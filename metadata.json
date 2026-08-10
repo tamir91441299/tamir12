@@ -1,0 +1,6 @@
+{
+  "name": "IOIO TV - Кино & Олон Ангит",
+  "description": "Монгол хадмал, дуу оруулгатай кино болон олон ангит цувралуудыг үзэх, хайх, AI санал болгогчтой вэб аппликейшн",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
