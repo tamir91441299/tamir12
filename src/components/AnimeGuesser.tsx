@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Gamepad2, Heart, Clock, Trophy, RotateCcw, Sparkles, CheckCircle2, XCircle, UserCheck, Film } from 'lucide-react';
+import { Gamepad2, Heart, Clock, Trophy, RotateCcw, Sparkles, CheckCircle2, XCircle, UserCheck, Film, Save, User, Check, ListOrdered } from 'lucide-react';
 import localGameData from '../data/data.json';
 import localCharacterData from '../data/character_data.json';
+import { saveScoreToFirestore, AnswerHistory } from '../lib/scoreService';
+import { LeaderboardModal } from './LeaderboardModal';
 
 interface QuestionItem {
   id: number;
@@ -22,6 +24,7 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
   useEffect(() => {
     setActiveGameMode(defaultMode);
   }, [defaultMode]);
+
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
@@ -31,6 +34,21 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [imgError, setImgError] = useState<boolean>(false);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+
+  // Firestore score saving states
+  const [playerName, setPlayerName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('ioio_anime_guesser_player_name') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [answerHistory, setAnswerHistory] = useState<AnswerHistory[]>([]);
+  const [savingScore, setSavingScore] = useState<boolean>(false);
+  const [scoreSaved, setScoreSaved] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const [highScore, setHighScore] = useState<number>(() => {
     try {
       return Number(localStorage.getItem('ioio_anime_guesser_highscore') || '0');
@@ -40,6 +58,7 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
   });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // Load question data based on mode
   useEffect(() => {
@@ -71,6 +90,9 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
     setSelectedOption(null);
     setIsCorrect(null);
     setImgError(false);
+    setAnswerHistory([]);
+    setScoreSaved(false);
+    setSaveError(null);
   }, [activeGameMode]);
 
   function shuffleArray<T>(array: T[]): T[] {
@@ -83,6 +105,20 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
   }
 
   const currentQ = questions[currentIndex];
+
+  // Helper to record answer history
+  const recordAnswerHistory = (selectedOpt: string | null, correct: boolean) => {
+    if (!currentQ) return;
+    setAnswerHistory((prev) => [
+      ...prev,
+      {
+        questionId: currentQ.id || currentIndex + 1,
+        questionAnswer: currentQ.answer,
+        selectedOption: selectedOpt || 'Хугацаа дууссан',
+        isCorrect: correct,
+      },
+    ]);
+  };
 
   // Helper to parse options into array of 4 distinct strings
   const parsedOptions = React.useMemo(() => {
@@ -186,6 +222,7 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
     setGameState('answered');
     setSelectedOption(null);
     setIsCorrect(false);
+    recordAnswerHistory(null, false);
 
     const newLives = lives - 1;
     setLives(newLives);
@@ -210,6 +247,7 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
 
     setIsCorrect(correct);
     setGameState('answered');
+    recordAnswerHistory(option, correct);
 
     if (correct) {
       const newScore = score + 15;
@@ -247,12 +285,40 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
       setImgError(false);
     } else {
       // Re-shuffle or show game completed
-      setQuestions(shuffleArray(questions));
-      setCurrentIndex(0);
-      setGameState('playing');
-      setSelectedOption(null);
-      setIsCorrect(null);
-      setImgError(false);
+      setGameState('gameover');
+    }
+  };
+
+  // Save score to Firestore
+  const handleSaveToFirestore = async () => {
+    if (!playerName.trim()) {
+      setSaveError('Тоглогчийн нэрийг оруулна уу!');
+      return;
+    }
+    setSavingScore(true);
+    setSaveError(null);
+    try {
+      try {
+        localStorage.setItem('ioio_anime_guesser_player_name', playerName.trim());
+      } catch {
+        // ignore
+      }
+
+      await saveScoreToFirestore({
+        playerName: playerName.trim(),
+        score,
+        gameMode: activeGameMode,
+        totalQuestions: questions.length,
+        correctCount: answerHistory.filter((a) => a.isCorrect).length,
+        answers: answerHistory,
+      });
+
+      setScoreSaved(true);
+    } catch (e) {
+      console.error(e);
+      setSaveError('Оноо хадгалахад алдаа гарлаа. Дахин оролдоно уу.');
+    } finally {
+      setSavingScore(false);
     }
   };
 
@@ -268,6 +334,9 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
     setSelectedOption(null);
     setIsCorrect(null);
     setImgError(false);
+    setAnswerHistory([]);
+    setScoreSaved(false);
+    setSaveError(null);
   };
 
   const getEmojiDisplay = () => {
@@ -321,6 +390,17 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
               <span>Анимэ Нэр (13)</span>
             </button>
           </div>
+
+          {/* Leaderboard Button */}
+          <button
+            id="open-leaderboard-btn"
+            onClick={() => setShowLeaderboard(true)}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md"
+            title="Онооны жагсаалт харах"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Онооны Жагсаалт</span>
+          </button>
 
           <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl">
             <Trophy className="w-5 h-5 text-amber-400" />
@@ -422,18 +502,82 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
             </div>
           </div>
 
-          <div>
+          {/* Firestore Score Submission Box */}
+          <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 max-w-md mx-auto space-y-4 text-left shadow-xl">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+              <Save className="w-4 h-4" />
+              <span>Firestore мэдээллийн санд оноо хадгалах</span>
+            </div>
+
+            {scoreSaved ? (
+              <div className="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-xl text-center space-y-2">
+                <div className="flex items-center justify-center gap-2 text-emerald-400 font-black text-sm">
+                  <Check className="w-5 h-5 bg-emerald-500 text-black rounded-full p-0.5" />
+                  <span>Оноо Firestore-д амжилттай хадгалагдлаа!</span>
+                </div>
+                <p className="text-xs text-emerald-200/80">
+                  Тоглогч <b>{playerName}</b> — {score} оноо, {answerHistory.filter((a) => a.isCorrect).length} зөв хариулттай
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Тоглогчийн нэр:</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Та нэрээ оруулна уу..."
+                      maxLength={24}
+                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white placeholder-zinc-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {saveError && <p className="text-xs text-rose-400 font-bold">{saveError}</p>}
+
+                <button
+                  id="save-score-to-firestore-btn"
+                  onClick={handleSaveToFirestore}
+                  disabled={savingScore}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black font-black py-2.5 rounded-xl text-sm transition-all shadow-lg hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {savingScore ? (
+                    <span>Хадгалж байна...</span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Оноо хадгалах</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            <button
+              id="open-leaderboard-modal-btn"
+              onClick={() => setShowLeaderboard(true)}
+              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 hover:text-white font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <ListOrdered className="w-4 h-4 text-amber-400" />
+              <span>Бүх Тоглогчдын Онооны Жагсаалт Харах</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               id="game-restart-btn"
               onClick={handleRestart}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-black px-8 py-4 rounded-2xl text-base shadow-xl shadow-rose-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-black px-8 py-3.5 rounded-2xl text-sm shadow-xl shadow-rose-600/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
-              <RotateCcw className="w-5 h-5" />
+              <RotateCcw className="w-4 h-4" />
               <span>Дахин тоглох</span>
             </button>
           </div>
 
-          <p className="text-[11px] text-zinc-500 pt-4">Зургийн эх сурвалж: Wikipedia</p>
+          <p className="text-[11px] text-zinc-500 pt-2">Зургийн эх сурвалж: Wikipedia</p>
         </div>
       ) : (
         /* ACTIVE GAME PLAY VIEW */
@@ -617,6 +761,13 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
             <p className="text-[11px] text-zinc-500">Зургийн эх сурвалж: Wikipedia</p>
           </div>
         </div>
+      )}
+
+      {showLeaderboard && (
+        <LeaderboardModal
+          currentGameMode={activeGameMode}
+          onClose={() => setShowLeaderboard(false)}
+        />
       )}
     </div>
   );

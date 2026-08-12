@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Score": {
+      "title": "Score",
+      "description": "Game scores and player submission records for Anime Guesser",
+      "properties": {
+        "playerName": {
+          "type": "string",
+          "description": "Name of the player"
+        },
+        "score": {
+          "type": "number",
+          "description": "Total score earned"
+        },
+        "gameMode": {
+          "type": "string",
+          "description": "Game mode played ('character' or 'title')"
+        },
+        "totalQuestions": {
+          "type": "number",
+          "description": "Total number of questions answered"
+        },
+        "correctCount": {
+          "type": "number",
+          "description": "Number of correct answers"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the score was saved"
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Summary of answers submitted during the game session"
+        }
+      },
+      "required": ["playerName", "score", "gameMode", "createdAt"]
+    }
+  }
+}
