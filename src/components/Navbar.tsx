@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Film, Tv, Sparkles, Heart, Wallet, X, Clapperboard, CheckCircle2, User, UserCheck, Gamepad2, Users } from 'lucide-react';
+import { Search, Film, Tv, Sparkles, Heart, Wallet, X, Clapperboard, CheckCircle2, User, UserCheck, Gamepad2, Users, ShieldCheck, Crown } from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 
@@ -166,6 +166,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-amber-400" />
               AI САНАЛ БОЛГОГЧ
             </button>
+
+            {onOpenUserManagement && (
+              <button
+                id="nav-admin-control"
+                onClick={onOpenUserManagement}
+                className="px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/50 text-amber-300 font-extrabold text-xs shadow-sm hover:scale-105 cursor-pointer ml-1"
+                title="Админ удирдлагын хэсэг"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>УДИРДАХ ХЭСЭГ</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -254,11 +266,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="user-management-btn"
               onClick={onOpenUserManagement}
-              className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-cyan-500/40 text-cyan-300 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer shadow-sm"
-              title="Нийт хэрэглэгчдийн мэдээлэл харах"
+              className="flex items-center gap-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/60 text-amber-300 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer shadow-sm"
+              title="Админ - Хэрэглэгчид ба системийн удирдлага"
             >
-              <Users className="w-4 h-4 text-cyan-400" />
-              <span className="hidden lg:inline">Хэрэглэгчид</span>
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span className="hidden lg:inline">Удирдах Хэсэг</span>
             </button>
           )}
           {/* Search Box */}
@@ -423,11 +435,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-users"
             onClick={onOpenUserManagement}
-            className="flex flex-col items-center gap-1 text-cyan-400"
-            title="Хэрэглэгчдийн жагсаалт"
+            className="flex flex-col items-center gap-1 text-amber-300 font-bold"
+            title="Удирдах хэсэг"
           >
-            <Users className="w-4 h-4" />
-            Хэрэглэгчид
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            Удирдах
           </button>
         )}
       </div>

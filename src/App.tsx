@@ -26,6 +26,46 @@ export default function App() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'movie' | 'series' | 'anime' | 'all'>('all');
 
+  // Movies list state with custom episode updates from localStorage
+  const [moviesList, setMoviesList] = useState<Movie[]>(() => {
+    try {
+      const savedEpisodes = localStorage.getItem('ioio_custom_episodes');
+      if (savedEpisodes) {
+        const parsedMap: Record<string, Movie['episodes']> = JSON.parse(savedEpisodes);
+        return SAMPLE_MOVIES.map((m) => {
+          if (parsedMap[m.id]) {
+            return { ...m, episodes: parsedMap[m.id] };
+          }
+          return m;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return SAMPLE_MOVIES;
+  });
+
+  const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
+    setMoviesList((prev) => {
+      const updated = prev.map((m) => {
+        if (m.id === movieId) {
+          return { ...m, episodes };
+        }
+        return m;
+      });
+      try {
+        const map: Record<string, Movie['episodes']> = {};
+        updated.forEach((m) => {
+          if (m.episodes) map[m.id] = m.episodes;
+        });
+        localStorage.setItem('ioio_custom_episodes', JSON.stringify(map));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
   // User Account state
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     try {
@@ -191,7 +231,7 @@ export default function App() {
 
   // Filter logic
   const filteredMovies = useMemo(() => {
-    return SAMPLE_MOVIES.filter((movie) => {
+    return moviesList.filter((movie) => {
       // Tab filter
       if (activeTab === 'movies' && movie.type !== 'movie') return false;
       if (activeTab === 'series' && movie.type !== 'series') return false;
@@ -221,12 +261,12 @@ export default function App() {
 
       return true;
     });
-  }, [activeTab, selectedType, selectedYear, selectedGenre, searchQuery, favorites, purchasedMovies]);
+  }, [moviesList, activeTab, selectedType, selectedYear, selectedGenre, searchQuery, favorites, purchasedMovies]);
 
   // Featured Movies for Hero Carousel
   const featuredMovies = useMemo(() => {
-    return SAMPLE_MOVIES.filter((m) => m.featured);
-  }, []);
+    return moviesList.filter((m) => m.featured);
+  }, [moviesList]);
 
   // Section categories
   const newEpisodesMovies = useMemo(() => {
@@ -261,7 +301,9 @@ export default function App() {
   };
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
-    if (isPurchased(movie.id)) {
+    // Blue Lock (m15) Episode 1 and Series 1st episode preview are FREE for everyone!
+    const isFreeEpisode = (movie.id === 'm15' && episodeNumber === 1) || (movie.episodes && episodeNumber === 1);
+    if (isPurchased(movie.id) || isFreeEpisode) {
       setSelectedMovieForPlayer(movie);
       setPlayerInitialEpisode(episodeNumber);
     } else {
@@ -603,6 +645,7 @@ export default function App() {
         onToggleFavorite={toggleFavorite}
         isFavorite={selectedMovieForDetails ? isFavorite(selectedMovieForDetails.id) : false}
         isPurchased={selectedMovieForDetails ? isPurchased(selectedMovieForDetails.id) : false}
+        onUpdateEpisodes={handleUpdateMovieEpisodes}
       />
 
       {selectedMovieForPlayer && (
@@ -633,7 +676,7 @@ export default function App() {
 
       {showAiModal && (
         <AiRecommendationModal
-          movies={SAMPLE_MOVIES}
+          movies={moviesList}
           onClose={() => {
             setShowAiModal(false);
             if (activeTab === 'ai') setActiveTab('home');
@@ -669,6 +712,8 @@ export default function App() {
           onClose={() => setShowUserManagementModal(false)}
           userBalance={userBalance}
           onUpdateBalance={(newBal) => setUserBalance(newBal)}
+          movies={moviesList}
+          onUpdateMovieEpisodes={handleUpdateMovieEpisodes}
         />
       )}
 

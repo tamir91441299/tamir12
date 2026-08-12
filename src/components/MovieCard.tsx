@@ -33,18 +33,25 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         />
 
         {/* Top Badges */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-          <span
-            className={`text-[10px] font-black px-2 py-0.5 rounded shadow ${
-              movie.type === 'anime'
-                ? 'bg-rose-600 text-white'
-                : movie.type === 'series'
-                ? 'bg-blue-600 text-white'
-                : 'bg-purple-600 text-white'
-            }`}
-          >
-            {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV' : 'MOVIE'}
-          </span>
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none gap-1">
+          <div className="flex items-center gap-1">
+            <span
+              className={`text-[10px] font-black px-2 py-0.5 rounded shadow ${
+                movie.type === 'anime'
+                  ? 'bg-rose-600 text-white'
+                  : movie.type === 'series'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-purple-600 text-white'
+              }`}
+            >
+              {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV' : 'MOVIE'}
+            </span>
+            {(movie.id === 'm15' || movie.episodes) && (
+              <span className="bg-emerald-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow border border-emerald-300">
+                1-р анги ҮНЭГҮЙ
+              </span>
+            )}
+          </div>
 
           {isPurchased ? (
             <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow">

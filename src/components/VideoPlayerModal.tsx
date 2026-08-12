@@ -52,10 +52,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   let iframeUrl = videoSrc;
   if (isFacebook) {
     iframeUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoSrc)}&show_text=false&autoplay=true`;
-  } else if (isYouTube && !videoSrc.includes('/embed/')) {
-    const match = videoSrc.match(/(?:v=|\/)([\w-]{11})/);
+  } else if (isYouTube) {
+    let videoId = '';
+    const match = videoSrc.match(/(?:v=|v\/|embed\/|shorts\/|youtu\.be\/|\/)([a-zA-Z0-9_-]{11})/);
     if (match) {
-      iframeUrl = `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+      videoId = match[1];
+    }
+    if (videoId) {
+      iframeUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&enablejsapi=1&controls=1`;
     }
   }
 
@@ -196,11 +200,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         >
           {/* Video or Embedded Player */}
           {isEmbed ? (
-            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex items-center justify-center">
+            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex items-center justify-center relative">
               <iframe
                 src={iframeUrl}
                 className="w-full h-full aspect-video rounded-2xl border border-zinc-800 shadow-2xl bg-black"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 title={movie.titleMongolian}
               />
