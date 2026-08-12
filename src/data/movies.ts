@@ -422,7 +422,7 @@ export const SAMPLE_MOVIES: Movie[] = [
       episodeNumber: i + 1,
       title: `${i + 1}-р анги - Сүүлчийн довтлогч`,
       duration: '24 мин',
-      videoUrl: i === 0 ? 'https://youtu.be/ruyryLrVGTo?si=LuXPOzl1YGMGPcGR' : 'https://www.facebook.com/share/v/1CepgQqt9Y/'
+      videoUrl: i === 0 ? 'https://youtu.be/VZPAg8iR8sk' : 'Y/'
     }))
   },
   {

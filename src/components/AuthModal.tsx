@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Lock, Phone, UserPlus, LogIn, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { X, User, Mail, Lock, Phone, UserPlus, LogIn, CheckCircle2, ShieldCheck, Sparkles, Users } from 'lucide-react';
 
 export interface UserAccount {
   id: string;
@@ -14,6 +14,7 @@ interface AuthModalProps {
   onClose: () => void;
   onLoginSuccess: (user: UserAccount) => void;
   onLogout: () => void;
+  onOpenUserManagement?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -21,6 +22,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onLoginSuccess,
   onLogout,
+  onOpenUserManagement,
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>(currentUser ? 'login' : 'register');
   const [formData, setFormData] = useState({
@@ -160,6 +162,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span className="font-bold text-emerald-400">Идэвхтэй ✓</span>
               </div>
             </div>
+
+            {onOpenUserManagement && (
+              <button
+                id="open-user-management-from-auth-modal"
+                onClick={() => {
+                  onClose();
+                  onOpenUserManagement();
+                }}
+                className="w-full bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Users className="w-4 h-4 text-cyan-400" />
+                <span>Нийт Хэрэглэгчдийн Мэдээлэл Харах</span>
+              </button>
+            )}
 
             <button
               id="logout-btn"

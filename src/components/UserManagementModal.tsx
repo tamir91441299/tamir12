@@ -206,6 +206,65 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       return u;
     });
     saveUsersState(updated);
+    if (selectedUser && selectedUser.id === id) {
+      const updatedUser = updated.find((u) => u.id === id);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
+  };
+
+  const handleExtendPackage = (id: string, newPkg: 'full_vip' | 'movie' | 'anime' | 'free', daysToAdd: number) => {
+    const updated = users.map((u) => {
+      if (u.id === id) {
+        if (newPkg === 'free') {
+          return {
+            ...u,
+            packageType: 'free' as const,
+            packageExpiry: '-',
+            role: 'user' as const,
+          };
+        }
+
+        let baseDate = new Date();
+        if (u.packageExpiry && u.packageExpiry !== '-' && !isNaN(new Date(u.packageExpiry).getTime())) {
+          const currentExpiry = new Date(u.packageExpiry);
+          if (currentExpiry.getTime() > Date.now()) {
+            baseDate = currentExpiry;
+          }
+        }
+        baseDate.setDate(baseDate.getDate() + daysToAdd);
+        const expiryStr = baseDate.toISOString().split('T')[0];
+
+        return {
+          ...u,
+          packageType: newPkg,
+          packageExpiry: expiryStr,
+          role: newPkg === 'full_vip' ? ('vip' as const) : u.role,
+        };
+      }
+      return u;
+    });
+    saveUsersState(updated);
+    if (selectedUser && selectedUser.id === id) {
+      const updatedUser = updated.find((u) => u.id === id);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
+  };
+
+  const handleSetCustomExpiryDate = (id: string, dateStr: string) => {
+    const updated = users.map((u) => {
+      if (u.id === id) {
+        return {
+          ...u,
+          packageExpiry: dateStr || '-',
+        };
+      }
+      return u;
+    });
+    saveUsersState(updated);
+    if (selectedUser && selectedUser.id === id) {
+      const updatedUser = updated.find((u) => u.id === id);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
   };
 
   const handleTopupUserWallet = (id: string) => {
@@ -475,6 +534,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
                   {/* Right: Actions */}
                   <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                    {/* View User Detail Button */}
+                    <button
+                      onClick={() => setSelectedUser(u)}
+                      className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 p-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                      title="Мэдээлэл харах"
+                    >
+                      <Eye className="w-4 h-4 text-cyan-400" />
+                    </button>
+
                     {/* Topup Balance Button */}
                     <button
                       onClick={() => setEditingUserId(u.id)}
@@ -719,6 +787,153 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Selected User Detail Sub-Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-60 bg-black/85 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1e] border border-cyan-500/40 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative text-zinc-100">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 text-black font-black text-xl flex items-center justify-center shadow-lg uppercase">
+                  {selectedUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-1.5">
+                    {selectedUser.name}
+                    <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                  </h3>
+                  <p className="text-xs text-zinc-400">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-900/90 p-4 rounded-xl border border-zinc-800">
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Дугаар:</span>
+                <span className="font-bold text-white">{selectedUser.phone}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Бүртгэлийн ID:</span>
+                <span className="font-mono text-zinc-300 text-[11px]">{selectedUser.id}</span>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Идэвхтэй Багц:</span>
+                <div>{getPackageBadge(selectedUser.packageType)}</div>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Дуусах хугацаа:</span>
+                <span className="font-extrabold text-amber-300">{selectedUser.packageExpiry}</span>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Хэтэвчний үлдэгдэл:</span>
+                <span className="font-black text-emerald-400 text-sm">{selectedUser.walletBalance.toLocaleString()} ₮</span>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Төлөв:</span>
+                <span className={`font-bold ${selectedUser.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {selectedUser.status === 'active' ? 'Идэвхтэй ✓' : 'Блоклогдсон ✕'}
+                </span>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Үзсэн кино:</span>
+                <span className="font-bold text-zinc-200">{selectedUser.watchedCount} кино</span>
+              </div>
+              <div className="space-y-1 pt-2 border-t border-zinc-800">
+                <span className="text-[10px] text-zinc-500 uppercase block font-bold">Сүүлд нэвтэрсэн:</span>
+                <span className="font-semibold text-zinc-300">{selectedUser.lastLogin}</span>
+              </div>
+            </div>
+
+            {/* Admin Package Control Section */}
+            <div className="bg-zinc-900/90 border border-amber-500/30 rounded-xl p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  Эрх олгох & Сунгах (Админ Удирдлага)
+                </span>
+                <span className="text-[10px] text-zinc-400 font-medium">Шууд өөрчлөгдөнө</span>
+              </div>
+
+              {/* Package Extend Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleExtendPackage(selectedUser.id, 'full_vip', 30)}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  FULL VIP (+30 хоног)
+                </button>
+                <button
+                  onClick={() => handleExtendPackage(selectedUser.id, 'full_vip', 365)}
+                  className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                >
+                  <Crown className="w-3.5 h-3.5 text-purple-400" />
+                  FULL VIP (+1 жил)
+                </button>
+                <button
+                  onClick={() => handleExtendPackage(selectedUser.id, 'movie', 30)}
+                  className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                >
+                  🎬 Кино багц (+30 хоног)
+                </button>
+                <button
+                  onClick={() => handleExtendPackage(selectedUser.id, 'anime', 30)}
+                  className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                >
+                  ⛩️ Анимэ багц (+30 хоног)
+                </button>
+              </div>
+
+              {/* Custom Expiry Date or Revoke */}
+              <div className="pt-2 border-t border-zinc-800 flex items-center gap-2">
+                <div className="flex-1 space-y-1">
+                  <label className="text-[10px] text-zinc-400 font-semibold block">
+                    Дуусах огноо гараар тохируулах:
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedUser.packageExpiry === '-' ? '' : selectedUser.packageExpiry}
+                    onChange={(e) => handleSetCustomExpiryDate(selectedUser.id, e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 text-xs text-amber-300 p-1.5 rounded-lg focus:outline-none focus:border-cyan-500 font-bold"
+                  />
+                </div>
+                <button
+                  onClick={() => handleExtendPackage(selectedUser.id, 'free', 0)}
+                  className="mt-4 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/80 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0"
+                  title="Хэрэглэгчийн багцыг цуцалж Үнэгүй болгох"
+                >
+                  Эрх Цуцлах
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setEditingUserId(selectedUser.id);
+                  setSelectedUser(null);
+                }}
+                className="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+              >
+                <DollarSign className="w-4 h-4" /> Цэнэглэх
+              </button>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl text-xs font-bold"
+              >
+                Хаах
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

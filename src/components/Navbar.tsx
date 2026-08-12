@@ -419,6 +419,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           <User className="w-4 h-4" />
           {currentUser ? 'Бүртгэл' : 'Нэвтрэх'}
         </button>
+        {onOpenUserManagement && (
+          <button
+            id="mobile-nav-users"
+            onClick={onOpenUserManagement}
+            className="flex flex-col items-center gap-1 text-cyan-400"
+            title="Хэрэглэгчдийн жагсаалт"
+          >
+            <Users className="w-4 h-4" />
+            Хэрэглэгчид
+          </button>
+        )}
       </div>
     </header>
   );

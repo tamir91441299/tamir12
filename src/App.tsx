@@ -652,6 +652,10 @@ export default function App() {
           onLogout={() => {
             setCurrentUser(null);
           }}
+          onOpenUserManagement={() => {
+            setShowAuthModal(false);
+            setShowUserManagementModal(true);
+          }}
         />
       )}
 
