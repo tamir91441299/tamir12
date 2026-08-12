@@ -13,9 +13,11 @@ import {
   Subtitles,
   ListVideo,
   Check,
-  Star
+  Star,
+  ExternalLink
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
+import { getEmbedUrl, isEmbeddableUrl } from '../lib/videoUtils';
 
 interface VideoPlayerModalProps {
   movie: Movie | null;
@@ -45,23 +47,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     movie.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
-  const isFacebook = videoSrc.includes('facebook.com');
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
-  const isEmbed = isFacebook || isYouTube || videoSrc.includes('/embed/') || videoSrc.endsWith('.html');
-
-  let iframeUrl = videoSrc;
-  if (isFacebook) {
-    iframeUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoSrc)}&show_text=false&autoplay=true`;
-  } else if (isYouTube) {
-    let videoId = '';
-    const match = videoSrc.match(/(?:v=|v\/|embed\/|shorts\/|youtu\.be\/|\/)([a-zA-Z0-9_-]{11})/);
-    if (match) {
-      videoId = match[1];
-    }
-    if (videoId) {
-      iframeUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&enablejsapi=1&controls=1`;
-    }
-  }
+  const isEmbed = isEmbeddableUrl(videoSrc);
+  const iframeUrl = getEmbedUrl(videoSrc);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -169,7 +157,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {videoSrc && (
+            <a
+              href={videoSrc}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-red-600/90 hover:bg-red-600 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-white shadow-md transition-all cursor-pointer"
+              title="Эх сурвалж эсвэл YouTube дээр шууд нээх"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isYouTube ? 'YouTube дээр нээх' : 'Эх сурвалж дээр нээх'}</span>
+              <span className="sm:hidden">Нээх</span>
+            </a>
+          )}
+
           {episodes.length > 0 && (
             <button
               id="toggle-episodes-drawer"

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Movie, Comment } from '../types';
 import { SAMPLE_COMMENTS } from '../data/movies';
+import { getEmbedUrl } from '../lib/videoUtils';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -132,10 +133,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="relative h-64 sm:h-80 md:h-96 w-full overflow-hidden bg-zinc-950">
             {showTrailer ? (
               <iframe
-                src={`${movie.trailerUrl}?autoplay=1`}
+                src={getEmbedUrl(movie.trailerUrl)}
                 title="Trailer"
                 className="w-full h-full border-0"
-                allow="autoplay; encrypted-media"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             ) : (
