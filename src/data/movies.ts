@@ -394,10 +394,10 @@ export const SAMPLE_MOVIES: Movie[] = [
   },
   {
     id: 'm15',
-    title: 'Blue Lock',
-    titleMongolian: 'Блу Лок (Blue Lock)',
+    title: 'Blue Lock S1',
+    titleMongolian: 'Блу Лок Бүлэг 1 (Blue Lock S1)',
     type: 'anime',
-    poster: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+    poster: 'https://tse1.mm.bing.net/th/id/OIP.eH8mEZK6fKI99DMLjbe1KQDIEs?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
     backdrop: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
     year: 2024,
     duration: '24 анги',
@@ -415,15 +415,14 @@ export const SAMPLE_MOVIES: Movie[] = [
     featured: true,
     featuredRank: 5,
     trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
-    videoUrl: 'https://www.facebook.com/share/v/1CepgQqt9Y/',
     ageRating: '+13',
     audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
     subtitles: ['Монгол хадмал'],
-    episodes: Array.from({ length: 24 }, (_, i) => ({
+    episodes: Array.from({ length: 1 }, (_, i) => ({
       episodeNumber: i + 1,
       title: `${i + 1}-р анги - Сүүлчийн довтлогч`,
       duration: '24 мин',
-      videoUrl: 'https://www.facebook.com/share/v/1CepgQqt9Y/'
+      videoUrl: i === 0 ? 'https://youtu.be/ruyryLrVGTo?si=LuXPOzl1YGMGPcGR' : 'https://www.facebook.com/share/v/1CepgQqt9Y/'
     }))
   },
   {
@@ -449,6 +448,40 @@ export const SAMPLE_MOVIES: Movie[] = [
     ageRating: '+16',
     audioTracks: ['Монгол дуу оруулга'],
     subtitles: ['Монгол хадмал']
+  },
+  {
+    id: 'm17',
+    title: 'Hunter x Hunter',
+    titleMongolian: 'Хантер х Хантер (Hunter x Hunter)',
+    type: 'anime',
+    poster: 'https://tse2.mm.bing.net/th/id/OIP.z9MT7uQNPPGdh7irrnHUvgHaLH?r=0&w=1000&h=1500&rs=1&pid=ImgDetMain&o=7&rm=3',
+    backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80',
+    year: 2021,
+    duration: '148 анги',
+    rating: 9.9,
+    genres: ['Animation', 'Action', 'Adventure', 'Fantasy'],
+    description: 'Аавыгаа олохын тулд Хантерийн шалгалтад орж, аюултай бөгөөд сонирхолтой ертөнцөөр аялах Гөн Фриксийн сэтгэл догдлуулсан адал явдалт аниме цуврал. Монгол дуу оруулгатай.',
+    director: 'Хироши Кошинака',
+    cast: ['Мэгүми Хан', 'Марико Исэ', 'Миюки Саваширо'],
+    country: 'Япон',
+    price: 4000,
+    isNewEpisode: true,
+    newEpisodeLabel: 'Шинэ ангитай',
+    totalEpisodes: 148,
+    views: 1250000,
+    featured: true,
+    featuredRank: 7,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    ageRating: '+13',
+    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
+    subtitles: ['Монгол хадмал'],
+    episodes: Array.from({ length: 148 }, (_, i) => ({
+      episodeNumber: i + 1,
+      title: `${i + 1}-р анги - Хантерийн Шалгалт`,
+      duration: '24 мин',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4'
+    }))
   }
 ];
 
@@ -510,6 +543,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     text: 'Монгол эрчүүдийн зориг чангийг харуулсан мундаг бүтээл. Заавал үзэх кинонуудын нэг!',
     rating: 10,
     date: '3 хоногийн өмнө',
-    likes: 42
-  }
+    likes: 42   
+  }        
 ];
