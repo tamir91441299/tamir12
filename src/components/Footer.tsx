@@ -1,7 +1,11 @@
 import React from 'react';
-import { ShieldAlert, Film, Heart } from 'lucide-react';
+import { ShieldAlert, Film, Heart, Search, Globe } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenSeoModal?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
   return (
     <footer className="bg-[#0f0f11] border-t border-zinc-800/80 text-zinc-400 py-10 px-4 mt-16 text-xs">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -17,18 +21,28 @@ export const Footer: React.FC = () => {
             <p className="text-zinc-400 text-xs leading-relaxed max-w-md">
               IOIO TV нь Монгол хадмал болон дуу оруулгатай кино, олон ангит цувралуудыг өндөр чанартайгаар толилуулах кино платформ юм.
             </p>
+
+            {onOpenSeoModal && (
+              <button
+                onClick={onOpenSeoModal}
+                className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs transition-all cursor-pointer mt-2"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Google SEO & Search Console Тохиргоо</span>
+              </button>
+            )}
           </div>
 
           {/* Quick links */}
           <div className="space-y-2">
             <h4 className="font-bold text-zinc-200 uppercase tracking-wider text-[11px]">
-              Цэсүүд
+              Цэсүүд & SEO
             </h4>
             <ul className="space-y-1.5 text-zinc-400">
               <li><a href="#" className="hover:text-cyan-400 transition-colors">Эхлэл нүүр</a></li>
               <li><a href="#" className="hover:text-cyan-400 transition-colors">Бүх кинонууд</a></li>
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">Олон ангит цуврал</a></li>
-              <li><a href="#" className="hover:text-cyan-400 transition-colors">AI Санал болгогч</a></li>
+              <li><a href="/sitemap.xml" target="_blank" className="hover:text-cyan-400 transition-colors flex items-center gap-1"><Globe className="w-3 h-3 text-emerald-400" /> Dynamic Sitemap.xml</a></li>
+              <li><a href="/robots.txt" target="_blank" className="hover:text-cyan-400 transition-colors flex items-center gap-1"><Globe className="w-3 h-3 text-cyan-400" /> Robots.txt</a></li>
             </ul>
           </div>
 

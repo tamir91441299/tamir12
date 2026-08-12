@@ -82,33 +82,12 @@
     "answer": "Haikyuu!!",
     "options": "Haikyuu!! | Free! | Kuroko's Basketball | Blue Lock",
     "image": "https://upload.wikimedia.org/wikipedia/en/6/6b/Haiky%C5%AB%21_volume_1_cover.jpg"
-
-
-
-   
-                   }
-
-{,
-   "id":13,
-    "emojies":"⏳ 🌍 🃏 🐪 👊"
-     "answer":"jojo"
-     "options":"    attack on titan  jojo  nobles"
-     "image":"https://images.wallpapersden.com/image/download/jojo-s-bizarre-adventure-all-characters_bGhrZmaUmZqaraWkpJRobWllrWdma2U.jpg"
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
+  },
+  {
+    "id": 13,
+    "emojies": "⏳ 🌍 🃏 🐪 👊",
+    "answer": "JoJo's Bizarre Adventure",
+    "options": "Attack on Titan | JoJo's Bizarre Adventure | Noblesse | Bleach",
+    "image": "https://upload.wikimedia.org/wikipedia/en/a/aa/JoJo_no_Kimyou_na_Bouken_cover_-_vol1.jpg"
+  }
 ]
-

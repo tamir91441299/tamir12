@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Film, Tv, Sparkles, Heart, Wallet, X, Clapperboard, CheckCircle2, User, UserCheck, Gamepad2 } from 'lucide-react';
+import { Search, Film, Tv, Sparkles, Heart, Wallet, X, Clapperboard, CheckCircle2, User, UserCheck, Gamepad2, Users } from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 
@@ -20,6 +20,7 @@ interface NavbarProps {
   onOpenVipModal: () => void;
   currentUser: UserAccount | null;
   onOpenAuthModal: () => void;
+  onOpenUserManagement?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenVipModal,
   currentUser,
   onOpenAuthModal,
+  onOpenUserManagement,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -258,6 +260,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               </>
             )}
           </button>
+
+          {/* User Management / Admin Button */}
+          {onOpenUserManagement && (
+            <button
+              id="user-management-btn"
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-cyan-500/40 text-cyan-300 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer shadow-sm"
+              title="Нийт хэрэглэгчдийн мэдээлэл харах"
+            >
+              <Users className="w-4 h-4 text-cyan-400" />
+              <span className="hidden lg:inline">Хэрэглэгчид</span>
+            </button>
+          )}
           {/* Search Box */}
           <div className="relative w-full max-w-xs">
             <div className="relative flex items-center">

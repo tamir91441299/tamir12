@@ -8,8 +8,11 @@ import { VideoPlayerModal } from './components/VideoPlayerModal';
 import { AiRecommendationModal } from './components/AiRecommendationModal';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal, UserAccount } from './components/AuthModal';
+import { UserManagementModal } from './components/UserManagementModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { Footer } from './components/Footer';
+import { SeoHead } from './components/SeoHead';
+import { SeoGuideModal } from './components/SeoGuideModal';
 import { SAMPLE_MOVIES } from './data/movies';
 import { Movie } from './types';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2 } from 'lucide-react';
@@ -32,6 +35,8 @@ export default function App() {
   });
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
+  const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
 
   // Favorites state
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -312,6 +317,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#121214] text-zinc-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+      {/* Dynamic SEO Head Manager */}
+      <SeoHead
+        activeTab={activeTab}
+        selectedMovie={selectedMovieForDetails}
+        searchQuery={searchQuery}
+      />
+
       {/* Top Header / Navigation */}
       <Navbar
         activeTab={activeTab}
@@ -336,6 +348,9 @@ export default function App() {
         onOpenAuthModal={() => {
           setShowAuthModal(true);
         }}
+        onOpenUserManagement={() => {
+          setShowUserManagementModal(true);
+        }}
       />
 
       {/* Main Container */}
@@ -352,7 +367,7 @@ export default function App() {
         )}
 
         {/* AI Banner Callout */}
-        <div className="mb-6 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+        <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
               <Sparkles className="w-6 h-6 animate-pulse" />
@@ -375,6 +390,34 @@ export default function App() {
             AI Санал Авах
           </button>
         </div>
+
+        {/* Anime Game Callout Banner (Prominent on home & anime view) */}
+        {activeTab !== 'games' && (
+          <div className="mb-6 bg-gradient-to-r from-purple-950/90 via-zinc-900 to-pink-950/90 border border-purple-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-purple-950/30">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
+                <Gamepad2 className="w-6 h-6 animate-bounce text-purple-300" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  🎮 АНИМЭ ЭМОЖИ ТААХ ТОГЛООМ (3 АМЬТАЙ, 15 СЕКУНДИЙН ТАЙМЕР)
+                </h3>
+                <p className="text-xs text-purple-200/80">
+                  Эможи ашиглан 13+ анимэ нэрийг 15 секундэд таагаарай! Буруу эсвэл зөв хариулахад анимэний постерийг дэлгэц дээр харуулна.
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="open-anime-game-banner-btn"
+              onClick={() => setActiveTab('games')}
+              className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-400 hover:to-pink-400 text-white font-black text-xs px-6 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-400/50"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>ТОГЛОХ 🎮</span>
+            </button>
+          </div>
+        )}
 
         {/* Main Content / Games View */}
         {activeTab === 'games' ? (
@@ -581,8 +624,21 @@ export default function App() {
         />
       )}
 
+      {showSeoModal && (
+        <SeoGuideModal onClose={() => setShowSeoModal(false)} />
+      )}
+
+      {showUserManagementModal && (
+        <UserManagementModal
+          currentUser={currentUser}
+          onClose={() => setShowUserManagementModal(false)}
+          userBalance={userBalance}
+          onUpdateBalance={(newBal) => setUserBalance(newBal)}
+        />
+      )}
+
       {/* Footer */}
-      <Footer />
+      <Footer onOpenSeoModal={() => setShowSeoModal(true)} />
     </div>
   );
 }

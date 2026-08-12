@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow administrative or private endpoints
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap location
+Sitemap: https://ioio.tv/sitemap.xml

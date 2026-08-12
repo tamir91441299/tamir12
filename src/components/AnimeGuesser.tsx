@@ -377,17 +377,25 @@ export function AnimeGuesser() {
             </p>
 
             {/* IMAGE REVEAL (Rendered when question is answered - both correct or incorrect) */}
-            {currentQ?.image && !imgError && gameState === 'answered' && (
+            {gameState === 'answered' && (
               <div className="mt-4 transition-all duration-500 animate-fadeIn flex flex-col items-center">
-                <img
-                  src={currentQ.image}
-                  alt={currentQ.answer}
-                  referrerPolicy="no-referrer"
-                  onError={() => setImgError(true)}
-                  className="max-h-[220px] w-auto mx-auto object-contain rounded-xl border-2 border-purple-500/60 shadow-xl shadow-purple-950/50"
-                />
+                {currentQ?.image && !imgError ? (
+                  <img
+                    src={currentQ.image}
+                    alt={currentQ.answer}
+                    referrerPolicy="no-referrer"
+                    onError={() => setImgError(true)}
+                    className="max-h-[220px] w-auto mx-auto object-contain rounded-xl border-2 border-purple-500/60 shadow-xl shadow-purple-950/50"
+                  />
+                ) : (
+                  <div className="w-48 h-60 rounded-xl bg-gradient-to-br from-purple-900/60 to-pink-900/60 border-2 border-purple-500/50 flex flex-col items-center justify-center p-4 text-center shadow-xl">
+                    <span className="text-4xl mb-2">🎬</span>
+                    <span className="text-sm font-black text-white">{currentQ?.answer}</span>
+                    <span className="text-[10px] text-purple-300 mt-1">{getEmojiDisplay()}</span>
+                  </div>
+                )}
                 <span className="text-xs text-purple-300 font-bold mt-2 bg-purple-950/80 border border-purple-800/80 px-3 py-1 rounded-full shadow-sm">
-                  🎬 {currentQ.answer}
+                  🎬 {currentQ?.answer}
                 </span>
               </div>
             )}

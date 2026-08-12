@@ -7,6 +7,7 @@ import moviesRouter from "./server/routes/movies.js";
 import packagesRouter from "./server/routes/packages.js";
 import paymentsRouter from "./server/routes/payments.js";
 import aiRouter from "./server/routes/ai.js";
+import seoRouter from "./server/routes/seo.js";
 
 dotenv.config();
 
@@ -14,6 +15,9 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// SEO XML Sitemap and Robots.txt routes
+app.use(seoRouter);
 
 // Health Check API
 app.get("/api/health", (req, res) => {
