@@ -391,6 +391,40 @@ export const SAMPLE_MOVIES: Movie[] = [
       duration: '25 мин',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4'
     }))
+  },
+  {
+    id: 'm15',
+    title: 'Blue Lock',
+    titleMongolian: 'Блу Лок (Blue Lock)',
+    type: 'anime',
+    poster: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
+    year: 2024,
+    duration: '24 анги',
+    rating: 9.8,
+    genres: ['Animation', 'Action', 'Sports'],
+    description: 'Японы хөлбөмбөгийн шигшээ багийг ДАШТ-д түрүүлгэхийн тулд хамгийн шилдэг 300 довтлогчийг цуглуулж, өрсөлдүүлдэг Blue Lock төслийн ширүүн тулаант аниме цуврал. Монгол дуу оруулгатай.',
+    director: 'Тецуаки Ватанабэ',
+    cast: ['Казуки Ура', 'Тасуку Кайто', 'Сома Сайто'],
+    country: 'Япон',
+    price: 4000,
+    isNewEpisode: true,
+    newEpisodeLabel: 'Шинэ ангитай',
+    totalEpisodes: 24,
+    views: 730000,
+    featured: true,
+    featuredRank: 5,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://www.facebook.com/share/v/1CepgQqt9Y/',
+    ageRating: '+13',
+    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
+    subtitles: ['Монгол хадмал'],
+    episodes: Array.from({ length: 24 }, (_, i) => ({
+      episodeNumber: i + 1,
+      title: `${i + 1}-р анги - Сүүлчийн довтлогч`,
+      duration: '24 мин',
+      videoUrl: 'https://www.facebook.com/share/v/1CepgQqt9Y/'
+    }))
   }
 ];
 

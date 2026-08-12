@@ -45,6 +45,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     movie.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
+  const isFacebook = videoSrc.includes('facebook.com');
+  const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
+  const isEmbed = isFacebook || isYouTube || videoSrc.includes('/embed/') || videoSrc.endsWith('.html');
+
+  let iframeUrl = videoSrc;
+  if (isFacebook) {
+    iframeUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoSrc)}&show_text=false&autoplay=true`;
+  } else if (isYouTube && !videoSrc.includes('/embed/')) {
+    const match = videoSrc.match(/(?:v=|\/)([\w-]{11})/);
+    if (match) {
+      iframeUrl = `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
+    }
+  }
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -180,22 +194,34 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           ref={playerContainerRef}
           className="relative w-full h-full flex items-center justify-center group"
         >
-          {/* HTML5 Video Element */}
-          <video
-            ref={videoRef}
-            src={videoSrc}
-            autoPlay
-            onTimeUpdate={handleTimeUpdate}
-            onEnded={() => {
-              if (currentEpisodeIndex < episodes.length - 1) {
-                selectEpisode(currentEpisodeIndex + 1);
-              } else {
-                setIsPlaying(false);
-              }
-            }}
-            onClick={togglePlay}
-            className="w-full h-full object-contain cursor-pointer"
-          />
+          {/* Video or Embedded Player */}
+          {isEmbed ? (
+            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex items-center justify-center">
+              <iframe
+                src={iframeUrl}
+                className="w-full h-full aspect-video rounded-2xl border border-zinc-800 shadow-2xl bg-black"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allowFullScreen
+                title={movie.titleMongolian}
+              />
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              src={videoSrc}
+              autoPlay
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={() => {
+                if (currentEpisodeIndex < episodes.length - 1) {
+                  selectEpisode(currentEpisodeIndex + 1);
+                } else {
+                  setIsPlaying(false);
+                }
+              }}
+              onClick={togglePlay}
+              className="w-full h-full object-contain cursor-pointer"
+            />
+          )}
 
           {/* Custom Overlay Controls */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
