@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Gamepad2, Heart, Clock, Trophy, RotateCcw, Sparkles, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { Gamepad2, Heart, Clock, Trophy, RotateCcw, Sparkles, CheckCircle2, XCircle, UserCheck, Film } from 'lucide-react';
 import localGameData from '../data/data.json';
+import localCharacterData from '../data/character_data.json';
 
 interface QuestionItem {
   id: number;
@@ -9,9 +10,18 @@ interface QuestionItem {
   answer: string;
   options: string | string[];
   image?: string;
+  meta?: {
+    mode?: string;
+    point?: number;
+  };
 }
 
-export function AnimeGuesser() {
+export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'character' | 'title' }) {
+  const [activeGameMode, setActiveGameMode] = useState<'character' | 'title'>(defaultMode);
+
+  useEffect(() => {
+    setActiveGameMode(defaultMode);
+  }, [defaultMode]);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
@@ -31,11 +41,14 @@ export function AnimeGuesser() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load question data
+  // Load question data based on mode
   useEffect(() => {
     const loadQuestions = async () => {
+      const endpoint = activeGameMode === 'character' ? '/character_data.json' : '/data.json';
+      const fallback = activeGameMode === 'character' ? localCharacterData : localGameData;
+
       try {
-        const res = await fetch('/data.json');
+        const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
@@ -44,12 +57,21 @@ export function AnimeGuesser() {
           }
         }
       } catch (e) {
-        console.warn('Fetching /data.json failed, using fallback data:', e);
+        console.warn(`Fetching ${endpoint} failed, using fallback data:`, e);
       }
-      setQuestions(shuffleArray(localGameData));
+      setQuestions(shuffleArray(fallback as QuestionItem[]));
     };
+
     loadQuestions();
-  }, []);
+    setCurrentIndex(0);
+    setScore(0);
+    setLives(3);
+    setTimeLeft(15);
+    setGameState('playing');
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setImgError(false);
+  }, [activeGameMode]);
 
   function shuffleArray<T>(array: T[]): T[] {
     const copy = [...array];
@@ -94,17 +116,40 @@ export function AnimeGuesser() {
     // Filter out empties and duplicates
     const uniqueOpts = Array.from(new Set(opts)).filter(Boolean);
 
-    // If less than 4 options, pad with generic fallback titles
-    const fallbackTitles = [
-      "Death Note", "Slam Dunk", "Hunter x Hunter", "Demon Slayer",
-      "One Piece", "One Punch Man", "Naruto", "Attack on Titan",
-      "Dr. STONE", "Dragon Ball Z", "Assassination Classroom", "Haikyuu!!"
-    ];
+    // If less than 4 options, pad with generic fallbacks
+    const fallbackList =
+      activeGameMode === 'character'
+        ? [
+            'Hisoka',
+            'Roronoa Zoro',
+            'Jotaro Kujo',
+            'Sakuragi Hanamichi',
+            'Satoru Gojo',
+            'Levi Ackerman',
+            'Son Goku',
+            'Monkey D. Luffy',
+            'Naruto Uzumaki',
+            'Light Yagami',
+          ]
+        : [
+            'Death Note',
+            'Slam Dunk',
+            'Hunter x Hunter',
+            'Demon Slayer',
+            'One Piece',
+            'One Punch Man',
+            'Naruto',
+            'Attack on Titan',
+            'Dr. STONE',
+            'Dragon Ball Z',
+            'Assassination Classroom',
+            'Haikyuu!!',
+          ];
 
-    for (const title of fallbackTitles) {
+    for (const item of fallbackList) {
       if (uniqueOpts.length >= 4) break;
-      if (!uniqueOpts.some((o) => o.toLowerCase() === title.toLowerCase())) {
-        uniqueOpts.push(title);
+      if (!uniqueOpts.some((o) => o.toLowerCase() === item.toLowerCase())) {
+        uniqueOpts.push(item);
       }
     }
 
@@ -233,29 +278,115 @@ export function AnimeGuesser() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-xl">
         <div className="flex items-center gap-3 text-center sm:text-left">
           <div className="p-3 bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 rounded-2xl shadow-lg shadow-purple-500/20 text-white">
             <Gamepad2 className="w-8 h-8 animate-bounce" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>🎮 Миний тоглоомууд</span>
+              <span>🎮 Анимэ Эможи Таавар</span>
             </h1>
             <p className="text-xs text-rose-400 font-semibold tracking-wide uppercase mt-0.5">
-              Anime Guesser — Emoji таавар тоглоом
+              {activeGameMode === 'character' ? '🎭 Анимэ Дүрүүд (10 Асуулт)' : '🎬 Анимэ Нэрс (13 Асуулт)'} — 3 Амь, 15s Таймер
             </p>
           </div>
         </div>
 
-        {/* Highscore Badge */}
-        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl">
-          <Trophy className="w-5 h-5 text-amber-400" />
-          <div>
-            <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Дээд амжилт</div>
-            <div className="text-lg font-black text-amber-400 leading-tight">{highScore} оноо</div>
+        {/* Highscore & Mode Switcher */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {/* Mode Switcher Buttons */}
+          <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 w-full sm:w-auto justify-center">
+            <button
+              onClick={() => setActiveGameMode('character')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                activeGameMode === 'character'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Дүр Таах (10)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveGameMode('title')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                activeGameMode === 'title'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Film className="w-3.5 h-3.5" />
+              <span>Анимэ Нэр (13)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl">
+            <Trophy className="w-5 h-5 text-amber-400" />
+            <div>
+              <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Дээд амжилт</div>
+              <div className="text-lg font-black text-amber-400 leading-tight">{highScore} оноо</div>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Game Mode Selector Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <button
+          onClick={() => setActiveGameMode('character')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden flex items-center justify-between ${
+            activeGameMode === 'character'
+              ? 'bg-gradient-to-r from-purple-900/80 via-pink-900/60 to-zinc-900 border-purple-500 shadow-lg shadow-purple-950/50 ring-2 ring-purple-500/50'
+              : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/60'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎭</span>
+              <h3 className="font-black text-sm text-white uppercase tracking-wider">
+                1. Анимэ Дүр Таах
+              </h3>
+              {activeGameMode === 'character' && (
+                <span className="bg-purple-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                  ТОГЛОЖ БУЙ
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-purple-200/80">
+              Хисока, Зоро, Жотаро, Гожо, Леви, Гоку, Луффи, Наруто гэх мэт 10 анимений дүрийг эможиноос таана
+            </p>
+          </div>
+          <UserCheck className={`w-6 h-6 shrink-0 ${activeGameMode === 'character' ? 'text-purple-400' : 'text-zinc-600'}`} />
+        </button>
+
+        <button
+          onClick={() => setActiveGameMode('title')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden flex items-center justify-between ${
+            activeGameMode === 'title'
+              ? 'bg-gradient-to-r from-pink-900/80 via-purple-900/60 to-zinc-900 border-pink-500 shadow-lg shadow-pink-950/50 ring-2 ring-pink-500/50'
+              : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/60'
+          }`}
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎬</span>
+              <h3 className="font-black text-sm text-white uppercase tracking-wider">
+                2. Анимэ Нэр Таах
+              </h3>
+              {activeGameMode === 'title' && (
+                <span className="bg-pink-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                  ТОГЛОЖ БУЙ
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-pink-200/80">
+              Slam Dunk, Death Note, Hunter x Hunter, One Piece зэрэг 13+ цувралын нэрийг эможиноос таана
+            </p>
+          </div>
+          <Film className={`w-6 h-6 shrink-0 ${activeGameMode === 'title' ? 'text-pink-400' : 'text-zinc-600'}`} />
+        </button>
       </div>
 
       {/* GAME OVER VIEW */}
@@ -373,7 +504,9 @@ export function AnimeGuesser() {
             </div>
 
             <p className="text-xs text-zinc-400 font-medium">
-              Дээрх эможи ямар анимег илэрхийлж байна вэ?
+              {activeGameMode === 'character'
+                ? 'Дээрх эможи ямар анимегийн дүрийг илэрхийлж байна вэ?'
+                : 'Дээрх эможи ямар анимег илэрхийлж байна вэ?'}
             </p>
 
             {/* IMAGE REVEAL (Rendered when question is answered - both correct or incorrect) */}

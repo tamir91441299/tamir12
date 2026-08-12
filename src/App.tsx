@@ -19,6 +19,7 @@ import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2 } from 'luci
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'movies' | 'series' | 'anime' | 'ai' | 'favorites' | 'purchased' | 'games'>('home');
+  const [selectedGameMode, setSelectedGameMode] = useState<'character' | 'title'>('character');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -393,35 +394,50 @@ export default function App() {
 
         {/* Anime Game Callout Banner (Prominent on home & anime view) */}
         {activeTab !== 'games' && (
-          <div className="mb-6 bg-gradient-to-r from-purple-950/90 via-zinc-900 to-pink-950/90 border border-purple-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-purple-950/30">
+          <div className="mb-6 bg-gradient-to-r from-purple-950/90 via-zinc-900 to-pink-950/90 border border-purple-500/40 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl shadow-purple-950/30">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
                 <Gamepad2 className="w-6 h-6 animate-bounce text-purple-300" />
               </div>
               <div>
                 <h3 className="font-black text-sm text-white flex items-center gap-2">
-                  🎮 АНИМЭ ЭМОЖИ ТААХ ТОГЛООМ (3 АМЬТАЙ, 15 СЕКУНДИЙН ТАЙМЕР)
+                  🎮 АНИМЭ ЭМОЖИ ТААВАР ТОГЛООМ (3 АМЬТАЙ, 15s ТАЙМЕР)
                 </h3>
                 <p className="text-xs text-purple-200/80">
-                  Эможи ашиглан 13+ анимэ нэрийг 15 секундэд таагаарай! Буруу эсвэл зөв хариулахад анимэний постерийг дэлгэц дээр харуулна.
+                  Анимэний гол дүрүүдийг таах эсвэл цувралуудын нэрийг эможиноос таагаарай!
                 </p>
               </div>
             </div>
 
-            <button
-              id="open-anime-game-banner-btn"
-              onClick={() => setActiveTab('games')}
-              className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-400 hover:to-pink-400 text-white font-black text-xs px-6 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-400/50"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              <span>ТОГЛОХ 🎮</span>
-            </button>
+            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+              <button
+                id="open-anime-character-game-btn"
+                onClick={() => {
+                  setSelectedGameMode('character');
+                  setActiveTab('games');
+                }}
+                className="bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-400/50"
+              >
+                <span>🎭 АНИМЭ ДҮР ТААХ (10)</span>
+              </button>
+
+              <button
+                id="open-anime-title-game-btn"
+                onClick={() => {
+                  setSelectedGameMode('title');
+                  setActiveTab('games');
+                }}
+                className="bg-zinc-800 hover:bg-zinc-700 text-purple-200 hover:text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-500/40"
+              >
+                <span>🎬 АНИМЭ НЭР ТААХ (13)</span>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Main Content / Games View */}
         {activeTab === 'games' ? (
-          <AnimeGuesser />
+          <AnimeGuesser defaultMode={selectedGameMode} />
         ) : (
           /* Main Content + Sidebar Layout */
           <div className="flex flex-col lg:flex-row gap-6">
