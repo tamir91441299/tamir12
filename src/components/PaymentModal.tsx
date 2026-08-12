@@ -108,7 +108,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 БАГЦ ИДЭВХЖҮҮЛЭХ / ЭРХ АВАХ
               </h2>
               <p className="text-[11px] text-zinc-400">
-                30 хоногийн хугацаатай Анимэ эсвэл Кино багцыг сонгон идэвхжүүлнэ үү
+                Анимэ багц (4,000 оноо) эсвэл Кино багцыг (4,000 оноо) сонгон идэвхжүүлнэ үү
               </p>
             </div>
           </div>
@@ -282,7 +282,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               }`}
             >
               <Wallet className="w-3.5 h-3.5" />
-              <span>Үлдэгдэл ({userBalance.toLocaleString()}₮)</span>
+              <span>Үлдэгдэл Оноо ({userBalance.toLocaleString()} оноо)</span>
             </button>
           </div>
 

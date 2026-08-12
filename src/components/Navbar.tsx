@@ -158,25 +158,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="nav-ai"
               onClick={() => setActiveTab('ai')}
               className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-                activeTab === 'ai'
+                activeTab === 'ai' || activeTab === 'games'
                   ? 'bg-cyan-500/20 text-cyan-300 font-bold border-b-2 border-cyan-400'
                   : 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800/50'
               }`}
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
-              AI ТУСЛАХ
-            </button>
-            <button
-              id="nav-games"
-              onClick={() => setActiveTab('games')}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-                activeTab === 'games'
-                  ? 'bg-purple-600/30 text-purple-300 font-bold border-b-2 border-purple-400'
-                  : 'text-purple-400 hover:text-purple-300 hover:bg-zinc-800/50'
-              }`}
-            >
-              <Gamepad2 className="w-4 h-4 text-purple-400 animate-pulse" />
-              ТОГЛООМ
+              AI САНАЛ БОЛГОГЧ
             </button>
           </nav>
         </div>
@@ -415,21 +403,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           id="mobile-nav-ai"
           onClick={() => setActiveTab('ai')}
           className={`flex flex-col items-center gap-1 ${
-            activeTab === 'ai' ? 'text-amber-400 font-bold' : 'text-zinc-400'
+            activeTab === 'ai' || activeTab === 'games' ? 'text-amber-400 font-bold' : 'text-zinc-400'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
-          AI Санал
-        </button>
-        <button
-          id="mobile-nav-games"
-          onClick={() => setActiveTab('games')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'games' ? 'text-purple-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Gamepad2 className="w-4 h-4 text-purple-400" />
-          Тоглоом
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          AI Санал & Тоглоом
         </button>
         <button
           id="mobile-nav-auth"

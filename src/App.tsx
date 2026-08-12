@@ -10,6 +10,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { AuthModal, UserAccount } from './components/AuthModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
+import { AiAssistantView } from './components/AiAssistantView';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
@@ -367,33 +368,35 @@ export default function App() {
           />
         )}
 
-        {/* AI Banner Callout */}
-        <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
-              <Sparkles className="w-6 h-6 animate-pulse" />
+        {/* AI Banner Callout (Shown on Home view) */}
+        {activeTab === 'home' && (
+          <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  IOIO AI Кино Санал Болгогч Цэс
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Та юу үзмээр байгаагаа монголоор бичээд AI туслахаас шууд зөвлөгөө аваарай.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                IOIO AI Кино Санал Болгогч (Анимэ багц 4,000 ₮ • Кино багц 4,000 ₮)
-              </h3>
-              <p className="text-xs text-zinc-400">
-                Та юу үзмээр байгаагаа монголоор бичээд AI туслахаас шууд зөвлөгөө аваарай.
-              </p>
-            </div>
+
+            <button
+              id="open-ai-callout"
+              onClick={() => setActiveTab('ai')}
+              className="bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap"
+            >
+              AI Цэс Рүү Очих
+            </button>
           </div>
+        )}
 
-          <button
-            id="open-ai-callout"
-            onClick={() => setShowAiModal(true)}
-            className="bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap"
-          >
-            AI Санал Авах
-          </button>
-        </div>
-
-        {/* Anime Game Callout Banner (Prominent on home & anime view) */}
-        {activeTab !== 'games' && (
+        {/* Anime Game Callout Banner (Shown on Home view) */}
+        {activeTab === 'home' && (
           <div className="mb-6 bg-gradient-to-r from-purple-950/90 via-zinc-900 to-pink-950/90 border border-purple-500/40 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl shadow-purple-950/30">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
@@ -418,7 +421,7 @@ export default function App() {
                 }}
                 className="bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-400/50"
               >
-                <span>🎭 АНИМЭ ДҮР ТААХ (10)</span>
+                <span>🎭 АНИМЭ ДҮР ТААХ</span>
               </button>
 
               <button
@@ -429,15 +432,27 @@ export default function App() {
                 }}
                 className="bg-zinc-800 hover:bg-zinc-700 text-purple-200 hover:text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-500/40"
               >
-                <span>🎬 АНИМЭ НЭР ТААХ (13)</span>
+                <span>🎬 АНИМЭ НЭР ТААХ</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Main Content / Games View */}
-        {activeTab === 'games' ? (
-          <AnimeGuesser defaultMode={selectedGameMode} />
+        {/* Main Content: AI Assistant & Games View / Catalog */}
+        {activeTab === 'ai' ? (
+          <AiAssistantView
+            movies={SAMPLE_MOVIES}
+            onSelectMovie={(m) => setSelectedMovieForDetails(m)}
+            onPlayMovie={(m) => handlePlayMovie(m)}
+            initialSubTab="ai"
+          />
+        ) : activeTab === 'games' ? (
+          <AiAssistantView
+            movies={SAMPLE_MOVIES}
+            onSelectMovie={(m) => setSelectedMovieForDetails(m)}
+            onPlayMovie={(m) => handlePlayMovie(m)}
+            initialSubTab="game"
+          />
         ) : (
           /* Main Content + Sidebar Layout */
           <div className="flex flex-col lg:flex-row gap-6">

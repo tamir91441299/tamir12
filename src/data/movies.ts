@@ -425,6 +425,30 @@ export const SAMPLE_MOVIES: Movie[] = [
       duration: '24 мин',
       videoUrl: 'https://www.facebook.com/share/v/1CepgQqt9Y/'
     }))
+  },
+  {
+    id: 'm16',
+    title: 'Wanga',
+    titleMongolian: 'Ванга (Wanga)',
+    type: 'movie',
+    poster: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
+    year: 2026,
+    duration: '1 цаг 45 мин',
+    rating: 9.5,
+    genres: ['Action', 'Drama'],
+    description: 'Адал явдалт, хурц сонирхолтой уран сайхны шинэ кино. Монгол дуу оруулгатай.',
+    director: 'IOIO Studio',
+    cast: ['Жинхэнэ жүжигчид'],
+    country: 'Монгол',
+    views: 105000,
+    featured: true,
+    featuredRank: 6,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://youtu.be/rTSBxkG8pbM?si=vn5Kj5h7ywEkbv3P',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга'],
+    subtitles: ['Монгол хадмал']
   }
 ];
 
