@@ -421,7 +421,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     subtitles: ['Монгол хадмал'],
     episodes: [
       { episodeNumber: 1, title: '1-р анги - Сүүлчийн довтлогч (ҮНЭГҮЙ)', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1q2-Q6o5YW8kH1X1MnSzHAoDX_owW8OBV/view?usp=drivesdk' },
-      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
+      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1fDtgUOpjbD8WS-rsvnGGdZZuunH_u8Py/view?usp=drivesdk' },
       { episodeNumber: 3, title: '3-р анги - Бөмбөгний мэдрэмж', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
       { episodeNumber: 4, title: '4-р анги - Зөн билэг ба хүч', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
       { episodeNumber: 5, title: '5-р анги - Дахин төрөлт', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },

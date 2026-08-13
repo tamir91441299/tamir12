@@ -14,7 +14,9 @@ import {
   ListVideo,
   Check,
   Star,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { getEmbedUrl, isEmbeddableUrl } from '../lib/videoUtils';
@@ -187,19 +189,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </div>
           )}
 
-          {videoSrc && (
-            <a
-              href={videoSrc}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-red-600/90 hover:bg-red-600 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-white shadow-md transition-all cursor-pointer"
-              title="Эх сурвалж эсвэл YouTube дээр шууд нээх"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isYouTube ? 'YouTube дээр нээх' : 'Эх сурвалж дээр нээх'}</span>
-              <span className="sm:hidden">Нээх</span>
-            </a>
-          )}
+          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-1 rounded-lg select-none">
+            <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="font-bold">Линк нууцлагдсан (Хамгаалагдсан)</span>
+          </div>
 
           {episodes.length > 0 && (
             <button
@@ -224,14 +217,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       </div>
 
       {/* Main Video & Episodes Layout */}
-      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black select-none">
         <div
           ref={playerContainerRef}
-          className="relative w-full h-full flex items-center justify-center group"
+          onContextMenu={(e) => e.preventDefault()}
+          onCopy={(e) => e.preventDefault()}
+          onCut={(e) => e.preventDefault()}
+          className="relative w-full h-full flex items-center justify-center group select-none"
         >
           {/* Video or Embedded Player */}
           {isEmbed ? (
-            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex flex-col items-center justify-center relative">
+            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex flex-col items-center justify-center relative select-none">
               <iframe
                 src={iframeUrl}
                 className="w-full h-full aspect-video rounded-2xl border border-zinc-800 shadow-2xl bg-black"
@@ -240,27 +236,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 allowFullScreen
                 title={movie.titleMongolian}
               />
-              {isYouTube && (
-                <div className="w-full mt-2 text-center text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2">
-                  <span className="truncate">
-                    💡 Хэрэв бичлэг тоглогдохгүй хаагдсан бол эзэмшигч нь бусад сайт дээр гаргахыг хязгаарласан байдаг.
-                  </span>
-                  <a
-                    href={videoSrc}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-red-400 hover:text-red-300 font-bold shrink-0 underline flex items-center gap-1 ml-2"
-                  >
-                    YouTube дээр үзэх <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
+              <div className="w-full mt-2 text-center text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none">
+                <span className="truncate flex items-center gap-1.5 text-zinc-300">
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span>Бичлэгийн эх сурвалжийн линкийг хуулах боломжгүйгээр хамгаалсан.</span>
+                </span>
+                <span className="text-cyan-400 font-bold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
+                  <Lock className="w-3 h-3" />
+                  <span>Хамгаалагдсан тоглуулагч</span>
+                </span>
+              </div>
             </div>
           ) : (
             <video
               ref={videoRef}
               src={videoSrc}
               autoPlay
+              controlsList="nodownload noplaybackrate"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
               onTimeUpdate={handleTimeUpdate}
               onEnded={() => {
                 if (currentEpisodeIndex < episodes.length - 1) {
