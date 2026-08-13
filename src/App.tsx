@@ -637,6 +637,7 @@ export default function App() {
       {/* Modals */}
       <MovieDetailModal
         movie={selectedMovieForDetails}
+        currentUser={currentUser}
         onClose={() => setSelectedMovieForDetails(null)}
         onPlay={(m, ep) => {
           setSelectedMovieForDetails(null);

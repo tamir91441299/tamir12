@@ -43,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenUserManagement,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
   const searchResults = searchQuery.trim()
     ? movies.filter(
@@ -262,7 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* User Management / Admin Button */}
-          {onOpenUserManagement && (
+          {onOpenUserManagement && isAdmin && (
             <button
               id="user-management-btn"
               onClick={onOpenUserManagement}

@@ -4,6 +4,7 @@ import {
   Users,
   Search,
   ShieldCheck,
+  ShieldAlert,
   UserCheck,
   UserX,
   CreditCard,
@@ -433,6 +434,30 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         );
     }
   };
+
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+
+  if (!isAdmin) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="relative w-full max-w-md bg-[#16161a] rounded-2xl border border-red-500/40 p-6 text-center space-y-4 shadow-2xl text-zinc-100">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-black text-white">⛔ Хандах Эрх Хязгаарлагдсан!</h2>
+          <p className="text-xs text-zinc-300 leading-relaxed">
+            Видео болон киноны холбоос оруулах, засах болон системийн удирдлагад хандах эрх зөвхөн сайтын эзэмшигч <b>Тамир админд (<span className="text-cyan-400">tamir91441299@gmail.com</span>)</b> олгогдсон. Бусад хэрэглэгч энд видео холбоос оруулах боломжгүй.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
+          >
+            Хаах
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">

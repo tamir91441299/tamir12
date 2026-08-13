@@ -16,11 +16,14 @@ import {
   Plus,
   PlusCircle,
   Video,
-  Edit2
+  Edit2,
+  Lock,
+  ShieldAlert
 } from 'lucide-react';
 import { Movie, Comment } from '../types';
 import { SAMPLE_COMMENTS } from '../data/movies';
 import { getEmbedUrl } from '../lib/videoUtils';
+import { UserAccount } from './AuthModal';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -30,6 +33,7 @@ interface MovieDetailModalProps {
   isFavorite: boolean;
   isPurchased?: boolean;
   onUpdateEpisodes?: (movieId: string, episodes: any[]) => void;
+  currentUser?: UserAccount | null;
 }
 
 export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
@@ -40,8 +44,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   isFavorite,
   isPurchased = false,
   onUpdateEpisodes,
+  currentUser,
 }) => {
   if (!movie) return null;
+
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
   const [comments, setComments] = useState<Comment[]>(
     SAMPLE_COMMENTS.filter((c) => c.movieId === movie.id || c.movieId === 'm1')
@@ -68,6 +75,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   const handleSaveNewEpisode = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert('⚠️ Хориглогдсон: Видео болон ангийн линк оруулах эрх зөвхөн сайтын эзэмшигч Тамир админд бий!');
+      return;
+    }
     if (!newEpUrl.trim()) return;
 
     const title = newEpTitle.trim() || `${newEpNum}-р анги`;
@@ -94,10 +105,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     e.preventDefault();
     if (!newCommentText.trim()) return;
 
+    // Check if non-admin tries to post a URL/link in comments
+    const containsUrl = /(https?:\/\/|www\.|youtu\.be|drive\.google\.com|\.mp4|\.m3u8)/i.test(newCommentText);
+    if (containsUrl && !isAdmin) {
+      alert('⚠️ Хориглогдсон: Сэтгэгдэл дээр видео болон вэб холбоос оруулахыг хориглосон! Видео болон ангийн линк оруулах эрх зөвхөн сайтын эзэмшигч Тамир админд бий.');
+      return;
+    }
+
     const newComment: Comment = {
       id: `c-${Date.now()}`,
       movieId: movie.id,
-      userName: 'Та',
+      userName: currentUser ? currentUser.name : 'Хэрэглэгч',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
       text: newCommentText.trim(),
       rating: userRating || 10,
@@ -312,13 +330,20 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <Video className="w-4 h-4 text-cyan-400" />
                     Ангиудын жагсаалт ({episodesList.length})
                   </h3>
-                  <button
-                    onClick={() => setShowAddEpForm(!showAddEpForm)}
-                    className="flex items-center gap-1 text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
-                    {showAddEpForm ? 'Хаах' : 'Анги оруулах'}
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      onClick={() => setShowAddEpForm(!showAddEpForm)}
+                      className="flex items-center gap-1 text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 text-cyan-400" />
+                      {showAddEpForm ? 'Хаах' : 'Анги оруулах'}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg select-none">
+                      <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Видео холбоос оруулах эрх хамгаалагдсан</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Episode Adder Form */}

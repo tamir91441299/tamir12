@@ -130,65 +130,68 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* If user is already logged in -> Profile details View */}
-        {currentUser ? (
-          <div className="p-6 space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-black font-black text-2xl flex items-center justify-center shadow-lg uppercase">
-                {currentUser.name.charAt(0)}
+        {currentUser ? (() => {
+          const isAdmin = currentUser.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+          return (
+            <div className="p-6 space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-black font-black text-2xl flex items-center justify-center shadow-lg uppercase">
+                  {currentUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white flex items-center gap-1.5">
+                    {currentUser.name}
+                    <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                  </h3>
+                  <p className="text-xs text-zinc-400">{currentUser.email}</p>
+                  <span className="inline-block mt-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded">
+                    {isAdmin ? 'Админ Систем Удирдагч' : 'Баталгаажсан Хэрэглэгч'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg text-white flex items-center gap-1.5">
-                  {currentUser.name}
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                </h3>
-                <p className="text-xs text-zinc-400">{currentUser.email}</p>
-                <span className="inline-block mt-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded">
-                  Баталгаажсан Хэрэглэгч
-                </span>
-              </div>
-            </div>
 
-            <div className="space-y-2 text-xs text-zinc-300 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <span className="text-zinc-400">Утасны дугаар:</span>
-                <span className="font-bold text-white">{currentUser.phone}</span>
+              <div className="space-y-2 text-xs text-zinc-300 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                  <span className="text-zinc-400">Утасны дугаар:</span>
+                  <span className="font-bold text-white">{currentUser.phone}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                  <span className="text-zinc-400">Бүртгүүлсэн огноо:</span>
+                  <span className="font-bold text-white">{currentUser.registeredAt}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-zinc-400">Бүртгэлийн төлөв:</span>
+                  <span className="font-bold text-emerald-400">Идэвхтэй ✓</span>
+                </div>
               </div>
-              <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                <span className="text-zinc-400">Бүртгүүлсэн огноо:</span>
-                <span className="font-bold text-white">{currentUser.registeredAt}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-zinc-400">Бүртгэлийн төлөв:</span>
-                <span className="font-bold text-emerald-400">Идэвхтэй ✓</span>
-              </div>
-            </div>
 
-            {onOpenUserManagement && (
+              {onOpenUserManagement && isAdmin && (
+                <button
+                  id="open-user-management-from-auth-modal"
+                  onClick={() => {
+                    onClose();
+                    onOpenUserManagement();
+                  }}
+                  className="w-full bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Users className="w-4 h-4 text-cyan-400" />
+                  <span>Системийн Удирдлага (Админ)</span>
+                </button>
+              )}
+
               <button
-                id="open-user-management-from-auth-modal"
+                id="logout-btn"
                 onClick={() => {
+                  onLogout();
                   onClose();
-                  onOpenUserManagement();
                 }}
-                className="w-full bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer"
               >
-                <Users className="w-4 h-4 text-cyan-400" />
-                <span>Нийт Хэрэглэгчдийн Мэдээлэл Харах</span>
+                Системээс Гарах
               </button>
-            )}
-
-            <button
-              id="logout-btn"
-              onClick={() => {
-                onLogout();
-                onClose();
-              }}
-              className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer"
-            >
-              Системээс Гарах
-            </button>
-          </div>
-        ) : (
+            </div>
+          );
+        })() : (
           /* Login or Register Form */
           <div className="p-5 space-y-4">
             {/* Mode Tabs */}
