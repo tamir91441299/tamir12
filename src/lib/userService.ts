@@ -6,11 +6,69 @@ import {
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserDetail, INITIAL_USERS } from '../components/UserManagementModal';
 import { UserAccount } from '../components/AuthModal';
+
+export interface AppNotification {
+  id: string;
+  type: 'NEW_USER' | 'TOP_UP_REQUEST' | 'PACKAGE_PURCHASE';
+  title: string;
+  message: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  createdAt: string;
+}
+
+/**
+ * Send notification to Firestore "notifications" collection
+ */
+export async function sendAdminNotification(notif: Omit<AppNotification, 'id' | 'createdAt'>) {
+  try {
+    const notifId = 'notif_' + Date.now();
+    const docRef = doc(db, 'notifications', notifId);
+    const payload: AppNotification = {
+      ...notif,
+      id: notifId,
+      createdAt: new Date().toLocaleString('mn-MN'),
+    };
+    await setDoc(docRef, payload);
+  } catch (err) {
+    console.error('Error sending admin notification:', err);
+  }
+}
+
+/**
+ * Subscribe to real-time notifications from Firestore
+ */
+export function subscribeNotificationsFromFirestore(callback: (notifications: AppNotification[]) => void) {
+  try {
+    const notifCol = collection(db, 'notifications');
+    const q = query(notifCol, limit(50));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const notifs: AppNotification[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as AppNotification;
+          if (data) notifs.push(data);
+        });
+        // Sort newest first
+        notifs.sort((a, b) => (b.id > a.id ? 1 : -1));
+        callback(notifs);
+      },
+      (err) => {
+        console.error('Error subscribing to notifications:', err);
+      }
+    );
+  } catch (err) {
+    console.error('Notification subscription failed:', err);
+    return () => {};
+  }
+}
 
 /**
  * Save or update user in Firestore "users" collection
@@ -45,12 +103,25 @@ export async function saveUserToFirestore(
       const savedListStr = localStorage.getItem('ioio_registered_users_list');
       let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
       const idx = list.findIndex((u) => u.id === rawId || (u.email && userPayload.email && u.email === userPayload.email));
+      const isNew = idx < 0;
       if (idx >= 0) {
         list[idx] = { ...list[idx], ...userPayload };
       } else {
         list = [userPayload, ...list];
       }
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
+
+      // Send real-time notification to Firebase if new user
+      if (isNew) {
+        sendAdminNotification({
+          type: 'NEW_USER',
+          title: '🎉 Шинэ хэрэглэгч бүртгэгдлээ',
+          message: `${userPayload.name} (${userPayload.email || userPayload.phone}) системд шинээр бүртгэгдлээ.`,
+          userName: userPayload.name,
+          userEmail: userPayload.email,
+          userPhone: userPayload.phone,
+        });
+      }
     } catch (e) {
       console.error('Error updating local registered users list:', e);
     }

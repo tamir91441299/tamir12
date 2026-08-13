@@ -4,8 +4,8 @@ import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 
 interface NavbarProps {
-  activeTab: 'home' | 'movies' | 'series' | 'anime' | 'ai' | 'favorites' | 'purchased' | 'games';
-  setActiveTab: (tab: 'home' | 'movies' | 'series' | 'anime' | 'ai' | 'favorites' | 'purchased' | 'games') => void;
+  activeTab: 'home' | 'movies' | 'series' | 'anime' | 'chinese' | 'ai' | 'favorites' | 'purchased' | 'games';
+  setActiveTab: (tab: 'home' | 'movies' | 'series' | 'anime' | 'chinese' | 'ai' | 'favorites' | 'purchased' | 'games') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   movies: Movie[];
@@ -142,6 +142,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-4 h-4 text-rose-400" />
               АНИМЭ
+            </button>
+            <button
+              id="nav-chinese"
+              onClick={() => setActiveTab('chinese')}
+              className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'chinese'
+                  ? 'bg-zinc-800 text-amber-400 font-bold border-b-2 border-amber-400'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+              }`}
+            >
+              <Clapperboard className="w-4 h-4 text-amber-400" />
+              ХЯТАД КИНО
             </button>
             <button
               id="nav-purchased"
@@ -411,6 +423,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Sparkles className="w-4 h-4 text-rose-400" />
           Анимэ
+        </button>
+        <button
+          id="mobile-nav-chinese"
+          onClick={() => setActiveTab('chinese')}
+          className={`flex flex-col items-center gap-1 ${
+            activeTab === 'chinese' ? 'text-amber-400 font-bold' : 'text-zinc-400'
+          }`}
+        >
+          <Clapperboard className="w-4 h-4 text-amber-400" />
+          Хятад
         </button>
         <button
           id="mobile-nav-ai"

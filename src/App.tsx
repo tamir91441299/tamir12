@@ -16,11 +16,15 @@ import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
 import { SAMPLE_MOVIES } from './data/movies';
 import { Movie } from './types';
-import { saveUserToFirestore } from './lib/userService';
-import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2 } from 'lucide-react';
+import {
+  saveUserToFirestore,
+  subscribeNotificationsFromFirestore,
+  AppNotification
+} from './lib/userService';
+import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'movies' | 'series' | 'anime' | 'ai' | 'favorites' | 'purchased' | 'games'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'movies' | 'series' | 'anime' | 'chinese' | 'ai' | 'favorites' | 'purchased' | 'games'>('home');
   const [selectedGameMode, setSelectedGameMode] = useState<'character' | 'title'>('character');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -132,7 +136,11 @@ export default function App() {
   const [userBalance, setUserBalance] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ioio_balance');
-      return saved ? parseInt(saved, 10) : 0; // 0 points default
+      if (!saved || saved === '5000') {
+        localStorage.setItem('ioio_balance', '0');
+        return 0;
+      }
+      return parseInt(saved, 10) || 0;
     } catch {
       return 0;
     }
@@ -186,6 +194,22 @@ export default function App() {
     }
   }, [userBalance]);
 
+  const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
+  const [showNotifToast, setShowNotifToast] = useState(false);
+
+  // Real-time listener for notifications (New user registration alerts)
+  useEffect(() => {
+    const unsubscribe = subscribeNotificationsFromFirestore((notifs) => {
+      if (notifs.length > 0) {
+        const topNotif = notifs[0];
+        setLatestNotification(topNotif);
+        setShowNotifToast(true);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Track visitor / user session
   useEffect(() => {
     try {
       if (currentUser) {
@@ -193,6 +217,26 @@ export default function App() {
         saveUserToFirestore(currentUser);
       } else {
         localStorage.removeItem('ioio_user');
+        // If guest visitor on site, ensure they are registered into Firestore so Admin sees all visitors in real-time
+        const savedGuest = localStorage.getItem('ioio_guest_session');
+        if (!savedGuest) {
+          const guestId = 'visitor_' + Date.now();
+          const guestUser: UserAccount = {
+            id: guestId,
+            name: 'Шинэ Зочин ' + Math.floor(1000 + Math.random() * 9000),
+            email: `visitor_${guestId}@ioio.mn`,
+            phone: '99' + Math.floor(100000 + Math.random() * 900000),
+            registeredAt: new Date().toLocaleDateString('mn-MN'),
+          };
+          localStorage.setItem('ioio_guest_session', JSON.stringify(guestUser));
+          saveUserToFirestore(guestUser, {
+            role: 'user',
+            status: 'active',
+            packageType: 'free',
+            walletBalance: 0,
+            lastLogin: 'Шинээр зочилж байна',
+          });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -238,6 +282,7 @@ export default function App() {
       if (activeTab === 'movies' && movie.type !== 'movie') return false;
       if (activeTab === 'series' && movie.type !== 'series') return false;
       if (activeTab === 'anime' && movie.type !== 'anime') return false;
+      if (activeTab === 'chinese' && movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
       if (activeTab === 'favorites' && !favorites.includes(movie.id)) return false;
       if (activeTab === 'purchased' && !purchasedMovies.includes(movie.id)) return false;
 
@@ -289,6 +334,10 @@ export default function App() {
 
   const mongolianMovies = useMemo(() => {
     return filteredMovies.filter((m) => m.country === 'Монгол');
+  }, [filteredMovies]);
+
+  const chineseMovies = useMemo(() => {
+    return filteredMovies.filter((m) => m.country === 'Хятад' || m.genres.includes('Хятад') || m.genres.includes('Хятад кино'));
   }, [filteredMovies]);
 
   const popularMovies = useMemo(() => {
@@ -530,6 +579,8 @@ export default function App() {
                     ? 'ОЛОН АНГИТ ЦУВРАЛУУД'
                     : activeTab === 'anime'
                     ? 'АНИМЭ КИНО & ЦУВРАЛУУД'
+                    : activeTab === 'chinese'
+                    ? 'ХЯТАД КИНО & ЦУВРАЛУУД'
                     : activeTab === 'favorites'
                     ? 'ХАДГАЛСАН КИНОНУУД'
                     : activeTab === 'purchased'
@@ -559,6 +610,20 @@ export default function App() {
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
                     onSeeAll={() => setActiveTab('series')}
+                  />
+                )}
+
+                {/* 2. Chinese Movies Section (ХЯТАД КИНО & ЦУВРАЛ) */}
+                {chineseMovies.length > 0 && (
+                  <MovieGrid
+                    title="ХЯТАД КИНО & ЦУВРАЛ"
+                    movies={chineseMovies}
+                    onPlayMovie={(m) => handlePlayMovie(m)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onToggleFavorite={toggleFavorite}
+                    isFavorite={isFavorite}
+                    isPurchased={isPurchased}
+                    onSeeAll={() => setActiveTab('chinese')}
                   />
                 )}
 
@@ -655,7 +720,13 @@ export default function App() {
         <VideoPlayerModal
           movie={selectedMovieForPlayer}
           initialEpisodeNumber={playerInitialEpisode}
+          isPurchased={isPurchased(selectedMovieForPlayer.id)}
           onClose={() => setSelectedMovieForPlayer(null)}
+          onRequestPurchase={(m) => {
+            setSelectedMovieForPlayer(null);
+            setPaymentMovie(m);
+            setShowPaymentModal(true);
+          }}
         />
       )}
 
@@ -718,6 +789,42 @@ export default function App() {
           movies={moviesList}
           onUpdateMovieEpisodes={handleUpdateMovieEpisodes}
         />
+      )}
+
+      {/* Real-time Notification Toast Alert */}
+      {showNotifToast && latestNotification && (
+        <div className="fixed top-20 right-4 z-50 max-w-sm bg-zinc-900 border-2 border-amber-500/80 text-white p-4 rounded-2xl shadow-2xl animate-in slide-in-from-top-5 duration-300 flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
+            <Bell className="w-5 h-5 animate-bounce" />
+          </div>
+          <div className="space-y-1 flex-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-extrabold text-xs text-amber-400">
+                {latestNotification.title}
+              </h4>
+              <button
+                onClick={() => setShowNotifToast(false)}
+                className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+              {latestNotification.message}
+            </p>
+            <div className="pt-2 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowNotifToast(false);
+                  setShowUserManagementModal(true);
+                }}
+                className="text-[11px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md"
+              >
+                Удирдах & Хэрэглэгч Харах
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Footer */}

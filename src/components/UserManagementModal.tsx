@@ -25,12 +25,20 @@ import {
   Film,
   Play,
   Save,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Bell,
+  Clock,
+  UserPlus
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { Movie } from '../types';
 import { SAMPLE_MOVIES } from '../data/movies';
-import { subscribeUsersFromFirestore, saveUserToFirestore } from '../lib/userService';
+import {
+  subscribeUsersFromFirestore,
+  saveUserToFirestore,
+  subscribeNotificationsFromFirestore,
+  AppNotification
+} from '../lib/userService';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -174,7 +182,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   // Edit balance state modal
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [topupAmountInput, setTopupAmountInput] = useState<number>(5000);
+  const [topupAmountInput, setTopupAmountInput] = useState<number>(1000);
 
   // New User Form State
   const [showAddUserModal, setShowAddUserModal] = useState<boolean>(false);
@@ -182,12 +190,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     name: '',
     email: '',
     phone: '',
-    packageType: 'full_vip' as 'full_vip' | 'movie' | 'anime' | 'free',
-    walletBalance: 10000,
+    packageType: 'free' as 'full_vip' | 'movie' | 'anime' | 'free',
+    walletBalance: 0,
   });
 
-  // Admin Mode Tabs: 'users' | 'episodes'
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes'>('users');
+  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications'
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications'>('users');
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('m15'); // Blue Lock S1 default
   const [epNumInput, setEpNumInput] = useState<number>(1);
   const [epTitleInput, setEpTitleInput] = useState<string>('');
@@ -228,10 +237,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   React.useEffect(() => {
-    const unsubscribe = subscribeUsersFromFirestore((list) => {
+    const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(list);
     });
-    return () => unsubscribe();
+    const unsubscribeNotifs = subscribeNotificationsFromFirestore((notifs) => {
+      setNotifications(notifs);
+    });
+    return () => {
+      unsubscribeUsers();
+      unsubscribeNotifs();
+    };
   }, []);
 
   const saveUsersState = (updatedUsers: UserDetail[]) => {
@@ -535,6 +550,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             <Video className="w-4 h-4 text-amber-400" />
             <span>Анимэ & Анги Удирдах ({allMoviesList.filter(m => m.episodes && m.episodes.length > 0).length} контент)</span>
           </button>
+
+          <button
+            onClick={() => setActiveAdminTab('notifications')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 ${
+              activeAdminTab === 'notifications'
+                ? 'bg-zinc-800 text-amber-400 border-amber-400 shadow'
+                : 'text-zinc-400 hover:text-white border-transparent hover:bg-zinc-800/50'
+            }`}
+          >
+            <Bell className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span>Firebase Мэдэгдэл</span>
+            {notifications.length > 0 && (
+              <span className="bg-amber-500 text-black px-1.5 py-0.2 rounded-full text-[10px] font-black">
+                {notifications.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {activeAdminTab === 'users' ? (
@@ -767,7 +799,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </button>
         </div>
           </>
-        ) : (
+        ) : activeAdminTab === 'episodes' ? (
           /* Episode & Content Management Tab View */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -946,7 +978,76 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               )}
             </div>
           </div>
-        )}
+        ) : activeAdminTab === 'notifications' ? (
+          <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between bg-zinc-900 border border-amber-500/30 p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                  <Bell className="w-6 h-6 animate-bounce" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">
+                    Firebase Бодит Цагийн Мэдэгдлүүд
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Шинэ хэрэглэгч бүртгүүлэх эсвэл хүсэлт явуулах бүрд Firestore сангаас шууд мэдэгдэл ирнэ.
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs bg-amber-500 text-black font-black px-3 py-1 rounded-full">
+                Нийт {notifications.length} мэдэгдэл
+              </span>
+            </div>
+
+            {notifications.length === 0 ? (
+              <div className="text-center py-12 bg-zinc-900/50 rounded-2xl border border-zinc-800 space-y-2">
+                <Bell className="w-10 h-10 text-zinc-600 mx-auto" />
+                <p className="text-sm text-zinc-400 font-semibold">Одоогоор шинэ мэдэгдэл байхгүй байна.</p>
+                <p className="text-xs text-zinc-500">Шинэ хэрэглэгч бүртгэгдвэл энд автоматаар гарч ирнэ.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {notifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    className="p-4 rounded-xl bg-zinc-900 border border-amber-500/30 hover:border-amber-500/60 transition-all flex items-start justify-between gap-4 shadow-lg"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+                        <UserPlus className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-extrabold text-sm text-white">
+                            {notif.title}
+                          </h4>
+                          <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded font-mono">
+                            {notif.type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                          {notif.message}
+                        </p>
+                        <div className="flex items-center gap-4 text-[11px] text-zinc-400 pt-1">
+                          {notif.userName && <span>👤 {notif.userName}</span>}
+                          {notif.userEmail && <span>📧 {notif.userEmail}</span>}
+                          {notif.userPhone && <span>📞 {notif.userPhone}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 space-y-1">
+                      <div className="text-[11px] text-amber-400/90 font-mono flex items-center justify-end gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{notif.createdAt}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Topup Sub-Modal */}

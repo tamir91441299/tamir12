@@ -503,10 +503,121 @@ export const SAMPLE_MOVIES: Movie[] = [
       duration: '24 мин',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4'
     }))
+  },
+  {
+    id: 'm18',
+    title: 'The Untamed (Chen Qing Ling)',
+    titleMongolian: 'Маргашгүй Хайр - Чэн Чин Лин 2026',
+    type: 'series',
+    poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80',
+    year: 2026,
+    duration: '50 анги',
+    rating: 9.8,
+    genres: ['Хятад кино', 'Action', 'Fantasy', 'Drama'],
+    description: 'Эртний Хятадын тулааны урлаг, сийлбэрт шид болон шидэт хараалын нууцуудыг харуулсан дэлхий дахинд алдартай Хятад түүхэн уран сайхны олон ангит цуврал. Монгол дуу оруулгатай.',
+    director: 'Чэн Кайгажи',
+    cast: ['Шиао Жан', 'Ванг Ибо'],
+    country: 'Хятад',
+    isNewEpisode: true,
+    newEpisodeLabel: '40-р анги гарлаа',
+    totalEpisodes: 50,
+    views: 890000,
+    featured: true,
+    featuredRank: 8,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга', 'Хятад эх хэлээр'],
+    subtitles: ['Монгол хадмал'],
+    episodes: Array.from({ length: 40 }, (_, i) => ({
+      episodeNumber: i + 1,
+      title: `${i + 1}-р анги - Шидэт Сэлэмний Нууц`,
+      duration: '45 мин',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+    }))
+  },
+  {
+    id: 'm19',
+    title: 'Creation of the Gods I: Kingdom of Storms',
+    titleMongolian: 'Бурхдын Төрөлт 1: Догшин Шуурга',
+    type: 'movie',
+    poster: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
+    year: 2025,
+    duration: '2 цаг 28 мин',
+    rating: 9.4,
+    genres: ['Хятад кино', 'Action', 'Fantasy', 'Adventure'],
+    description: 'Эртний Хятадын хаант улсын сүйрэл ба бурхад, чөтгөрүүдийн хоорондох домогт агуу их тулааныг харуулсан өндөр зардлаар бүтээн байгуулсан уран сайхны блокбастер кино.',
+    director: 'Ву Эршань',
+    cast: ['Крис Филлипс', 'Ли Шюэжиан', 'Анар'],
+    country: 'Хятад',
+    views: 540000,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга', 'Хятад эх хэлээр'],
+    subtitles: ['Монгол хадмал']
+  },
+  {
+    id: 'm20',
+    title: 'Word of Honor (Shan He Ling)',
+    titleMongolian: 'Шанхай Хайр ба Сэлэм - Шан Хэ Лин',
+    type: 'series',
+    poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1200&q=80',
+    year: 2025,
+    duration: '36 анги',
+    rating: 9.6,
+    genres: ['Хятад кино', 'Action', 'Romance', 'Drama'],
+    description: 'Нууц байгууллагын тэргүүн асан болон аюулт тулааны мастер залуу хоёр хамтран эрдэнэсийн түлхүүрийг хайх явцдаа өрнүүлэх Wuxia төрлийн Хятад кино. Монгол дуу оруулгатай.',
+    director: 'Чэн Жоу',
+    cast: ['Жан Жэхань', 'Гун Жун'],
+    country: 'Хятад',
+    isNewEpisode: true,
+    newEpisodeLabel: '36-р анги дууссан',
+    totalEpisodes: 36,
+    views: 410000,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга'],
+    subtitles: ['Монгол хадмал'],
+    episodes: Array.from({ length: 36 }, (_, i) => ({
+      episodeNumber: i + 1,
+      title: `${i + 1}-р анги - Сэлэмний Төгсгөл`,
+      duration: '42 мин',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+    }))
+  },
+  {
+    id: 'm21',
+    title: 'Avenger (Revenge)',
+    titleMongolian: 'ӨШӨӨ АВАЛТ',
+    type: 'movie',
+    poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+    backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80',
+    year: 2026,
+    duration: '1 цаг 45 мин',
+    rating: 9.7,
+    genres: ['Хятад кино', 'Action', 'Drama', 'Thriller'],
+    description: 'Хятадын адал явдалт, тулаант уран сайхны "ӨШӨӨ АВАЛТ" кино. Монгол дуу оруулгатай.',
+    director: 'Хятад Найруулагч',
+    cast: ['Жан Вэй', 'Ли На'],
+    country: 'Хятад',
+    views: 125000,
+    featured: true,
+    featuredRank: 9,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://drive.google.com/file/d/1UUTxvlRcfAN-lcFdvcdovYf3QoLJVr6E/view?usp=drivesdk',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга', 'Хятад эх хэлээр'],
+    subtitles: ['Монгол хадмал']
   }
 ];
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
+  { name: 'Хятад кино', count: 185 },
   { name: '+18', count: 16 },
   { name: 'Action', count: 502 },
   { name: 'Action & Adventure', count: 99 },
@@ -567,3 +678,17 @@ export const SAMPLE_COMMENTS: Comment[] = [
     likes: 42   
   }        
 ];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
