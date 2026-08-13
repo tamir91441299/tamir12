@@ -13,15 +13,15 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
   searchQuery,
 }) => {
   useEffect(() => {
-    let pageTitle = 'IOIO TV - Монгол хадмал, дуу оруулгатай онлайн кино театр';
+    let pageTitle = 'FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино театр';
     let metaDescription =
-      'IOIO TV - Монгол хадмал болон орчуулгатай сүүлийн үеийн уран сайхны кино, олон ангит цуврал, анимэ, Солонгос драмуудыг өндөр чанартайгаар шууд үзэх онлайн платформ.';
+      'FlickNime - Монгол хадмал болон орчуулгатай сүүлийн үеийн уран сайхны кино, олон ангит цуврал, анимэ, Солонгос драмуудыг өндөр чанартайгаар шууд үзэх онлайн платформ.';
     let ogImage =
       'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=80';
     let jsonLdData: any = null;
 
     if (selectedMovie) {
-      pageTitle = `${selectedMovie.titleMongolian} (${selectedMovie.title}) Үзэх | IOIO TV`;
+      pageTitle = `${selectedMovie.titleMongolian} (${selectedMovie.title}) Үзэх | FlickNime`;
       metaDescription = `${selectedMovie.titleMongolian} (${selectedMovie.year}) - ${selectedMovie.description.slice(0, 150)}... Монгол хадмал, дуу оруулгатай HD чанараар үзэх.`;
       ogImage = selectedMovie.backdrop || selectedMovie.poster;
 
@@ -52,19 +52,19 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
         },
       };
     } else if (searchQuery && searchQuery.trim()) {
-      pageTitle = `"${searchQuery}" Хайлтын үр дүн | IOIO TV`;
-      metaDescription = `IOIO TV дээр "${searchQuery}" түлхүүр үгээр кино, цуврал, анимэ хайх.`;
+      pageTitle = `"${searchQuery}" Хайлтын үр дүн | FlickNime`;
+      metaDescription = `FlickNime дээр "${searchQuery}" түлхүүр үгээр кино, цуврал, анимэ хайх.`;
     } else if (activeTab === 'movies') {
-      pageTitle = 'Бүх Уран Сайхны Кинонууд | IOIO TV';
+      pageTitle = 'Бүх Уран Сайхны Кинонууд | FlickNime';
       metaDescription = 'Сүүлийн үеийн Холливуд, Солонгос болон Монгол уран сайхны кинонуудыг монгол дуу оруулгатайгаар үзээрэй.';
     } else if (activeTab === 'series') {
-      pageTitle = 'Олон Ангит Цуврал Кинонууд | IOIO TV';
+      pageTitle = 'Олон Ангит Цуврал Кинонууд | FlickNime';
       metaDescription = 'Солонгос драм, АНУ болон Дэлхийн шилдэг олон ангит цуврал кинонуудыг шинэ анги бүрээр нь шууд үзэх.';
     } else if (activeTab === 'anime') {
-      pageTitle = 'Анимэ Кино & Цувралууд Монгол Орчуулгатай | IOIO TV';
+      pageTitle = 'Анимэ Кино & Цувралууд Монгол Орчуулгатай | FlickNime';
       metaDescription = 'Шилдэг Япон анимэ цуврал ба бүрэн хэмжээний анимэ кинонуудыг монгол хадмал, дуу оруулгатайгаар үзээрэй.';
     } else if (activeTab === 'games') {
-      pageTitle = 'Анимэ Нэр Таах Тоглоом | IOIO TV Games';
+      pageTitle = 'Анимэ Нэр Таах Тоглоом | FlickNime Games';
       metaDescription = 'Анимэ сонирхогчдод зориулсан хөгжилтэй Анимэ Нэр Таах викторина тоглоом.';
     }
 

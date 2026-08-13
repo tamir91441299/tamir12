@@ -20,7 +20,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
   const [promptText, setPromptText] = useState('');
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(
-    'Сайн байна уу! Би IOIO TV-ийн AI Кино ба Анимэ туслах байна. Та өнөөдөр ямар төрлийн кино эсвэл анимэ үзмээр байна вэ? Би таны сэтгэл санаа, сонирхолд тохируулан хамгийн шилдэг бүтээлийг санал болгож чадна.'
+    'Сайн байна уу! Би FlickNime-ийн AI Кино ба Анимэ туслах байна. Та өнөөдөр ямар төрлийн кино эсвэл анимэ үзмээр байна вэ? Би таны сэтгэл санаа, сонирхолд тохируулан хамгийн шилдэг бүтээлийг санал болгож чадна.'
   );
 
   const presetPrompts = [

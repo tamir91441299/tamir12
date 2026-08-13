@@ -59,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Top micro banner */}
       <div className="bg-gradient-to-r from-amber-600/20 via-red-600/20 to-purple-600/20 border-b border-zinc-800 text-xs py-1 px-4 text-center text-zinc-300 flex justify-between items-center">
         <span className="hidden sm:inline-block text-zinc-400">
-          🎬 IOIO TV — Монгол хадмал болон дуу оруулгатай кино сан
+          🎬 FlickNime — Монгол хадмал болон дуу оруулгатай анимэ & кино сан
         </span>
         <div className="flex items-center gap-3 mx-auto sm:mx-0 text-[#f39c12] font-medium">
           <span className="flex items-center gap-1 hidden md:flex">
@@ -84,13 +84,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="logo-button"
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 group cursor-pointer focus:outline-none"
+            className="flex items-center gap-1.5 group cursor-pointer focus:outline-none"
           >
-            <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-2xl tracking-wider px-3.5 py-1 rounded shadow-lg group-hover:scale-105 transition-transform">
-              IOIO
+            <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-2xl tracking-wider px-3 py-1 rounded shadow-lg group-hover:scale-105 transition-transform">
+              Flick
             </div>
-            <span className="font-extrabold text-xl text-cyan-400 tracking-tight hidden md:inline-block">
-              TV
+            <span className="font-extrabold text-2xl text-cyan-400 tracking-tight hidden md:inline-block">
+              Nime
             </span>
           </button>
 

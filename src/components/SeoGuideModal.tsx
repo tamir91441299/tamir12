@@ -47,7 +47,7 @@ export const SeoGuideModal: React.FC<SeoGuideModalProps> = ({ onClose }) => {
               Google SEO Хэрхэн Идэвхжүүлэх Вэ? (Google Search Console & Meta Guide)
             </h2>
             <p className="text-xs text-zinc-400">
-              IOIO TV платформд суурилагдсан Google SEO болон хайлтын системийн тохиргоонууд
+              FlickNime платформд суурилагдсан Google SEO болон хайлтын системийн тохиргоонууд
             </p>
           </div>
         </div>

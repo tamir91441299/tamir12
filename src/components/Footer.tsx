@@ -12,14 +12,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div className="space-y-3 md:col-span-2">
-            <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-xl px-3 py-0.5 rounded">
-                IOIO
+            <div className="flex items-center gap-1.5">
+              <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-xl px-2.5 py-0.5 rounded">
+                Flick
               </div>
-              <span className="font-extrabold text-white text-base text-cyan-400">TV</span>
+              <span className="font-extrabold text-cyan-400 text-xl">Nime</span>
             </div>
             <p className="text-zinc-400 text-xs leading-relaxed max-w-md">
-              IOIO TV нь Монгол хадмал болон дуу оруулгатай кино, олон ангит цувралуудыг өндөр чанартайгаар толилуулах кино платформ юм.
+              FlickNime нь Монгол хадмал болон дуу оруулгатай анимэ, кино, олон ангит цувралуудыг өндөр чанартайгаар толилуулах онлайн платформ юм.
             </p>
 
             {onOpenSeoModal && (
@@ -67,7 +67,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
         </div>
 
         <div className="border-t border-zinc-800/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center text-[11px]">
-          <p>© 2026 IOIO TV. Бүх эрх хуулиар хамгаалагдсан.</p>
+          <p>© 2026 FlickNime. Бүх эрх хуулиар хамгаалагдсан.</p>
           <div className="flex items-center gap-1 text-zinc-400">
             <span>Монгол хэлээр бүтээгдэв</span>
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 inline" />
