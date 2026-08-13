@@ -47,9 +47,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     movie.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
+  const [playerMode, setPlayerMode] = useState<'standard' | 'nocookie'>('standard');
+
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
   const isEmbed = isEmbeddableUrl(videoSrc);
-  const iframeUrl = getEmbedUrl(videoSrc);
+  const iframeUrl = getEmbedUrl(videoSrc, playerMode);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -158,6 +160,33 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {isYouTube && (
+            <div className="hidden sm:flex items-center bg-zinc-900 border border-zinc-700/80 rounded-lg p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setPlayerMode('standard')}
+                className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                  playerMode === 'standard'
+                    ? 'bg-purple-600 text-white font-bold shadow'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Сервер 1
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlayerMode('nocookie')}
+                className={`px-2.5 py-1 rounded-md transition-all font-medium ${
+                  playerMode === 'nocookie'
+                    ? 'bg-purple-600 text-white font-bold shadow'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Сервер 2 (NoCookie)
+              </button>
+            </div>
+          )}
+
           {videoSrc && (
             <a
               href={videoSrc}
@@ -202,14 +231,30 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         >
           {/* Video or Embedded Player */}
           {isEmbed ? (
-            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex items-center justify-center relative">
+            <div className="w-full h-full max-w-6xl p-2 sm:p-4 flex flex-col items-center justify-center relative">
               <iframe
                 src={iframeUrl}
                 className="w-full h-full aspect-video rounded-2xl border border-zinc-800 shadow-2xl bg-black"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
                 title={movie.titleMongolian}
               />
+              {isYouTube && (
+                <div className="w-full mt-2 text-center text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    💡 Хэрэв бичлэг тоглогдохгүй хаагдсан бол эзэмшигч нь бусад сайт дээр гаргахыг хязгаарласан байдаг.
+                  </span>
+                  <a
+                    href={videoSrc}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-red-400 hover:text-red-300 font-bold shrink-0 underline flex items-center gap-1 ml-2"
+                  >
+                    YouTube дээр үзэх <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
             <video

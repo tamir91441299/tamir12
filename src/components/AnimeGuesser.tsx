@@ -716,23 +716,29 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
           )}
 
           {/* 4 MULTIPLE CHOICE OPTIONS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
             {parsedOptions.map((option, idx) => {
+              const optionLetters = ['А', 'Б', 'В', 'Г'];
+              const letter = optionLetters[idx] || String.fromCharCode(65 + idx);
               const cleanAnswer = currentQ?.answer.trim().toLowerCase();
               const cleanOpt = option.trim().toLowerCase();
               const isThisAnswer = cleanOpt === cleanAnswer;
               const isSelected = selectedOption?.trim().toLowerCase() === cleanOpt;
 
               let btnStyle =
-                'bg-zinc-800/90 hover:bg-zinc-700 border-zinc-700 text-zinc-200 hover:border-purple-500/50';
+                'bg-zinc-800/90 hover:bg-zinc-700/90 border-zinc-700/80 text-zinc-100 hover:border-purple-500/60 shadow-md';
+              let badgeStyle = 'bg-zinc-950 border-zinc-700 text-purple-300';
 
               if (gameState === 'answered') {
                 if (isThisAnswer) {
-                  btnStyle = 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-600/30';
+                  btnStyle = 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-600/30 scale-[1.02]';
+                  badgeStyle = 'bg-emerald-800 border-emerald-300 text-white';
                 } else if (isSelected && !isCorrect) {
-                  btnStyle = 'bg-rose-600 border-rose-400 text-white font-bold opacity-80';
+                  btnStyle = 'bg-rose-600 border-rose-400 text-white font-bold opacity-90';
+                  badgeStyle = 'bg-rose-800 border-rose-300 text-white';
                 } else {
-                  btnStyle = 'bg-zinc-900 border-zinc-800 text-zinc-500 opacity-50 cursor-not-allowed';
+                  btnStyle = 'bg-zinc-900 border-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed';
+                  badgeStyle = 'bg-zinc-950 border-zinc-800 text-zinc-600';
                 }
               }
 
@@ -742,11 +748,17 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
                   id={`option-btn-${idx}`}
                   disabled={gameState !== 'playing'}
                   onClick={() => handleSelectOption(option)}
-                  className={`p-4 rounded-2xl border text-sm font-semibold transition-all text-left flex items-center justify-between cursor-pointer ${btnStyle}`}
+                  className={`p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between gap-3 cursor-pointer ${btnStyle}`}
                 >
-                  <span className="truncate pr-2">{option}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`w-8 h-8 rounded-xl border flex items-center justify-center text-xs font-black shrink-0 ${badgeStyle}`}>
+                      {letter}
+                    </span>
+                    <span className="font-bold text-sm tracking-wide text-left truncate">{option}</span>
+                  </div>
+
                   {gameState === 'answered' && isThisAnswer && (
-                    <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 animate-bounce" />
                   )}
                   {gameState === 'answered' && isSelected && !isCorrect && (
                     <XCircle className="w-5 h-5 text-white flex-shrink-0" />

@@ -22,7 +22,7 @@ export function extractGoogleDriveId(url: string): string | null {
   return null;
 }
 
-export function getEmbedUrl(url: string): string {
+export function getEmbedUrl(url: string, playerMode: 'standard' | 'nocookie' = 'standard'): string {
   if (!url) return '';
   const cleanUrl = url.trim();
 
@@ -30,7 +30,8 @@ export function getEmbedUrl(url: string): string {
   if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     const ytId = extractYouTubeId(cleanUrl);
     if (ytId) {
-      return `https://www.youtube.com/embed/${ytId}?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&enablejsapi=1&controls=1`;
+      const domain = playerMode === 'nocookie' ? 'www.youtube-nocookie.com' : 'www.youtube.com';
+      return `https://${domain}/embed/${ytId}?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&enablejsapi=1&controls=1`;
     }
   }
 

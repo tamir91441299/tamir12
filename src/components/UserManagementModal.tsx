@@ -817,14 +817,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1 flex items-center justify-between">
-                  <span>Бичлэгийн линк URL (YouTube Embed / FB / Direct Video MP4):</span>
-                  <span className="text-[10px] text-zinc-400">youtube-nocookie.com болон бусад</span>
+                  <span>Бичлэгийн линк URL (YouTube / Google Drive / Facebook / Direct Video MP4):</span>
+                  <span className="text-[10px] text-cyan-400">Автомат Embed тохируулгатай</span>
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="url"
                     required
-                    placeholder="https://youtu.be/VZPAg8iR8sk эсвэл https://www.facebook.com/..."
+                    placeholder="https://youtu.be/... эсвэл https://drive.google.com/file/d/..."
                     value={epUrlInput}
                     onChange={(e) => setEpUrlInput(e.target.value)}
                     className="flex-1 bg-zinc-950 border border-zinc-800 text-sm font-mono text-cyan-300 p-2.5 rounded-xl focus:outline-none focus:border-cyan-500"
@@ -833,10 +833,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     type="submit"
                     className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-lg"
                   >
-                    <Save className="w-4 h-4" />
+                    <Plus className="w-4 h-4" />
                     <span>Анги Хадгалах</span>
                   </button>
                 </div>
+                <p className="text-[11px] text-zinc-400 mt-2 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800">
+                  💡 <strong>YouTube линк ба блок:</strong> YouTube-ийн зарим бичлэгийг эзэмшигч нь бусад вэбсайт дээр тоглуулахыг (embed) хаасан байдаг. Тийм бичлэгийг үзэгч систем дээрх <strong>"YouTube дээр нээх"</strong> товчоор саадгүй үзнэ. Мөн <strong>Google Drive</strong> (`/preview` эсвэл `/view`), <strong>Facebook</strong>, эсвэл <strong>Direct MP4</strong> линкүүд шууд тоглогдоно.
+                </p>
               </div>
             </form>
 
