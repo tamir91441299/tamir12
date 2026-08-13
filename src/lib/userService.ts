@@ -57,16 +57,57 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       (snapshot) => {
         const fetchedMap = new Map<string, UserDetail>();
 
-        // Preload initial static users
+        // 1. Preload initial demo users
         INITIAL_USERS.forEach((u) => fetchedMap.set(u.id, u));
 
-        // Override/append Firestore users
+        // 2. Preload localStorage registered users list
+        try {
+          const savedList = localStorage.getItem('ioio_registered_users_list');
+          if (savedList) {
+            const parsed: UserDetail[] = JSON.parse(savedList);
+            parsed.forEach((u) => {
+              if (u && u.id) fetchedMap.set(u.id, u);
+            });
+          }
+        } catch (e) {}
+
+        // 3. Preload current user in localStorage
+        try {
+          const savedUser = localStorage.getItem('ioio_user');
+          if (savedUser) {
+            const u = JSON.parse(savedUser);
+            if (u && (u.email || u.id)) {
+              const uId = u.id || u.email.replace(/[^a-zA-Z0-9_-]/g, '_');
+              if (!fetchedMap.has(uId)) {
+                fetchedMap.set(uId, {
+                  id: uId,
+                  name: u.name || 'Хэрэглэгч',
+                  email: u.email || 'user@ioio.mn',
+                  phone: u.phone || '99110000',
+                  registeredAt: u.registeredAt || new Date().toLocaleDateString('mn-MN'),
+                  role: u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+                  status: 'active',
+                  packageType: 'free',
+                  packageExpiry: 'Идэвхгүй',
+                  walletBalance: 5000,
+                  lastLogin: 'Идэвхтэй одоо',
+                  watchedCount: 1,
+                  favoriteCount: 0,
+                });
+              }
+            }
+          }
+        } catch (e) {}
+
+        // 4. Override with real-time Firestore docs
         snapshot.forEach((docSnap) => {
           const d = docSnap.data() as UserDetail;
-          fetchedMap.set(docSnap.id, {
-            ...d,
-            id: docSnap.id,
-          });
+          if (d) {
+            fetchedMap.set(docSnap.id, {
+              ...d,
+              id: docSnap.id,
+            });
+          }
         });
 
         const resultList = Array.from(fetchedMap.values());
@@ -74,7 +115,19 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       },
       (err) => {
         console.error('Error listening to users from Firestore:', err);
-        callback(INITIAL_USERS);
+        // Fallback to local
+        const fetchedMap = new Map<string, UserDetail>();
+        INITIAL_USERS.forEach((u) => fetchedMap.set(u.id, u));
+        try {
+          const savedList = localStorage.getItem('ioio_registered_users_list');
+          if (savedList) {
+            const parsed: UserDetail[] = JSON.parse(savedList);
+            parsed.forEach((u) => {
+              if (u && u.id) fetchedMap.set(u.id, u);
+            });
+          }
+        } catch (e) {}
+        callback(Array.from(fetchedMap.values()));
       }
     );
   } catch (err) {

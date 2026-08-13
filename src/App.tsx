@@ -16,6 +16,7 @@ import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
 import { SAMPLE_MOVIES } from './data/movies';
 import { Movie } from './types';
+import { saveUserToFirestore } from './lib/userService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2 } from 'lucide-react';
 
 export default function App() {
@@ -127,13 +128,13 @@ export default function App() {
     }
   });
 
-  // User Wallet Balance (MNT)
+  // User Wallet Balance (MNT / Points)
   const [userBalance, setUserBalance] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('ioio_balance');
-      return saved ? parseInt(saved, 10) : 5000; // 5,000₮ initial balance
+      return saved ? parseInt(saved, 10) : 0; // 0 points default
     } catch {
-      return 5000;
+      return 0;
     }
   });
 
@@ -189,6 +190,7 @@ export default function App() {
     try {
       if (currentUser) {
         localStorage.setItem('ioio_user', JSON.stringify(currentUser));
+        saveUserToFirestore(currentUser);
       } else {
         localStorage.removeItem('ioio_user');
       }

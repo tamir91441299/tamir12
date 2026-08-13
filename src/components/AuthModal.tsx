@@ -75,7 +75,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         role: newUser.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
         status: 'active',
         packageType: 'free',
-        walletBalance: 5000,
+        walletBalance: 0,
       });
 
       setSuccessMessage('Амжилттай бүртгэгдлээ! Системд нэвтэрч байна...');

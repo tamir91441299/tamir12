@@ -49,10 +49,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const activePrice = getPlanPrice(planType);
 
-  const [paymentMethod, setPaymentMethod] = useState<'qpay' | 'monpay' | 'wallet'>('monpay');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay'>('wallet');
   const [selectedBank, setSelectedBank] = useState<string>('monpay');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [topUpRequestSent, setTopUpRequestSent] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState<number>(5000);
   const [showTopUp, setShowTopUp] = useState(false);
   const [copiedMonpay, setCopiedMonpay] = useState(false);
@@ -78,15 +79,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleConfirmPayment = () => {
     setIsVerifying(true);
 
-    setTimeout(() => {
-      setIsVerifying(false);
-      setIsSuccess(true);
+    if (paymentMethod === 'wallet') {
+      if (userBalance < activePrice) {
+        setIsVerifying(false);
+        alert(`⚠️ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()} оноо байна. Энэ багцыг авахад ${activePrice.toLocaleString()} оноо шаардлагатай. Админаас оноогоо цэнэглүүлнэ үү.`);
+        return;
+      }
 
       setTimeout(() => {
-        const deducted = paymentMethod === 'wallet' ? activePrice : 0;
-        onSubscribePackage(planType, deducted);
+        setIsVerifying(false);
+        setIsSuccess(true);
+
+        setTimeout(() => {
+          onSubscribePackage(planType, activePrice);
+        }, 1200);
+      }, 1000);
+    } else {
+      // MonPay / QPay method: Send topup request to admin instead of instant free activation
+      setTimeout(() => {
+        setIsVerifying(false);
+        setTopUpRequestSent(true);
       }, 1200);
-    }, 1500);
+    }
   };
 
   const handleTopUp = () => {
@@ -476,11 +490,23 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <CheckCircle className="w-4 h-4 text-emerald-400" />
               <span>
                 {planType === 'anime'
-                  ? 'Анимэ Багц (4,000₮) амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
+                  ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
                   : planType === 'movie'
-                  ? 'Кино Багц (4,000₮) амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
-                  : 'VIP Бүтэн Багц (7,000₮) амжилттай идэвхжлээ! Бүх контент нээгдлээ...'}
+                  ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
+                  : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...'}
               </span>
+            </div>
+          ) : topUpRequestSent ? (
+            <div className="bg-cyan-500/20 border border-cyan-500 text-cyan-200 text-xs font-bold p-3 rounded-xl flex items-center justify-between gap-2 animate-in zoom-in-95">
+              <div className="space-y-0.5">
+                <p className="text-white font-extrabold flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>📩 Оноо цэнэглүүлэх хүсэлт Админд хүрэглээ!</span>
+                </p>
+                <p className="text-[11px] text-zinc-300">
+                  Банкаар / MonPay-ээр шилжүүлсэн тул Админ таны акаунтыг шалгаад оноо оруулна. Оноо ормогц эндээс оноогоороо багцаа идэвхжүүлнэ үү.
+                </p>
+              </div>
             </div>
           ) : (
             <button
@@ -494,13 +520,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Төлбөр баталгаажуулж байна...</span>
                 </>
-              ) : (
+              ) : paymentMethod === 'wallet' ? (
                 <span>
                   {planType === 'anime'
-                    ? `АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} ₮)`
+                    ? `ОНООГООР АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} оноо)`
                     : planType === 'movie'
-                    ? `КИНО БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} ₮)`
-                    : `VIP БҮТЭН БАГЦ АВАХ (${activePrice.toLocaleString()} ₮)`}
+                    ? `ОНООГООР КИНО БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} оноо)`
+                    : `ОНООГООР VIP БҮТЭН БАГЦ АВАХ (${activePrice.toLocaleString()} оноо)`}
+                </span>
+              ) : (
+                <span>
+                  📩 АДМИНААС ОНОО ЦЭНЭГЛҮҮЛЭХ ХҮСЭЛТ ИЛГЭЭХ
                 </span>
               )}
             </button>
