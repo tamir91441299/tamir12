@@ -60,7 +60,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
   const [playerMode, setPlayerMode] = useState<'standard' | 'nocookie'>('standard');
-  const [driveServerMode, setDriveServerMode] = useState<'direct' | 'iframe' | 'proxy'>('direct');
+  const [driveServerMode, setDriveServerMode] = useState<'direct' | 'fast' | 'iframe' | 'proxy'>('fast');
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
 
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
@@ -73,8 +73,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     ? `https://docs.google.com/file/d/${googleDriveId}/preview`
     : getEmbedUrl(videoSrc, playerMode);
 
-  const videoSrcToPlay = (isGoogleDrive && driveServerMode === 'direct' && googleDriveId)
-    ? getGoogleDriveDirectStreamUrl(googleDriveId)
+  const videoSrcToPlay = isGoogleDrive
+    ? (driveServerMode === 'direct' && googleDriveId
+        ? getGoogleDriveDirectStreamUrl(googleDriveId)
+        : driveServerMode === 'fast'
+        ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+        : videoSrc)
     : videoSrc;
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -305,6 +309,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => setDriveServerMode('fast')}
+                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                  driveServerMode === 'fast'
+                    ? 'bg-cyan-500 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Аливаа 'Эрх хүсэх' сануулгагүйгээр шууд үзэх сервер"
+              >
+                Сервер 2 (Хурдан)
+              </button>
+              <button
+                type="button"
                 onClick={() => setDriveServerMode('iframe')}
                 className={`px-2.5 py-1 rounded-md transition-all font-bold ${
                   driveServerMode === 'iframe'
@@ -313,19 +329,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 }`}
                 title="Google Drive Frame сервер"
               >
-                Сервер 2 (Frame)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriveServerMode('proxy')}
-                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
-                  driveServerMode === 'proxy'
-                    ? 'bg-cyan-500 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Google Docs Stream сервер"
-              >
-                Сервер 3 (Docs)
+                Сервер 3 (Frame)
               </button>
             </div>
           )}
@@ -427,14 +431,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <div className="w-full mt-1.5 text-center text-xs text-amber-300 bg-amber-950/80 border border-amber-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none animate-in fade-in">
                   <span className="truncate flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>💡 Хэрэв Google Drive 'Эрх хүсэх' сануулбал дээд талын <b>Сервер 1 (Шууд)</b> товчийг дарж Gmail-гүй шууд үзнэ үү.</span>
+                    <span>💡 Хэрэв Google Drive 'Эрх хүсэх' эсвэл Gmail шаардвал дээд талын <b>Сервер 1 (Шууд)</b> эсвэл <b>Сервер 2 (Хурдан)</b> сонгоно уу.</span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => setDriveServerMode('direct')}
+                    onClick={() => setDriveServerMode('fast')}
                     className="text-black font-extrabold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-400 hover:bg-cyan-300 px-2.5 py-0.5 rounded cursor-pointer transition-colors"
                   >
-                    <span>Сервер 1 рүү шилжих</span>
+                    <span>Gmail-гүй Хурдан Сервер</span>
                   </button>
                 </div>
               )}
@@ -451,8 +455,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
                 onError={() => {
-                  console.warn('Direct stream failed, switching to Drive Frame server mode');
-                  if (isGoogleDrive) setDriveServerMode('iframe');
+                  console.warn('Direct stream failed, switching to Fast server mode');
+                  if (driveServerMode === 'direct') {
+                    setDriveServerMode('fast');
+                  } else if (driveServerMode === 'fast') {
+                    setDriveServerMode('iframe');
+                  }
                 }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}

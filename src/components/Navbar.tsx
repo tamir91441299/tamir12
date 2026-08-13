@@ -96,6 +96,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Nav Links */}
           <nav className="hidden md:flex items-center gap-1 text-sm font-semibold tracking-wide">
+            {onOpenUserManagement && (
+              <button
+                id="nav-admin-control"
+                onClick={onOpenUserManagement}
+                className="px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/60 text-amber-300 font-extrabold text-xs shadow-md hover:scale-105 cursor-pointer mr-1 animate-pulse"
+                title="Админ удирдлагын хэсэг - Хэрэглэгчдийн мэдээлэл харах"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>УДИРДАХ ХЭСЭГ</span>
+              </button>
+            )}
             <button
               id="nav-home"
               onClick={() => setActiveTab('home')}
@@ -179,18 +190,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles className="w-4 h-4 text-amber-400" />
               AI САНАЛ БОЛГОГЧ
             </button>
-
-            {onOpenUserManagement && (
-              <button
-                id="nav-admin-control"
-                onClick={onOpenUserManagement}
-                className="px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/50 text-amber-300 font-extrabold text-xs shadow-sm hover:scale-105 cursor-pointer ml-1"
-                title="Админ удирдлагын хэсэг"
-              >
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>УДИРДАХ ХЭСЭГ</span>
-              </button>
-            )}
           </nav>
         </div>
 
@@ -384,6 +383,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile navigation bar */}
       <div className="md:hidden flex items-center justify-around bg-zinc-950 border-t border-zinc-800 py-2 px-2 text-xs">
+        {onOpenUserManagement && (
+          <button
+            id="mobile-nav-users"
+            onClick={onOpenUserManagement}
+            className="flex flex-col items-center gap-1 text-amber-300 font-extrabold"
+            title="Удирдах хэсэг"
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400 animate-pulse" />
+            Удирдах
+          </button>
+        )}
         <button
           id="mobile-nav-home"
           onClick={() => setActiveTab('home')}
@@ -454,17 +464,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <User className="w-4 h-4" />
           {currentUser ? 'Бүртгэл' : 'Нэвтрэх'}
         </button>
-        {onOpenUserManagement && (
-          <button
-            id="mobile-nav-users"
-            onClick={onOpenUserManagement}
-            className="flex flex-col items-center gap-1 text-amber-300 font-bold"
-            title="Удирдах хэсэг"
-          >
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            Удирдах
-          </button>
-        )}
       </div>
     </header>
   );

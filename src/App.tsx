@@ -281,7 +281,7 @@ export default function App() {
       // Tab filter
       if (activeTab === 'movies' && movie.type !== 'movie') return false;
       if (activeTab === 'series' && movie.type !== 'series') return false;
-      if (activeTab === 'anime' && movie.type !== 'anime') return false;
+      if (activeTab === 'anime' && movie.type !== 'anime' && !movie.genres.includes('Animation') && !movie.genres.includes('Анимэ')) return false;
       if (activeTab === 'chinese' && movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
       if (activeTab === 'favorites' && !favorites.includes(movie.id)) return false;
       if (activeTab === 'purchased' && !purchasedMovies.includes(movie.id)) return false;
@@ -321,7 +321,7 @@ export default function App() {
   }, [filteredMovies]);
 
   const animeMovies = useMemo(() => {
-    return filteredMovies.filter((m) => m.type === 'anime');
+    return filteredMovies.filter((m) => m.type === 'anime' || m.genres.includes('Animation') || m.genres.includes('Анимэ'));
   }, [filteredMovies]);
 
   const featureMoviesOnly = useMemo(() => {
