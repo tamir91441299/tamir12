@@ -23,7 +23,7 @@ export async function saveUserToFirestore(
     const rawId = user.id || (user.email ? user.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now());
     const docRef = doc(db, 'users', rawId);
 
-    const userPayload: Partial<UserDetail> = {
+    const userPayload: UserDetail = {
       id: rawId,
       name: user.name || 'Хэрэглэгч',
       email: user.email || '',
@@ -33,12 +33,27 @@ export async function saveUserToFirestore(
       status: (user as UserDetail).status || 'active',
       packageType: (user as UserDetail).packageType || 'free',
       packageExpiry: (user as UserDetail).packageExpiry || 'Идэвхгүй',
-      walletBalance: (user as UserDetail).walletBalance ?? 5000,
+      walletBalance: (user as UserDetail).walletBalance ?? 0,
       lastLogin: (user as UserDetail).lastLogin || new Date().toLocaleString('mn-MN'),
       watchedCount: (user as UserDetail).watchedCount ?? 0,
       favoriteCount: (user as UserDetail).favoriteCount ?? 0,
       ...extraData,
     };
+
+    // Immediately persist into local storage registered users list so admin sees new user right away
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+      const idx = list.findIndex((u) => u.id === rawId || (u.email && userPayload.email && u.email === userPayload.email));
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...userPayload };
+      } else {
+        list = [userPayload, ...list];
+      }
+      localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
+    } catch (e) {
+      console.error('Error updating local registered users list:', e);
+    }
 
     await setDoc(docRef, userPayload, { merge: true });
   } catch (err) {
@@ -89,7 +104,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
                   status: 'active',
                   packageType: 'free',
                   packageExpiry: 'Идэвхгүй',
-                  walletBalance: 5000,
+                  walletBalance: 0,
                   lastLogin: 'Идэвхтэй одоо',
                   watchedCount: 1,
                   favoriteCount: 0,
