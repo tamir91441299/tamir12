@@ -19,7 +19,13 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
-import { getEmbedUrl, isEmbeddableUrl } from '../lib/videoUtils';
+import {
+  getEmbedUrl,
+  isEmbeddableUrl,
+  extractGoogleDriveId,
+  getGoogleDriveDirectStreamUrl,
+  getGoogleDriveDownloadUrl
+} from '../lib/videoUtils';
 
 interface VideoPlayerModalProps {
   movie: Movie | null;
@@ -50,10 +56,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
   const [playerMode, setPlayerMode] = useState<'standard' | 'nocookie'>('standard');
+  const [driveServerMode, setDriveServerMode] = useState<'direct' | 'iframe'>('direct');
 
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
-  const isEmbed = isEmbeddableUrl(videoSrc);
+  const googleDriveId = extractGoogleDriveId(videoSrc);
+  const isGoogleDrive = !!googleDriveId;
+
+  // Use iframe embed only if it's embeddable AND not playing via direct Google Drive stream
+  const isEmbed = isEmbeddableUrl(videoSrc) && (!isGoogleDrive || driveServerMode === 'iframe');
   const iframeUrl = getEmbedUrl(videoSrc, playerMode);
+
+  const videoSrcToPlay = (isGoogleDrive && driveServerMode === 'direct' && googleDriveId)
+    ? getGoogleDriveDirectStreamUrl(googleDriveId)
+    : videoSrc;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -69,15 +84,32 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
 
+  // Auto play effect on source/episode change
+  useEffect(() => {
+    if (videoRef.current && !isEmbed) {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch((err) => {
+        console.warn('Autoplay blocked or paused:', err);
+        setIsPlaying(false);
+      });
+    }
+  }, [videoSrcToPlay, currentEpisodeIndex, isEmbed]);
+
   // Play / Pause toggle
   const togglePlay = () => {
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
+      if (videoRef.current.paused) {
+        videoRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch((err) => {
+          console.error('Play error:', err);
+          setIsPlaying(false);
+        });
       } else {
-        videoRef.current.play();
+        videoRef.current.pause();
+        setIsPlaying(false);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -162,6 +194,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {isGoogleDrive && (
+            <div className="flex items-center bg-zinc-900 border border-cyan-800/80 rounded-lg p-0.5 text-xs shadow-inner">
+              <button
+                type="button"
+                onClick={() => setDriveServerMode('direct')}
+                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                  driveServerMode === 'direct'
+                    ? 'bg-cyan-500 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Gmail шаардлагагүй шууд тоглуулах горим"
+              >
+                Сервер 1 (Шууд)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDriveServerMode('iframe')}
+                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                  driveServerMode === 'iframe'
+                    ? 'bg-cyan-500 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Google Drive Frame горим"
+              >
+                Сервер 2 (Drive Iframe)
+              </button>
+            </div>
+          )}
+
           {isYouTube && (
             <div className="hidden sm:flex items-center bg-zinc-900 border border-zinc-700/80 rounded-lg p-0.5 text-xs">
               <button
@@ -191,7 +252,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
           <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-1 rounded-lg select-none">
             <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span className="font-bold">Линк нууцлагдсан (Хамгаалагдсан)</span>
+            <span className="font-bold">Линк нууцлагдсан</span>
           </div>
 
           {episodes.length > 0 && (
@@ -239,34 +300,69 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <div className="w-full mt-2 text-center text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none">
                 <span className="truncate flex items-center gap-1.5 text-zinc-300">
                   <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>Бичлэгийн эх сурвалжийн линкийг хуулах боломжгүйгээр хамгаалсан.</span>
+                  {isGoogleDrive ? (
+                    <span>Gmail шаардлагагүй шууд тоглуулах серверээр ажиллаж байна.</span>
+                  ) : (
+                    <span>Бичлэгийн эх сурвалжийн линкийг хуулах боломжгүйгээр хамгаалсан.</span>
+                  )}
                 </span>
                 <span className="text-cyan-400 font-bold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
                   <Lock className="w-3 h-3" />
                   <span>Хамгаалагдсан тоглуулагч</span>
                 </span>
               </div>
+              {isGoogleDrive && driveServerMode === 'iframe' && (
+                <div className="w-full mt-1.5 text-center text-xs text-amber-300 bg-amber-950/80 border border-amber-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none animate-in fade-in">
+                  <span className="truncate flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>💡 Хэрэв Google Drive 'Эрх хүсэх' сануулбал дээд талын <b>Сервер 1 (Шууд)</b> сонгож Gmail-гүй үзнэ үү.</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDriveServerMode('direct')}
+                    className="text-black font-extrabold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-400 hover:bg-cyan-300 px-2.5 py-0.5 rounded cursor-pointer transition-colors"
+                  >
+                    <span>Сервер 1 рүү шилжих</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <video
-              ref={videoRef}
-              src={videoSrc}
-              autoPlay
-              controlsList="nodownload noplaybackrate"
-              disablePictureInPicture
-              onContextMenu={(e) => e.preventDefault()}
-              onDragStart={(e) => e.preventDefault()}
-              onTimeUpdate={handleTimeUpdate}
-              onEnded={() => {
-                if (currentEpisodeIndex < episodes.length - 1) {
-                  selectEpisode(currentEpisodeIndex + 1);
-                } else {
-                  setIsPlaying(false);
-                }
-              }}
-              onClick={togglePlay}
-              className="w-full h-full object-contain cursor-pointer"
-            />
+            <div className="relative w-full h-full flex items-center justify-center">
+              <video
+                ref={videoRef}
+                src={videoSrcToPlay}
+                autoPlay
+                playsInline
+                controlsList="nodownload noplaybackrate"
+                disablePictureInPicture
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={() => {
+                  if (currentEpisodeIndex < episodes.length - 1) {
+                    selectEpisode(currentEpisodeIndex + 1);
+                  } else {
+                    setIsPlaying(false);
+                  }
+                }}
+                onClick={togglePlay}
+                className="w-full h-full object-contain cursor-pointer"
+              />
+
+              {!isPlaying && (
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="absolute p-5 rounded-full bg-cyan-500/90 text-black hover:bg-cyan-400 hover:scale-110 transition-all shadow-2xl shadow-cyan-500/50 z-30 cursor-pointer animate-in zoom-in-75 duration-200"
+                  title="Тоглуулах"
+                >
+                  <Play className="w-10 h-10 fill-current translate-x-0.5" />
+                </button>
+              )}
+            </div>
           )}
 
           {/* Custom Overlay Controls */}

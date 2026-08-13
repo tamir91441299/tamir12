@@ -768,6 +768,69 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
             })}
           </div>
 
+          {/* BOTTOM ANSWER REVEAL & IMAGE CARD (Доор хариулт харуулах хэсэг) */}
+          {gameState === 'answered' && (
+            <div className="mt-4 bg-gradient-to-br from-purple-950/80 via-zinc-900 to-zinc-950 border-2 border-purple-500/50 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between border-b border-purple-800/50 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">✨</span>
+                  <span className="text-xs font-black text-purple-300 uppercase tracking-wider">
+                    Хариулт ба Асуултын Мэдээлэл (Доорх Баталгаажуулалт)
+                  </span>
+                </div>
+                <span className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
+                  isCorrect
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+                    : 'bg-rose-950 text-rose-300 border-rose-500/50'
+                }`}>
+                  {isCorrect ? '✓ Зөв хариулт' : '✕ Буруу хариулт'}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-5 justify-between">
+                <div className="flex items-center gap-4">
+                  {currentQ?.image && !imgError ? (
+                    <img
+                      src={currentQ.image}
+                      alt={currentQ.answer}
+                      referrerPolicy="no-referrer"
+                      onError={() => setImgError(true)}
+                      className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl border-2 border-purple-400/80 shadow-lg shrink-0"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-purple-900/60 border border-purple-500/50 flex flex-col items-center justify-center text-center shrink-0">
+                      <span className="text-2xl">🎭</span>
+                      <span className="text-[10px] text-purple-300 font-bold">{getEmojiDisplay()}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <div className="text-[11px] text-purple-300 font-bold uppercase tracking-wider">
+                      ЗӨВ ХАРИУЛТ:
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {currentQ?.answer}
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Эможи илэрхийлэл: <span className="text-white font-mono">{getEmojiDisplay()}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {lives > 0 && (
+                  <button
+                    id="next-question-bottom-btn"
+                    onClick={handleNextQuestion}
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white font-black px-6 py-3.5 rounded-xl text-xs transition-all shadow-xl shadow-purple-600/30 cursor-pointer flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shrink-0"
+                  >
+                    <span>Дараагийн Асуулт</span>
+                    <span>➔</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Footer note as explicitly requested */}
           <div className="text-center pt-4 border-t border-zinc-800/60">
             <p className="text-[11px] text-zinc-500">Зургийн эх сурвалж: Wikipedia</p>

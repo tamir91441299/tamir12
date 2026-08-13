@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Lock, Phone, UserPlus, LogIn, CheckCircle2, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { saveUserToFirestore } from '../lib/userService';
 
 export interface UserAccount {
   id: string;
@@ -70,6 +71,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         registeredAt: new Date().toLocaleDateString('mn-MN'),
       };
 
+      saveUserToFirestore(newUser, {
+        role: newUser.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+        status: 'active',
+        packageType: 'free',
+        walletBalance: 5000,
+      });
+
       setSuccessMessage('Амжилттай бүртгэгдлээ! Системд нэвтэрч байна...');
       setTimeout(() => {
         onLoginSuccess(newUser);
@@ -92,6 +100,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         phone: formData.phone.trim() || '99106883',
         registeredAt: new Date().toLocaleDateString('mn-MN'),
       };
+
+      saveUserToFirestore(loggedInUser);
 
       setSuccessMessage('Нэвтрэх амжилттай!');
       setTimeout(() => {

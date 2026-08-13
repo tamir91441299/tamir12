@@ -13,6 +13,16 @@ export function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+export function getGoogleDriveDirectStreamUrl(driveId: string): string {
+  if (!driveId) return '';
+  return `https://lh3.googleusercontent.com/d/${driveId}`;
+}
+
+export function getGoogleDriveDownloadUrl(driveId: string): string {
+  if (!driveId) return '';
+  return `https://drive.google.com/uc?export=download&id=${driveId}`;
+}
+
 export function extractGoogleDriveId(url: string): string | null {
   if (!url) return null;
   const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);

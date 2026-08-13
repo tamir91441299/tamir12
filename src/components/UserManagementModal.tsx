@@ -30,6 +30,7 @@ import {
 import { UserAccount } from './AuthModal';
 import { Movie } from '../types';
 import { SAMPLE_MOVIES } from '../data/movies';
+import { subscribeUsersFromFirestore, saveUserToFirestore } from '../lib/userService';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -226,9 +227,19 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
+  React.useEffect(() => {
+    const unsubscribe = subscribeUsersFromFirestore((list) => {
+      setUsers(list);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const saveUsersState = (updatedUsers: UserDetail[]) => {
     setUsers(updatedUsers);
     localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedUsers));
+    updatedUsers.forEach((u) => {
+      saveUserToFirestore(u);
+    });
   };
 
   const handleToggleStatus = (id: string) => {
