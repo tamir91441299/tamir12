@@ -420,7 +420,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
     subtitles: ['Монгол хадмал'],
     episodes: [
-      { episodeNumber: 1, title: '1-р анги - Сүүлчийн довтлогч (ҮНЭГҮЙ)', duration: '24 мин', videoUrl: 'https://youtu.be/Dxd9-liFkYA?si=KasX6qLzbVesmXnV' },
+      { episodeNumber: 1, title: '1-р анги - Сүүлчийн довтлогч (ҮНЭГҮЙ)', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1q2-Q6o5YW8kH1X1MnSzHAoDX_owW8OBV/view?usp=drivesdk' },
       { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
       { episodeNumber: 3, title: '3-р анги - Бөмбөгний мэдрэмж', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
       { episodeNumber: 4, title: '4-р анги - Зөн билэг ба хүч', duration: '24 мин', videoUrl: 'https://youtu.be/VZPAg8iR8sk' },
