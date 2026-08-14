@@ -23,10 +23,10 @@ import {
 import { Movie, Episode } from '../types';
 import {
   getEmbedUrl,
-  isEmbeddableUrl,
   extractGoogleDriveId,
-  getGoogleDriveDirectStreamUrl,
-  getGoogleDriveDownloadUrl
+  getDirectPlaybackStream,
+  isDirectPlayableMedia,
+  RELIABLE_CDN_STREAMS
 } from '../lib/videoUtils';
 
 interface VideoPlayerModalProps {
@@ -73,49 +73,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
   const googleDriveId = extractGoogleDriveId(videoSrc);
   const isGoogleDrive = !!googleDriveId;
+  const isDirectMedia = isDirectPlayableMedia(videoSrc);
 
-  // Embedded iframe is only used on Server 1 for Google Drive, YouTube, Vimeo, Facebook, and embeddable URLs
-  // Switching to Server 2 or 3 explicitly switches to the native HTML5 player to bypass Gmail login / iframe restrictions!
+  // Embedded iframe is only used on Server 1 for Google Drive, YouTube, Vimeo, Facebook when not direct media
   const isEmbed =
     serverMode === 'server1' &&
-    (isGoogleDrive || isYouTube || videoSrc.includes('vimeo.com') || videoSrc.includes('facebook.com') || isEmbeddableUrl(videoSrc));
+    !isDirectMedia &&
+    (isGoogleDrive || isYouTube || videoSrc.includes('vimeo.com') || videoSrc.includes('facebook.com'));
 
   const iframeUrl = getEmbedUrl(videoSrc, 'standard');
 
-  // Reliable high-speed CDN video streams for fallback / sample playback on Server 2 & 3
-  const sampleBackups = [
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
-  ];
-
+  const epNum = currentEpisode?.episodeNumber || currentEpisodeIndex + 1;
+  const sampleBackups = RELIABLE_CDN_STREAMS;
   const backupIndex = (currentEpisodeIndex || 0) % sampleBackups.length;
   const backupSrc1 = sampleBackups[backupIndex];
   const backupSrc2 = sampleBackups[(backupIndex + 1) % sampleBackups.length];
 
-  // Resolve video stream URL based on active server
-  let videoSrcToPlay = videoSrc;
-  if (serverMode === 'server1') {
-    if (isGoogleDrive && googleDriveId) {
-      videoSrcToPlay = getEmbedUrl(videoSrc, 'standard');
-    } else if (isYouTube) {
-      videoSrcToPlay = backupSrc1;
-    } else {
-      videoSrcToPlay = videoSrc;
-    }
-  } else if (serverMode === 'server2') {
-    // Server 2 direct stream or fallback HTML5 player
-    if (!isYouTube && !isGoogleDrive && videoSrc.startsWith('http') && (videoSrc.endsWith('.mp4') || videoSrc.endsWith('.m3u8') || videoSrc.endsWith('.webm'))) {
-      videoSrcToPlay = videoSrc;
-    } else {
-      videoSrcToPlay = backupSrc1;
-    }
-  } else {
-    // Server 3 is backup high-speed CDN stream
+  // Resolve direct video stream URL based on active server
+  let videoSrcToPlay = isDirectMedia ? videoSrc : getDirectPlaybackStream(videoSrc, epNum);
+  if (serverMode === 'server2') {
+    videoSrcToPlay = isDirectMedia ? videoSrc : backupSrc1;
+  } else if (serverMode === 'server3') {
     videoSrcToPlay = backupSrc2;
   }
 
