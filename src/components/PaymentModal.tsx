@@ -56,8 +56,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMsgText, setSuccessMsgText] = useState<string>('');
   const [topUpRequestSent, setTopUpRequestSent] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState<number>(5000);
-  const [showTopUp, setShowTopUp] = useState(false);
   const [copiedMonpay, setCopiedMonpay] = useState(false);
 
   // Activation Code States
@@ -154,11 +152,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setTopUpRequestSent(true);
       }, 1200);
     }
-  };
-
-  const handleTopUp = () => {
-    onTopUpBalance(topUpAmount);
-    setShowTopUp(false);
   };
 
   return (

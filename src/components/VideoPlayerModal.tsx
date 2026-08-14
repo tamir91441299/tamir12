@@ -45,11 +45,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 }) => {
   if (!movie) return null;
 
-  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(
-    movie.episodes
+  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(
+    movie.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
       ? Math.max(0, initialEpisodeNumber - 1)
       : 0
   );
+
+  useEffect(() => {
+    if (initialEpisodeNumber && initialEpisodeNumber > 0) {
+      setCurrentEpisodeIndex(Math.max(0, initialEpisodeNumber - 1));
+      setCurrentTime(0);
+      setIsPlaying(true);
+    }
+  }, [initialEpisodeNumber]);
 
   const episodes = movie.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];
@@ -141,8 +149,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               setIsPlaying(true);
             })
             .catch((err) => {
-              console.warn('Autoplay handled:', err);
-              setIsPlaying(false);
+              console.warn('Autoplay with audio handled by browser:', err);
+              // Browser policy fallback: Mute and attempt autoplay, or display play button
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                setIsMuted(true);
+                videoRef.current
+                  .play()
+                  .then(() => setIsPlaying(true))
+                  .catch(() => setIsPlaying(false));
+              }
             });
         }
       } catch (e) {
@@ -242,18 +258,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Switch Episode
   const selectEpisode = (index: number) => {
-    const isFreeEp = index === 0; // 1st episode preview is free
-    if (!isFreeEp && !isPurchased) {
-      const epNum = episodes[index]?.episodeNumber || index + 1;
-      alert(`⚠️ [${epNum}-р анги] Энэ ангийг үзэхийн тулд Анимэ / Кино багц эсвэл VIP багцаа идэвхжүүлнэ үү!`);
-      if (onRequestPurchase) {
-        onRequestPurchase(movie);
-      }
-      return;
+    if (index >= 0 && index < episodes.length) {
+      setCurrentEpisodeIndex(index);
+      setCurrentTime(0);
+      setIsPlaying(true);
     }
-    setCurrentEpisodeIndex(index);
-    setCurrentTime(0);
-    setIsPlaying(true);
   };
 
   // Format Time
@@ -715,7 +724,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <div className="flex-1 overflow-y-auto p-2 space-y-1.5 divide-y divide-zinc-800/40">
               {episodes.map((ep, idx) => {
                 const isActive = idx === currentEpisodeIndex;
-                const isLocked = idx > 0 && !isPurchased;
                 return (
                   <button
                     key={ep.episodeNumber}
@@ -724,9 +732,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer ${
                       isActive
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold'
-                        : isLocked
-                        ? 'bg-rose-950/20 hover:bg-rose-900/30 text-rose-300 border border-rose-900/40'
-                        : 'hover:bg-zinc-800 text-zinc-300'
+                        : 'hover:bg-zinc-800 text-zinc-300 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -734,8 +740,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                           isActive
                             ? 'bg-cyan-500 text-black'
-                            : isLocked
-                            ? 'bg-rose-900/50 text-rose-300'
                             : 'bg-zinc-800 text-zinc-400'
                         }`}
                       >
@@ -744,7 +748,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       <div className="min-w-0">
                         <div className="text-xs truncate font-semibold flex items-center gap-1">
                           {ep.title}
-                          {isLocked && <Lock className="w-3 h-3 text-rose-400 shrink-0 inline" />}
                         </div>
                         <div className="text-[10px] text-zinc-500 font-mono">
                           {ep.duration}
@@ -752,15 +755,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       </div>
                     </div>
 
-                    {isActive ? (
+                    {isActive && (
                       <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-1.5 py-0.5 rounded shrink-0">
                         ҮЗЭЖ БАЙНА
                       </span>
-                    ) : isLocked ? (
-                      <span className="text-[9px] bg-rose-500/30 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/40 shrink-0 flex items-center gap-0.5">
-                        <Lock className="w-2.5 h-2.5" /> ТҮГЖЭЭТЭЙ
-                      </span>
-                    ) : null}
+                    )}
                   </button>
                 );
               })}

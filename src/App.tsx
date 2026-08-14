@@ -352,16 +352,8 @@ export default function App() {
   };
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
-    // Blue Lock (m15) Episode 1 and Series 1st episode preview are FREE for everyone!
-    const isFreeEpisode = (movie.id === 'm15' && episodeNumber === 1) || (movie.episodes && episodeNumber === 1);
-    if (isPurchased(movie.id) || isFreeEpisode) {
-      setSelectedMovieForPlayer(movie);
-      setPlayerInitialEpisode(episodeNumber);
-    } else {
-      setPaymentMovie(movie);
-      setPlayerInitialEpisode(episodeNumber);
-      setShowPaymentModal(true);
-    }
+    setSelectedMovieForPlayer(movie);
+    setPlayerInitialEpisode(episodeNumber);
   };
 
   const handlePaymentSuccess = (movieId: string, deductedAmount: number = 0) => {
