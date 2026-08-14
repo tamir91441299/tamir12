@@ -6,6 +6,7 @@ import {
   Volume2,
   VolumeX,
   Maximize,
+  Minimize,
   RotateCcw,
   SkipForward,
   Settings,
@@ -218,33 +219,116 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   };
 
-  // Listen to fullscreen changes
+  // Listen to fullscreen changes across all browsers
   useEffect(() => {
     const handleFSChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const doc: any = document;
+      const isFS = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isFS);
     };
-    document.addEventListener('fullscreenchange', handleFSChange);
-    return () => document.removeEventListener('fullscreenchange', handleFSChange);
-  }, []);
 
-  // Enhanced Fullscreen Toggle
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      if (playerContainerRef.current?.requestFullscreen) {
-        playerContainerRef.current.requestFullscreen().catch(() => {
-          if (videoRef.current?.requestFullscreen) {
-            videoRef.current.requestFullscreen();
-          } else if (iframeRef.current?.requestFullscreen) {
-            iframeRef.current.requestFullscreen();
-          }
-        });
-      } else if (videoRef.current && (videoRef.current as any).webkitRequestFullscreen) {
-        (videoRef.current as any).webkitRequestFullscreen();
+    document.addEventListener('fullscreenchange', handleFSChange);
+    document.addEventListener('webkitfullscreenchange', handleFSChange);
+    document.addEventListener('mozfullscreenchange', handleFSChange);
+    document.addEventListener('MSFullscreenChange', handleFSChange);
+
+    // Keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
       }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch((err) => console.error(err));
+
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (videoRef.current) {
+          videoRef.current.currentTime = Math.min(videoRef.current.duration || 0, videoRef.current.currentTime + 10);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (videoRef.current) {
+          videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+        }
+      } else if (e.key === 'Escape') {
+        const doc: any = document;
+        if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+          // Let browser exit fullscreen
+        } else {
+          onClose();
+        }
       }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFSChange);
+      document.removeEventListener('webkitfullscreenchange', handleFSChange);
+      document.removeEventListener('mozfullscreenchange', handleFSChange);
+      document.removeEventListener('MSFullscreenChange', handleFSChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen, isPlaying, isMuted]);
+
+  // Enhanced Cross-Browser Fullscreen Toggle (supports iOS, Safari, Chrome, Firefox, Edge)
+  const toggleFullscreen = async () => {
+    try {
+      const doc: any = document;
+      const targetElem: any = playerContainerRef.current || videoRef.current;
+
+      const isFS = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+
+      if (!isFS) {
+        if (targetElem?.requestFullscreen) {
+          await targetElem.requestFullscreen();
+        } else if (targetElem?.webkitRequestFullscreen) {
+          await targetElem.webkitRequestFullscreen();
+        } else if (targetElem?.mozRequestFullScreen) {
+          await targetElem.mozRequestFullScreen();
+        } else if (targetElem?.msRequestFullscreen) {
+          await targetElem.msRequestFullscreen();
+        } else if (videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
+          // iOS Safari native video fullscreen
+          (videoRef.current as any).webkitEnterFullscreen();
+        } else if (iframeRef.current?.requestFullscreen) {
+          await iframeRef.current.requestFullscreen();
+        }
+        setIsFullscreen(true);
+      } else {
+        if (doc.exitFullscreen) {
+          await doc.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        } else if (doc.mozCancelFullScreen) {
+          await doc.mozCancelFullScreen();
+        } else if (doc.msExitFullscreen) {
+          await doc.msExitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle notice:', err);
+      // Fallback state
+      setIsFullscreen(!isFullscreen);
     }
   };
 
@@ -337,11 +421,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="flex items-center gap-1 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-transform hover:scale-105 shadow-md shadow-cyan-500/20"
-            title="Бүтэн дэлгэцээр үзэх"
+            className="flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-transform hover:scale-105 shadow-md shadow-cyan-500/20"
+            title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
           >
-            <Maximize className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">БҮТЭН ДЭЛГЭЦ</span>
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-3.5 h-3.5" />
+                <span>ГАРАХ</span>
+              </>
+            ) : (
+              <>
+                <Maximize className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">БҮТЭН ДЭЛГЭЦ</span>
+              </>
+            )}
           </button>
 
           {/* Unified Server Selector */}
@@ -423,7 +516,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           {/* Video or Embedded Player */}
           {isEmbed ? (
             <div className={`w-full h-full p-2 sm:p-4 flex flex-col items-center justify-center relative select-none ${
-              videoFitMode === 'cover' ? 'max-w-none' : 'max-w-6xl'
+              isFullscreen || videoFitMode === 'cover' ? 'max-w-none' : 'max-w-7xl'
             }`}>
               <iframe
                 ref={iframeRef}
@@ -521,6 +614,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   }
                 }}
                 onClick={togglePlay}
+                onDoubleClick={toggleFullscreen}
                 className={`w-full h-full cursor-pointer transition-all ${
                   videoFitMode === 'cover'
                     ? 'object-cover'
@@ -699,9 +793,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <button
                   id="player-fullscreen-toggle"
                   onClick={toggleFullscreen}
-                  className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                  className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
                 >
-                  <Maximize className="w-5 h-5" />
+                  {isFullscreen ? (
+                    <Minimize className="w-5 h-5 text-cyan-400" />
+                  ) : (
+                    <Maximize className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
