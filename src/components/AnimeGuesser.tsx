@@ -189,8 +189,9 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
       }
     }
 
-    return uniqueOpts.slice(0, 4);
-  }, [currentQ]);
+    // Randomize options so the correct answer appears in random positions (A, B, V, or G)
+    return shuffleArray(uniqueOpts.slice(0, 4));
+  }, [currentIndex, currentQ, activeGameMode]);
 
   // Timer Countdown Effect
   useEffect(() => {

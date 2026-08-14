@@ -511,17 +511,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   videoFitMode === 'cover' ? 'object-cover aspect-none' : 'aspect-video'
                 }`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                referrerPolicy="strict-origin-when-cross-origin"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+                referrerPolicy="no-referrer"
                 allowFullScreen
                 title={movie.titleMongolian}
               />
-              <div className="w-full mt-2 text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800/80 py-2 px-3 rounded-xl flex flex-wrap items-center justify-between gap-2 select-none">
+              <div className="w-full mt-2 text-xs text-zinc-400 bg-zinc-900/95 border border-zinc-800/80 py-2.5 px-3.5 rounded-xl flex flex-wrap items-center justify-between gap-2 select-none shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-zinc-300">
                   <span className="flex items-center gap-1.5 font-medium">
                     <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                     {isGoogleDrive ? (
                       <span>
-                        <strong className="text-cyan-300">Google Drive:</strong> Хэрэв дэлгэц дээр Gmail нэвтрэх / Access нэхэж байвал:
+                        <strong className="text-cyan-300">Google Drive:</strong> Өөр браузер дээр Drive-ийн холбоосыг <span className="text-amber-300 font-bold">"Anyone with the link can view"</span> болгосон эсэхээ шалгаарай. Хэрэв нэвтрэх нэхэж байвал:
                       </span>
                     ) : isYouTube ? (
                       <span>
@@ -535,7 +536,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setServerMode('server2')}
-                      className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow flex items-center gap-1"
+                      className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow flex items-center gap-1 hover:scale-105 active:scale-95"
                     >
                       <Sparkles className="w-3 h-3" />
                       <span>🚀 Шууд тоглуулах (Сервер 2)</span>
@@ -543,7 +544,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setServerMode('server3')}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-cyan-800 transition-all cursor-pointer"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-cyan-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
                     >
                       <span>🌐 Сервер 3</span>
                     </button>
