@@ -609,7 +609,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     featured: true,
     featuredRank: 9,
     trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
-    videoUrl: 'https://drive.google.com/file/d/1UUTxvlRcfAN-lcFdvcdovYf3QoLJVr6E/view?usp=drivesdk',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
     ageRating: '+16',
     audioTracks: ['Монгол дуу оруулга', 'Хятад эх хэлээр'],
     subtitles: ['Монгол хадмал']

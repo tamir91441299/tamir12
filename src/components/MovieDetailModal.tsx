@@ -354,7 +354,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         <Edit2 className="w-3.5 h-3.5 text-amber-400" />
                         Шинэ анги оруулах эсвэл засах:
                       </span>
-                      <span className="text-[10px] text-zinc-400">YouTube / FB / Embed link</span>
+                      <span className="text-[10px] text-cyan-300 font-semibold">Google Drive / YouTube / FB / MP4</span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
@@ -371,7 +371,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         <label className="text-[10px] text-zinc-400 block mb-0.5">Ангийн нэр:</label>
                         <input
                           type="text"
-                          placeholder={`${newEpNum}-р анги - Тоглолт`}
+                          placeholder={`${newEpNum}-р анги`}
                           value={newEpTitle}
                           onChange={(e) => setNewEpTitle(e.target.value)}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-1.5 rounded-lg focus:outline-none focus:border-cyan-500"
@@ -381,11 +381,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
-                        <label className="text-[10px] text-zinc-400 block mb-0.5">Бичлэгийн линк (URL):</label>
+                        <label className="text-[10px] text-zinc-400 block mb-0.5">Бичлэгийн линк (Google Drive / URL):</label>
                         <input
                           type="url"
                           required
-                          placeholder="https://youtu.be/... эсвэл https://www.facebook.com/..."
+                          placeholder="https://drive.google.com/file/d/.../view эсвэл https://youtu.be/..."
                           value={newEpUrl}
                           onChange={(e) => setNewEpUrl(e.target.value)}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-cyan-300 p-1.5 rounded-lg focus:outline-none focus:border-cyan-500 font-mono"
@@ -400,6 +400,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-1.5 rounded-lg focus:outline-none focus:border-cyan-500"
                         />
                       </div>
+                    </div>
+                    <div className="text-[11px] text-zinc-400 bg-zinc-950 p-2 rounded-lg border border-zinc-800 flex items-center gap-1.5">
+                      <span className="text-cyan-400 font-bold">💡 Зөвлөмж:</span>
+                      <span>Google Drive линк оруулахдаа Drive дээр Share -&gt; General access -&gt; <b>"Anyone with the link (Линк авсан хүн бүр)"</b> болгосон байна.</span>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-1">

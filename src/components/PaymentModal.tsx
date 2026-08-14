@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Sparkles, Copy, Check } from 'lucide-react';
+import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Sparkles, Copy, Check, Ticket, Gift, KeyRound } from 'lucide-react';
 import { Movie } from '../types';
+import { redeemCode } from '../lib/codeService';
 
 interface PaymentModalProps {
   movie: Movie | null;
@@ -49,14 +50,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const activePrice = getPlanPrice(planType);
 
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay'>('wallet');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('code');
   const [selectedBank, setSelectedBank] = useState<string>('monpay');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successMsgText, setSuccessMsgText] = useState<string>('');
   const [topUpRequestSent, setTopUpRequestSent] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState<number>(5000);
   const [showTopUp, setShowTopUp] = useState(false);
   const [copiedMonpay, setCopiedMonpay] = useState(false);
+
+  // Activation Code States
+  const [inputActivationCode, setInputActivationCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const monpayNumber = '99106883518';
 
@@ -64,6 +70,41 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedMonpay(true);
     setTimeout(() => setCopiedMonpay(false), 2000);
+  };
+
+  const handleRedeemActivationCode = (codeToRedeem?: string) => {
+    const targetCode = (codeToRedeem || inputActivationCode).trim();
+    if (!targetCode) {
+      setCodeError('Идэвхжүүлэх кодоо оруулна уу.');
+      return;
+    }
+
+    setCodeError(null);
+    setIsVerifying(true);
+
+    setTimeout(() => {
+      setIsVerifying(false);
+      const res = redeemCode(targetCode);
+
+      if (res.success) {
+        setIsSuccess(true);
+        setSuccessMsgText(res.message);
+
+        setTimeout(() => {
+          if (res.type === 'full_vip') {
+            onSubscribePackage('full_vip', 0);
+          } else if (res.type === 'anime') {
+            onSubscribePackage('anime', 0);
+          } else if (res.type === 'movie') {
+            onSubscribePackage('movie', 0);
+          } else if (res.type === 'points' && res.pointsAdded) {
+            onTopUpBalance(res.pointsAdded);
+          }
+        }, 1200);
+      } else {
+        setCodeError(res.message);
+      }
+    }, 600);
   };
 
   const banks = [
@@ -79,6 +120,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleConfirmPayment = () => {
     setIsVerifying(true);
 
+    if (paymentMethod === 'code') {
+      handleRedeemActivationCode();
+      return;
+    }
+
     if (paymentMethod === 'wallet') {
       if (userBalance < activePrice) {
         setIsVerifying(false);
@@ -89,6 +135,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setTimeout(() => {
         setIsVerifying(false);
         setIsSuccess(true);
+        setSuccessMsgText(
+          planType === 'anime'
+            ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
+            : planType === 'movie'
+            ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
+            : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...'
+        );
 
         setTimeout(() => {
           onSubscribePackage(planType, activePrice);
@@ -259,7 +312,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
 
           {/* Payment Method Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
+          <div className="grid grid-cols-4 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
+            <button
+              id="pay-tab-code"
+              onClick={() => setPaymentMethod('code')}
+              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                paymentMethod === 'code'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>🎟️ Код оруулах</span>
+            </button>
+
             <button
               id="pay-tab-monpay"
               onClick={() => setPaymentMethod('monpay')}
@@ -296,9 +362,73 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               }`}
             >
               <Wallet className="w-3.5 h-3.5" />
-              <span>Үлдэгдэл Оноо ({userBalance.toLocaleString()} оноо)</span>
+              <span>Оноо ({userBalance.toLocaleString()})</span>
             </button>
           </div>
+
+          {/* Option 1: Activation / Promo Code Option */}
+          {paymentMethod === 'code' && (
+            <div className="space-y-3 bg-gradient-to-b from-cyan-950/30 via-zinc-900 to-zinc-900 p-3.5 rounded-xl border border-cyan-500/40">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-cyan-500 text-black flex items-center justify-center font-black text-xs">
+                    🎟️
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-white">Идэвхжүүлэх Код / Ваучер</h4>
+                    <p className="text-[10px] text-zinc-400">Админаас өгсөн эсвэл урамшууллын кодоо оруулна уу</p>
+                  </div>
+                </div>
+                <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
+                  Шууд Идэвхжинэ
+                </span>
+              </div>
+
+              {/* Code Input Box */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-zinc-300 block">
+                  Админаас авсан 6-12 оронтой эрхийн код:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Эрхийн кодоо энд оруулна уу..."
+                    value={inputActivationCode}
+                    onChange={(e) => {
+                      setInputActivationCode(e.target.value.toUpperCase());
+                      setCodeError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleRedeemActivationCode();
+                      }
+                    }}
+                    className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-cyan-400 text-white font-mono text-sm font-bold px-3 py-2 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRedeemActivationCode()}
+                    disabled={isVerifying || !inputActivationCode.trim()}
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1"
+                  >
+                    {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    <span>Идэвхжүүлэх</span>
+                  </button>
+                </div>
+
+                {codeError && (
+                  <p className="text-xs text-rose-400 font-semibold bg-rose-950/60 p-2 rounded-lg border border-rose-800">
+                    {codeError}
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-400">
+                <span>ℹ️ Эрхийн код аваагүй бол MonPay / Дансаар төлбөрөө шилжүүлэн админаас авна уу.</span>
+              </div>
+            </div>
+          )}
 
           {/* Option A: MonPay Option */}
           {paymentMethod === 'monpay' && (
@@ -437,48 +567,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               ) : (
                 <div className="space-y-2.5">
                   <div className="p-2.5 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs">
-                    Үлдэгдэл хүрэлцэхгүй байна ({activePrice.toLocaleString()} ₮ шаардлагатай). Дансаа цэнэглэнэ үү!
+                    Үлдэгдэл хүрэлцэхгүй байна ({activePrice.toLocaleString()} ₮ шаардлагатай). MonPay / Банкаар шилжүүлэн админаас оноогоо цэнэглүүлнэ үү!
                   </div>
 
-                  {showTopUp ? (
-                    <div className="space-y-2 bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                      <span className="text-[11px] font-bold text-zinc-300">
-                        Цэнэглэх дүн сонгох:
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {[5000, 8000, 10000].map((amt) => (
-                          <button
-                            key={amt}
-                            onClick={() => setTopUpAmount(amt)}
-                            className={`flex-1 py-1.5 text-xs font-mono font-bold rounded-lg border transition-all cursor-pointer ${
-                              topUpAmount === amt
-                                ? 'bg-amber-500 text-black border-amber-400'
-                                : 'bg-zinc-800 text-zinc-300 border-zinc-700'
-                            }`}
-                          >
-                            +{amt.toLocaleString()} ₮
-                          </button>
-                        ))}
-                      </div>
-
-                      <button
-                        id="confirm-topup-btn"
-                        onClick={handleTopUp}
-                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2 rounded-lg transition-colors cursor-pointer mt-1"
-                      >
-                        +{topUpAmount.toLocaleString()} ₮-өөр Данс Цэнэглэх
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      id="show-topup-btn"
-                      onClick={() => setShowTopUp(true)}
-                      className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <Sparkles className="w-4 h-4 text-amber-400" />
-                      Данс Цэнэглэх (+8,000 ₮)
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('monpay')}
+                    className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>💳 MonPay-ээр Данс Цэнэглэх заавар харах</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -487,13 +585,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* Confirm Button */}
           {isSuccess ? (
             <div className="bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold p-3 rounded-xl flex items-center justify-center gap-2 animate-in zoom-in-95">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
-                {planType === 'anime'
-                  ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
-                  : planType === 'movie'
-                  ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
-                  : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...'}
+                {successMsgText ||
+                  (planType === 'anime'
+                    ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
+                    : planType === 'movie'
+                    ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
+                    : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...')}
               </span>
             </div>
           ) : topUpRequestSent ? (

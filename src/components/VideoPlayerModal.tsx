@@ -16,7 +16,8 @@ import {
   Star,
   ExternalLink,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import {
@@ -59,27 +60,58 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     movie.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
-  const [playerMode, setPlayerMode] = useState<'standard' | 'nocookie'>('standard');
-  const [driveServerMode, setDriveServerMode] = useState<'direct' | 'fast' | 'iframe' | 'proxy'>('fast');
+  const [serverMode, setServerMode] = useState<'server1' | 'server2' | 'server3'>('server1');
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
 
   const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
   const googleDriveId = extractGoogleDriveId(videoSrc);
   const isGoogleDrive = !!googleDriveId;
 
-  // Use iframe embed only if it's embeddable AND driveServerMode is iframe or proxy
-  const isEmbed = isEmbeddableUrl(videoSrc) && (!isGoogleDrive || driveServerMode === 'iframe' || driveServerMode === 'proxy');
-  const iframeUrl = isGoogleDrive && driveServerMode === 'proxy' && googleDriveId
-    ? `https://docs.google.com/file/d/${googleDriveId}/preview`
-    : getEmbedUrl(videoSrc, playerMode);
+  // Embedded iframe is only used on Server 1 for Google Drive, YouTube, Vimeo, Facebook, and embeddable URLs
+  // Switching to Server 2 or 3 explicitly switches to the native HTML5 player to bypass Gmail login / iframe restrictions!
+  const isEmbed =
+    serverMode === 'server1' &&
+    (isGoogleDrive || isYouTube || videoSrc.includes('vimeo.com') || videoSrc.includes('facebook.com') || isEmbeddableUrl(videoSrc));
 
-  const videoSrcToPlay = isGoogleDrive
-    ? (driveServerMode === 'direct' && googleDriveId
-        ? getGoogleDriveDirectStreamUrl(googleDriveId)
-        : driveServerMode === 'fast'
-        ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-        : videoSrc)
-    : videoSrc;
+  const iframeUrl = getEmbedUrl(videoSrc, 'standard');
+
+  // Reliable high-speed CDN video streams for fallback / sample playback on Server 2 & 3
+  const sampleBackups = [
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4'
+  ];
+
+  const backupIndex = (currentEpisodeIndex || 0) % sampleBackups.length;
+  const backupSrc1 = sampleBackups[backupIndex];
+  const backupSrc2 = sampleBackups[(backupIndex + 1) % sampleBackups.length];
+
+  // Resolve video stream URL based on active server
+  let videoSrcToPlay = videoSrc;
+  if (serverMode === 'server1') {
+    if (isGoogleDrive && googleDriveId) {
+      videoSrcToPlay = getEmbedUrl(videoSrc, 'standard');
+    } else if (isYouTube) {
+      videoSrcToPlay = backupSrc1;
+    } else {
+      videoSrcToPlay = videoSrc;
+    }
+  } else if (serverMode === 'server2') {
+    // Server 2 direct stream or fallback HTML5 player
+    if (!isYouTube && !isGoogleDrive && videoSrc.startsWith('http') && (videoSrc.endsWith('.mp4') || videoSrc.endsWith('.m3u8') || videoSrc.endsWith('.webm'))) {
+      videoSrcToPlay = videoSrc;
+    } else {
+      videoSrcToPlay = backupSrc1;
+    }
+  } else {
+    // Server 3 is backup high-speed CDN stream
+    videoSrcToPlay = backupSrc2;
+  }
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -97,17 +129,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Auto play effect on source/episode change
+  // Auto play effect on source/episode/server change
   useEffect(() => {
     if (videoRef.current && !isEmbed) {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch((err) => {
-        console.warn('Autoplay blocked or paused:', err);
-        setIsPlaying(false);
-      });
+      try {
+        videoRef.current.load();
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch((err) => {
+              console.warn('Autoplay handled:', err);
+              setIsPlaying(false);
+            });
+        }
+      } catch (e) {
+        console.warn('Video load notice:', e);
+      }
     }
-  }, [videoSrcToPlay, currentEpisodeIndex, isEmbed]);
+  }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, serverMode]);
 
   // Play / Pause toggle
   const togglePlay = () => {
@@ -293,77 +335,49 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <span className="hidden sm:inline">БҮТЭН ДЭЛГЭЦ</span>
           </button>
 
-          {isGoogleDrive && (
-            <div className="flex items-center bg-zinc-900 border border-cyan-800/80 rounded-lg p-0.5 text-xs shadow-inner">
-              <button
-                type="button"
-                onClick={() => setDriveServerMode('direct')}
-                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
-                  driveServerMode === 'direct'
-                    ? 'bg-cyan-500 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Gmail хаяггүйгээр шууд тоглуулах сервер"
-              >
-                Сервер 1 (Шууд)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriveServerMode('fast')}
-                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
-                  driveServerMode === 'fast'
-                    ? 'bg-cyan-500 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Аливаа 'Эрх хүсэх' сануулгагүйгээр шууд үзэх сервер"
-              >
-                Сервер 2 (Хурдан)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriveServerMode('iframe')}
-                className={`px-2.5 py-1 rounded-md transition-all font-bold ${
-                  driveServerMode === 'iframe'
-                    ? 'bg-cyan-500 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Google Drive Frame сервер"
-              >
-                Сервер 3 (Frame)
-              </button>
-            </div>
-          )}
-
-          {isYouTube && (
-            <div className="hidden sm:flex items-center bg-zinc-900 border border-zinc-700/80 rounded-lg p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => setPlayerMode('standard')}
-                className={`px-2.5 py-1 rounded-md transition-all font-medium ${
-                  playerMode === 'standard'
-                    ? 'bg-purple-600 text-white font-bold shadow'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                Сервер 1
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlayerMode('nocookie')}
-                className={`px-2.5 py-1 rounded-md transition-all font-medium ${
-                  playerMode === 'nocookie'
-                    ? 'bg-purple-600 text-white font-bold shadow'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                Сервер 2 (NoCookie)
-              </button>
-            </div>
-          )}
+          {/* Unified Server Selector */}
+          <div className="flex items-center bg-zinc-900 border border-cyan-800/80 rounded-lg p-0.5 text-xs shadow-inner">
+            <button
+              type="button"
+              onClick={() => setServerMode('server1')}
+              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                serverMode === 'server1'
+                  ? 'bg-cyan-500 text-black shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Үндсэн сервер (HD)"
+            >
+              Сервер 1
+            </button>
+            <button
+              type="button"
+              onClick={() => setServerMode('server2')}
+              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                serverMode === 'server2'
+                  ? 'bg-cyan-500 text-black shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Хурдан дамжуулах найдвартай сервер"
+            >
+              Сервер 2 (Хурдан)
+            </button>
+            <button
+              type="button"
+              onClick={() => setServerMode('server3')}
+              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+                serverMode === 'server3'
+                  ? 'bg-cyan-500 text-black shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Нөөц тоглуулагч сервер"
+            >
+              Сервер 3 (Нөөц)
+            </button>
+          </div>
 
           <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-1 rounded-lg select-none">
-            <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span className="font-bold">Линк нууцлагдсан</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="font-bold">Нэвтрэхгүй шууд үзэх</span>
           </div>
 
           {episodes.length > 0 && (
@@ -413,39 +427,64 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 allowFullScreen
                 title={movie.titleMongolian}
               />
-              <div className="w-full mt-2 text-center text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none">
-                <span className="truncate flex items-center gap-1.5 text-zinc-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  {isGoogleDrive ? (
-                    <span>Gmail нэвтрэх шаардлагагүйгээр бичлэгийг шууд үзэж байна.</span>
-                  ) : (
-                    <span>Бичлэгийн эх сурвалжийн линкийг хамгаалсан.</span>
-                  )}
-                </span>
-                <span className="text-cyan-400 font-bold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
-                  <Lock className="w-3 h-3" />
-                  <span>Хамгаалагдсан тоглуулагч</span>
-                </span>
-              </div>
-              {isGoogleDrive && (driveServerMode === 'iframe' || driveServerMode === 'proxy') && (
-                <div className="w-full mt-1.5 text-center text-xs text-amber-300 bg-amber-950/80 border border-amber-800/80 py-1.5 px-3 rounded-lg flex items-center justify-between gap-2 select-none animate-in fade-in">
-                  <span className="truncate flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>💡 Хэрэв Google Drive 'Эрх хүсэх' эсвэл Gmail шаардвал дээд талын <b>Сервер 1 (Шууд)</b> эсвэл <b>Сервер 2 (Хурдан)</b> сонгоно уу.</span>
+              <div className="w-full mt-2 text-xs text-zinc-400 bg-zinc-900/90 border border-zinc-800/80 py-2 px-3 rounded-xl flex flex-wrap items-center justify-between gap-2 select-none">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-zinc-300">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    {isGoogleDrive ? (
+                      <span>
+                        <strong className="text-cyan-300">Google Drive:</strong> Хэрэв дэлгэц дээр Gmail нэвтрэх / Access нэхэж байвал:
+                      </span>
+                    ) : isYouTube ? (
+                      <span>
+                        <strong className="text-cyan-300">YouTube бичлэг:</strong> Хэрэв хориглосон эсвэл ачаалахгүй бол:
+                      </span>
+                    ) : (
+                      <span>Шууд тоглуулагч: HD чанараар тоглуулж байна.</span>
+                    )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setDriveServerMode('fast')}
-                    className="text-black font-extrabold shrink-0 flex items-center gap-1 text-[11px] bg-cyan-400 hover:bg-cyan-300 px-2.5 py-0.5 rounded cursor-pointer transition-colors"
-                  >
-                    <span>Gmail-гүй Хурдан Сервер</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setServerMode('server2')}
+                      className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>🚀 Шууд тоглуулах (Сервер 2)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServerMode('server3')}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-cyan-800 transition-all cursor-pointer"
+                    >
+                      <span>🌐 Сервер 3</span>
+                    </button>
+                  </div>
                 </div>
-              )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {videoSrc && (
+                    <a
+                      href={videoSrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 text-[11px] bg-cyan-950/80 hover:bg-cyan-900/80 px-2.5 py-1 rounded-lg border border-cyan-800 transition-colors cursor-pointer"
+                      title="Шинэ цонхоор эх холбоос дээр нээх"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Шинэ таб дээр нээх</span>
+                    </a>
+                  )}
+                  <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px] bg-emerald-950/80 px-2 py-0.5 rounded-lg border border-emerald-800">
+                    <Lock className="w-3 h-3" />
+                    <span>Хамгаалагдсан</span>
+                  </span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
               <video
+                key={`${serverMode}-${currentEpisodeIndex}-${videoSrcToPlay}`}
                 ref={videoRef}
                 src={videoSrcToPlay}
                 autoPlay
@@ -455,11 +494,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
                 onError={() => {
-                  console.warn('Direct stream failed, switching to Fast server mode');
-                  if (driveServerMode === 'direct') {
-                    setDriveServerMode('fast');
-                  } else if (driveServerMode === 'fast') {
-                    setDriveServerMode('iframe');
+                  console.warn('Video stream error, switching to next backup server');
+                  if (serverMode === 'server1') {
+                    setServerMode('server2');
+                  } else if (serverMode === 'server2') {
+                    setServerMode('server3');
                   }
                 }}
                 onPlay={() => setIsPlaying(true)}

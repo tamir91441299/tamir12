@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Users,
@@ -28,7 +28,12 @@ import {
   Link as LinkIcon,
   Bell,
   Clock,
-  UserPlus
+  UserPlus,
+  Ticket,
+  Copy,
+  Check,
+  KeyRound,
+  Gift
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { Movie } from '../types';
@@ -39,6 +44,13 @@ import {
   subscribeNotificationsFromFirestore,
   AppNotification
 } from '../lib/userService';
+import {
+  PromoCode,
+  getAllPromoCodes,
+  savePromoCode,
+  deletePromoCode,
+  subscribePromoCodesFromFirestore
+} from '../lib/codeService';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -194,9 +206,22 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     walletBalance: 0,
   });
 
-  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications'
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications'>('users');
+  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes'
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes'>('users');
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [promoCodesList, setPromoCodesList] = useState<PromoCode[]>(() => getAllPromoCodes());
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // New Promo Code Form State
+  const [newCodeForm, setNewCodeForm] = useState({
+    code: '',
+    type: 'full_vip' as 'full_vip' | 'anime' | 'movie' | 'points',
+    value: 5000,
+    durationDays: 30,
+    description: '',
+    maxUses: 100,
+  });
+
   const [selectedMovieId, setSelectedMovieId] = useState<string>('m15'); // Blue Lock S1 default
   const [epNumInput, setEpNumInput] = useState<number>(1);
   const [epTitleInput, setEpTitleInput] = useState<string>('');
@@ -236,16 +261,68 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  React.useEffect(() => {
+  const handleGenerateRandomCode = () => {
+    const prefixes = ['VIP', 'CINEMA', 'FLICK', 'BONUS', 'IOIO', 'PROMO'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const randNum = Math.floor(1000 + Math.random() * 9000);
+    setNewCodeForm((prev) => ({
+      ...prev,
+      code: `${prefix}-${randNum}`,
+      description: `${prefix}-${randNum} Тусгай урамшууллын эрхийн код`,
+    }));
+  };
+
+  const handleCreatePromoCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCodeForm.code.trim()) return;
+
+    const saved = await savePromoCode({
+      code: newCodeForm.code.trim().toUpperCase(),
+      type: newCodeForm.type,
+      value: newCodeForm.type === 'points' ? Number(newCodeForm.value) : 0,
+      durationDays: newCodeForm.type !== 'points' ? Number(newCodeForm.durationDays) : 30,
+      description: newCodeForm.description.trim() || `${newCodeForm.code.toUpperCase()} Эрхийн Код`,
+      maxUses: Number(newCodeForm.maxUses) || 100,
+      isActive: true,
+      createdBy: currentUser?.name || 'Admin',
+    });
+
+    setPromoCodesList((prev) => [saved, ...prev.filter((c) => c.code !== saved.code)]);
+    setNewCodeForm({
+      code: '',
+      type: 'full_vip',
+      value: 5000,
+      durationDays: 30,
+      description: '',
+      maxUses: 100,
+    });
+  };
+
+  const handleDeleteCode = async (codeId: string) => {
+    await deletePromoCode(codeId);
+    setPromoCodesList((prev) => prev.filter((c) => c.id !== codeId && c.code !== codeId));
+  };
+
+  const handleCopyCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  useEffect(() => {
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(list);
     });
     const unsubscribeNotifs = subscribeNotificationsFromFirestore((notifs) => {
       setNotifications(notifs);
     });
+    const unsubscribeCodes = subscribePromoCodesFromFirestore((codes) => {
+      setPromoCodesList(codes);
+    });
     return () => {
       unsubscribeUsers();
       unsubscribeNotifs();
+      unsubscribeCodes();
     };
   }, []);
 
@@ -566,6 +643,19 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 {notifications.length}
               </span>
             )}
+          </button>
+
+          <button
+            id="admin-tab-codes"
+            onClick={() => setActiveAdminTab('codes')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 ${
+              activeAdminTab === 'codes'
+                ? 'bg-zinc-800 text-emerald-400 border-emerald-400 shadow'
+                : 'text-zinc-400 hover:text-white border-transparent hover:bg-zinc-800/50'
+            }`}
+          >
+            <Ticket className="w-4 h-4 text-emerald-400" />
+            <span>🎟️ Эрхийн Код / Промо ({promoCodesList.length})</span>
           </button>
         </div>
 
@@ -1046,6 +1136,225 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        ) : activeAdminTab === 'codes' ? (
+          <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto">
+            {/* Header & Intro */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-zinc-900 border border-emerald-500/30 p-4 rounded-xl gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+                  <Ticket className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                    Ваучер & Эрхийн Кодын Удирдлага
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
+                      {promoCodesList.length} Идэвхтэй Код
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Хэрэглэгчдэд өгөх урамшууллын болон төлбөрийн эрхийн код үүсгэх, хуулах, удирдах.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Create Code Form */}
+            <form onSubmit={handleCreatePromoCode} className="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h4 className="text-xs font-black uppercase text-zinc-300 flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  Шинэ Эрхийн Код Үүсгэх
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleGenerateRandomCode}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>🎲 Санамсаргүй Код Үүсгэх</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase block mb-1">
+                    Код (Нэр):
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Жнь: VIP-2025, FREE10K"
+                    value={newCodeForm.code}
+                    onChange={(e) => setNewCodeForm({ ...newCodeForm, code: e.target.value.toUpperCase() })}
+                    className="w-full bg-zinc-950 border border-zinc-800 font-mono text-sm font-black text-amber-300 p-2.5 rounded-xl uppercase tracking-wider focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase block mb-1">
+                    Төрөл / Эрх:
+                  </label>
+                  <select
+                    value={newCodeForm.type}
+                    onChange={(e) => setNewCodeForm({ ...newCodeForm, type: e.target.value as any })}
+                    className="w-full bg-zinc-950 border border-zinc-800 text-xs font-bold text-white p-2.5 rounded-xl focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="full_vip">👑 VIP Бүтэн Багц (Бүх кино+анимэ)</option>
+                    <option value="anime">🎌 Анимэ Багц</option>
+                    <option value="movie">🎬 Кино Багц</option>
+                    <option value="points">💰 Хэтэвчний Оноо Цэнэглэх</option>
+                  </select>
+                </div>
+
+                <div>
+                  {newCodeForm.type === 'points' ? (
+                    <div>
+                      <label className="text-[11px] font-bold text-zinc-400 uppercase block mb-1">
+                        Онооны дүн (₮):
+                      </label>
+                      <input
+                        type="number"
+                        min={500}
+                        step={500}
+                        value={newCodeForm.value}
+                        onChange={(e) => setNewCodeForm({ ...newCodeForm, value: Number(e.target.value) })}
+                        className="w-full bg-zinc-950 border border-zinc-800 text-sm font-black text-emerald-400 p-2 rounded-xl focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-[11px] font-bold text-zinc-400 uppercase block mb-1">
+                        Хүчинтэй хугацаа (хоногоор):
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newCodeForm.durationDays}
+                        onChange={(e) => setNewCodeForm({ ...newCodeForm, durationDays: Number(e.target.value) })}
+                        className="w-full bg-zinc-950 border border-zinc-800 text-sm font-black text-amber-300 p-2 rounded-xl focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase block mb-1">
+                    Тайлбар (Заавал биш):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Жнь: 3-р сарын урамшууллын эрхийн код"
+                    value={newCodeForm.description}
+                    onChange={(e) => setNewCodeForm({ ...newCodeForm, description: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-2.5 rounded-xl focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-black text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Кодыг Үүсгэж Хадгалах</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Codes List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-emerald-400" />
+                  Систем дээрх эрхийн кодууд ({promoCodesList.length})
+                </h4>
+                <span className="text-xs text-zinc-500">
+                  Хэрэглэгч төлбөрийн цонхонд энэ кодыг оруулж шууд эрх авна
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {promoCodesList.map((c) => (
+                  <div
+                    key={c.id}
+                    className="bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 p-3.5 rounded-xl flex flex-col justify-between gap-3 group transition-all relative overflow-hidden"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-base font-black text-amber-400 tracking-wider">
+                            {c.code}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCode(c.code, c.id)}
+                            className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-md text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                            title="Кодыг хуулах"
+                          >
+                            {copiedCodeId === c.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Хууллаа</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Хуулах</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-xs text-zinc-300 font-medium line-clamp-2">
+                          {c.description}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                          c.type === 'full_vip'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : c.type === 'anime'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                            : c.type === 'movie'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        {c.type === 'full_vip'
+                          ? '👑 VIP'
+                          : c.type === 'anime'
+                          ? '🎌 Анимэ'
+                          : c.type === 'movie'
+                          ? '🎬 Кино'
+                          : `💰 +${(c.value || 5000).toLocaleString()} ₮`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80 text-[11px] text-zinc-500">
+                      <span>
+                        {c.type === 'points'
+                          ? `Оноо: +${(c.value || 5000).toLocaleString()}`
+                          : `Хугацаа: ${c.durationDays || 30} хоног`}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 font-bold">Идэвхтэй ✓</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCode(c.id)}
+                          className="p-1 text-zinc-600 hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Устгах"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
