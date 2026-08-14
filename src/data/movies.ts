@@ -421,8 +421,8 @@ export const SAMPLE_MOVIES: Movie[] = [
     subtitles: ['Монгол хадмал'],
     episodes: [
       { episodeNumber: 1, title: '1-р анги - Сүүлчийн довтлогч (ҮНЭГҮЙ)', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
-      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1fdMsTzK5IZXRdjjyweQ5pfDhVs7PgGax/view?usp=drivesdk' },
-      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: '' },
+      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/19wv60h7EY2Ycj4h-1JjoYY0bdHjcfjVG/view?usp=drivesdk' },
+      { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: '' },                                                                                         
       { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: '' },
       { episodeNumber: 3, title: '3-р анги - Бөмбөгний мэдрэмж', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/19wv60h7EY2Ycj4h-1JjoYY0bdHjcfjVG/view?usp=drivesdk' },
       { episodeNumber: 4, title: '4-р анги - Зөн билэг ба хүч', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
