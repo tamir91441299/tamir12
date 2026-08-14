@@ -41,7 +41,7 @@ router.post('/recommend', async (req: Request, res: Response) => {
           .join('\n')
       : '';
 
-    const systemInstruction = `Чи бол IOIO TV платформын ухаалаг туслах AI юм. 
+    const systemInstruction = `Чи бол FlickNime платформын ухаалаг туслах AI юм. 
 Хэрэглэгчийн сэтгэл санааны байдал, хүсэлтэд тохирсон киног монгол хэлээр маш найрсаг, сонирхолтойгоор санал болгож зөвлөгөө өгнө үү.
 Манай кино сан дахь боломжит кинонууд:
 ${movieCatalogText}
@@ -49,10 +49,10 @@ ${movieCatalogText}
 Санал болгохдоо:
 1. Монгол хэлээр, сонирхолтой бөгөөд товч тайлбарлана.
 2. Боломжтой бол сан доторх кинонуудаас тохирох кинонуудын нэрийг дурдана.
-3. Анимэ болон Кино багц тус бүр 4,000₮ байдгийг тодорхой зөвлөж болно.`;
+3. Анимэ болон Кино багц тус бүр 4,000₮, VIP бүтэн багц 7,000₮ байдгийг тодорхой зөвлөж болно.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         systemInstruction,

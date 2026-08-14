@@ -15,6 +15,11 @@ service cloud.firestore {
     match /scores/{scoreId} {
       allow read, write: if true;
     }
+
+    // Promo codes collection
+    match /promo_codes/{codeId} {
+      allow read, write: if true;
+    }
   }
 }
 

@@ -110,43 +110,42 @@ export const RELIABLE_CDN_STREAMS = [
  * If the input is already a direct playable file (.mp4, .webm, .m3u8, direct HTTP stream), it uses it.
  * If it's a Drive/YT/external URL or empty/broken, it smoothly maps to a high-speed CDN stream for direct HTML5 playback.
  */
+export function isDirectPlayableMedia(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const clean = url.trim().toLowerCase();
+  return (
+    clean.startsWith('data:video') ||
+    clean.startsWith('blob:') ||
+    clean.includes('commondatastorage.googleapis.com') ||
+    clean.includes('.mp4') ||
+    clean.includes('.webm') ||
+    clean.includes('.m3u8') ||
+    clean.includes('.ogg')
+  );
+}
+
+/**
+ * Returns a guaranteed direct playable video stream URL.
+ * If the input is already a direct playable file (.mp4, .webm, .m3u8, direct HTTP stream), it uses it.
+ * If it's a Drive/YT/external URL or empty/broken, it smoothly maps to a high-speed CDN stream for direct HTML5 playback.
+ */
 export function getDirectPlaybackStream(videoUrl?: string, episodeNumber?: number): string {
-  if (!videoUrl || videoUrl.trim() === '') {
-    const epNum = episodeNumber && episodeNumber > 0 ? episodeNumber : 1;
-    const idx = (epNum - 1) % RELIABLE_CDN_STREAMS.length;
-    return RELIABLE_CDN_STREAMS[idx];
+  const epNum = episodeNumber && episodeNumber > 0 ? episodeNumber : 1;
+  const idx = (epNum - 1) % RELIABLE_CDN_STREAMS.length;
+  const fallbackStream = RELIABLE_CDN_STREAMS[idx] || RELIABLE_CDN_STREAMS[0];
+
+  if (!videoUrl || typeof videoUrl !== 'string' || videoUrl.trim() === '') {
+    return fallbackStream;
   }
 
   const clean = videoUrl.trim();
 
-  // If it's a direct HTML5 media stream
-  if (
-    clean.endsWith('.mp4') ||
-    clean.endsWith('.webm') ||
-    clean.endsWith('.m3u8') ||
-    clean.endsWith('.ogg') ||
-    clean.includes('commondatastorage.googleapis.com') ||
-    clean.startsWith('blob:')
-  ) {
+  // If it's already a direct HTML5 media stream
+  if (isDirectPlayableMedia(clean)) {
     return clean;
   }
 
-  // If it's an external URL (Google Drive, YouTube, etc.) and player requires direct HTML5 streaming
-  const epNum = episodeNumber && episodeNumber > 0 ? episodeNumber : 1;
-  const idx = (epNum - 1) % RELIABLE_CDN_STREAMS.length;
-  return RELIABLE_CDN_STREAMS[idx];
-}
-
-export function isDirectPlayableMedia(url?: string): boolean {
-  if (!url) return false;
-  const clean = url.trim().toLowerCase();
-  return (
-    clean.endsWith('.mp4') ||
-    clean.endsWith('.webm') ||
-    clean.endsWith('.m3u8') ||
-    clean.endsWith('.ogg') ||
-    clean.includes('commondatastorage.googleapis.com') ||
-    clean.startsWith('blob:')
-  );
+  // Fallback to high-speed sample stream for smooth HTML5 playback
+  return fallbackStream;
 }
 

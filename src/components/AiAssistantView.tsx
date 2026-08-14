@@ -79,7 +79,7 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({
             <div>
               <div className="inline-flex items-center gap-2 bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-xs font-black border border-cyan-500/30 mb-1">
                 <Bot className="w-3.5 h-3.5" />
-                <span>IOIO AI САНАЛ БОЛГОГЧ</span>
+                <span>FLICKNIME AI САНАЛ БОЛГОГЧ</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 AI Кино Туслах & Тоглоом

@@ -116,47 +116,47 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   // Auto play effect on source/episode/server change
   useEffect(() => {
     if (videoRef.current && !isEmbed) {
-      try {
-        videoRef.current.load();
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-            })
-            .catch((err) => {
-              console.warn('Autoplay with audio handled by browser:', err);
-              // Browser policy fallback: Mute and attempt autoplay, or display play button
-              if (videoRef.current) {
-                videoRef.current.muted = true;
-                setIsMuted(true);
-                videoRef.current
-                  .play()
-                  .then(() => setIsPlaying(true))
-                  .catch(() => setIsPlaying(false));
-              }
-            });
-        }
-      } catch (e) {
-        console.warn('Video load notice:', e);
+      const video = videoRef.current;
+      // When source changes, attempt to play if isPlaying is active
+      if (isPlaying && video.paused) {
+        video.play().catch((err) => {
+          console.warn('Autoplay notice:', err?.message || err);
+          if (video && video.paused) {
+            video.muted = true;
+            setIsMuted(true);
+            video.play().catch(() => setIsPlaying(false));
+          }
+        });
       }
     }
   }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, serverMode]);
 
-  // Play / Pause toggle
+  // Safe Play / Pause toggle
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch((err) => {
-          console.error('Play error:', err);
-          setIsPlaying(false);
-        });
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.warn('Play handled gracefully:', err?.message || err);
+            // If browser blocked unmuted sound, mute and play then let user unmute
+            video.muted = true;
+            setIsMuted(true);
+            video
+              .play()
+              .then(() => setIsPlaying(true))
+              .catch(() => setIsPlaying(false));
+          });
       }
+    } else {
+      video.pause();
+      setIsPlaying(false);
     }
   };
 
@@ -568,10 +568,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 src={videoSrcToPlay}
                 autoPlay
                 playsInline
+                preload="auto"
                 controlsList="nodownload noplaybackrate"
                 disablePictureInPicture
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
+                onLoadedMetadata={() => {
+                  if (videoRef.current) {
+                    setDuration(videoRef.current.duration || 0);
+                  }
+                }}
+                onCanPlay={() => {
+                  if (isPlaying && videoRef.current && videoRef.current.paused) {
+                    videoRef.current.play().catch((err) => {
+                      console.warn('CanPlay autoplay notice:', err?.message || err);
+                    });
+                  }
+                }}
                 onError={() => {
                   console.warn('Video stream error, switching to next backup server');
                   if (serverMode === 'server1') {
@@ -602,186 +615,199 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               />
 
               {!isPlaying && (
-                <button
-                  type="button"
+                <div
                   onClick={togglePlay}
-                  className="absolute p-5 rounded-full bg-cyan-500/90 text-black hover:bg-cyan-400 hover:scale-110 transition-all shadow-2xl shadow-cyan-500/50 z-30 cursor-pointer animate-in zoom-in-75 duration-200"
-                  title="Тоглуулах"
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20 cursor-pointer backdrop-blur-[2px] transition-all"
                 >
-                  <Play className="w-10 h-10 fill-current translate-x-0.5" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePlay();
+                    }}
+                    className="p-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-black hover:scale-110 transition-transform shadow-2xl shadow-cyan-500/50 cursor-pointer flex items-center justify-center group"
+                    title="Эхлүүлэх (Play)"
+                  >
+                    <Play className="w-12 h-12 fill-black translate-x-1" />
+                  </button>
+                  <p className="mt-3 text-sm font-black text-cyan-300 drop-shadow uppercase tracking-wider bg-black/70 px-4 py-1.5 rounded-full border border-cyan-500/40">
+                    ▶ Тоглуулах / Эхлэх
+                  </p>
+                </div>
               )}
             </div>
           )}
 
-          {/* Custom Overlay Controls */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
-            {/* Timeline Progress Bar */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono text-zinc-300">
-                {formatTime(currentTime)}
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={duration || 100}
-                value={currentTime}
-                onChange={handleSeek}
-                className="flex-1 h-1.5 bg-zinc-700 accent-cyan-400 rounded-lg cursor-pointer"
-              />
-              <span className="text-xs font-mono text-zinc-400">
-                {formatTime(duration)}
-              </span>
-            </div>
+          {/* Custom Overlay Controls (Only for native HTML5 video stream) */}
+          {!isEmbed && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
+              {/* Timeline Progress Bar */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono text-zinc-300">
+                  {formatTime(currentTime)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 100}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="flex-1 h-1.5 bg-zinc-700 accent-cyan-400 rounded-lg cursor-pointer"
+                />
+                <span className="text-xs font-mono text-zinc-400">
+                  {formatTime(duration)}
+                </span>
+              </div>
 
-            {/* Bottom Controls Row */}
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center gap-4">
-                <button
-                  id="player-play-toggle"
-                  onClick={togglePlay}
-                  className="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-cyan-400"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-6 h-6 fill-current" />
-                  ) : (
-                    <Play className="w-6 h-6 fill-current" />
-                  )}
-                </button>
-
-                {/* Next Episode Button if available */}
-                {episodes.length > 0 && currentEpisodeIndex < episodes.length - 1 && (
+              {/* Bottom Controls Row */}
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-4">
                   <button
-                    id="player-next-ep"
-                    onClick={() => selectEpisode(currentEpisodeIndex + 1)}
-                    className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
-                    title="Дараагийн анги"
+                    id="player-play-toggle"
+                    onClick={togglePlay}
+                    className="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-cyan-400"
                   >
-                    <SkipForward className="w-5 h-5" />
-                  </button>
-                )}
-
-                {/* Volume Slider */}
-                <div className="flex items-center gap-2 group/vol">
-                  <button
-                    id="player-mute-toggle"
-                    onClick={toggleMute}
-                    className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="w-5 h-5 text-rose-400" />
+                    {isPlaying ? (
+                      <Pause className="w-6 h-6 fill-current" />
                     ) : (
-                      <Volume2 className="w-5 h-5" />
+                      <Play className="w-6 h-6 fill-current" />
                     )}
                   </button>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={isMuted ? 0 : volume}
-                    onChange={handleVolumeChange}
-                    className="w-16 sm:w-24 h-1 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
-                  />
+
+                  {/* Next Episode Button if available */}
+                  {episodes.length > 0 && currentEpisodeIndex < episodes.length - 1 && (
+                    <button
+                      id="player-next-ep"
+                      onClick={() => selectEpisode(currentEpisodeIndex + 1)}
+                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
+                      title="Дараагийн анги"
+                    >
+                      <SkipForward className="w-5 h-5" />
+                    </button>
+                  )}
+
+                  {/* Volume Slider */}
+                  <div className="flex items-center gap-2 group/vol">
+                    <button
+                      id="player-mute-toggle"
+                      onClick={toggleMute}
+                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                    >
+                      {isMuted || volume === 0 ? (
+                        <VolumeX className="w-5 h-5 text-rose-400" />
+                      ) : (
+                        <Volume2 className="w-5 h-5" />
+                      )}
+                    </button>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={isMuted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      className="w-16 sm:w-24 h-1 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Right Player Settings */}
-              <div className="flex items-center gap-3">
-                {/* Audio/Sub badges */}
-                <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
-                  🔊 {selectedAudio}
-                </span>
-                <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
-                  💬 {selectedSub}
-                </span>
+                {/* Right Player Settings */}
+                <div className="flex items-center gap-3">
+                  {/* Audio/Sub badges */}
+                  <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
+                    🔊 {selectedAudio}
+                  </span>
+                  <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
+                    💬 {selectedSub}
+                  </span>
 
-                {/* Quality Badge */}
-                <span className="text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 px-2 py-0.5 rounded">
-                  {selectedQuality}
-                </span>
+                  {/* Quality Badge */}
+                  <span className="text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 px-2 py-0.5 rounded">
+                    {selectedQuality}
+                  </span>
 
-                {/* Settings Toggle Menu */}
-                <div className="relative">
+                  {/* Settings Toggle Menu */}
+                  <div className="relative">
+                    <button
+                      id="player-settings-toggle"
+                      onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </button>
+
+                    {showSettingsMenu && (
+                      <div className="absolute right-0 bottom-12 w-64 bg-zinc-900 border border-zinc-700 rounded-xl p-3 shadow-2xl space-y-3 z-50 text-xs text-zinc-200">
+                        <div>
+                          <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
+                            <Languages className="w-3.5 h-3.5" />
+                            Дууны зам (Audio)
+                          </div>
+                          {movie.audioTracks.map((track) => (
+                            <button
+                              key={track}
+                              onClick={() => setSelectedAudio(track)}
+                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                            >
+                              <span>{track}</span>
+                              {selectedAudio === track && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-zinc-800 pt-2">
+                          <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
+                            <Subtitles className="w-3.5 h-3.5" />
+                            Хадмал (Subtitles)
+                          </div>
+                          {movie.subtitles.concat(['Унтраах']).map((sub) => (
+                            <button
+                              key={sub}
+                              onClick={() => setSelectedSub(sub)}
+                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                            >
+                              <span>{sub}</span>
+                              {selectedSub === sub && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-zinc-800 pt-2">
+                          <div className="font-bold text-cyan-400 mb-1">
+                            Чанар (Quality)
+                          </div>
+                          {['4K Ultra HD', '1080p HD', '720p', '480p'].map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => setSelectedQuality(q)}
+                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                            >
+                              <span>{q}</span>
+                              {selectedQuality === q && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fullscreen Toggle */}
                   <button
-                    id="player-settings-toggle"
-                    onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                    className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                    id="player-fullscreen-toggle"
+                    onClick={toggleFullscreen}
+                    className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
                   >
-                    <Settings className="w-5 h-5" />
+                    {isFullscreen ? (
+                      <Minimize className="w-5 h-5 text-cyan-400" />
+                    ) : (
+                      <Maximize className="w-5 h-5" />
+                    )}
                   </button>
-
-                  {showSettingsMenu && (
-                    <div className="absolute right-0 bottom-12 w-64 bg-zinc-900 border border-zinc-700 rounded-xl p-3 shadow-2xl space-y-3 z-50 text-xs text-zinc-200">
-                      <div>
-                        <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
-                          <Languages className="w-3.5 h-3.5" />
-                          Дууны зам (Audio)
-                        </div>
-                        {movie.audioTracks.map((track) => (
-                          <button
-                            key={track}
-                            onClick={() => setSelectedAudio(track)}
-                            className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
-                          >
-                            <span>{track}</span>
-                            {selectedAudio === track && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="border-t border-zinc-800 pt-2">
-                        <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
-                          <Subtitles className="w-3.5 h-3.5" />
-                          Хадмал (Subtitles)
-                        </div>
-                        {movie.subtitles.concat(['Унтраах']).map((sub) => (
-                          <button
-                            key={sub}
-                            onClick={() => setSelectedSub(sub)}
-                            className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
-                          >
-                            <span>{sub}</span>
-                            {selectedSub === sub && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="border-t border-zinc-800 pt-2">
-                        <div className="font-bold text-cyan-400 mb-1">
-                          Чанар (Quality)
-                        </div>
-                        {['4K Ultra HD', '1080p HD', '720p', '480p'].map((q) => (
-                          <button
-                            key={q}
-                            onClick={() => setSelectedQuality(q)}
-                            className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
-                          >
-                            <span>{q}</span>
-                            {selectedQuality === q && <Check className="w-3.5 h-3.5 text-cyan-400" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-
-                {/* Fullscreen Toggle */}
-                <button
-                  id="player-fullscreen-toggle"
-                  onClick={toggleFullscreen}
-                  className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white transition-colors cursor-pointer"
-                  title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
-                >
-                  {isFullscreen ? (
-                    <Minimize className="w-5 h-5 text-cyan-400" />
-                  ) : (
-                    <Maximize className="w-5 h-5" />
-                  )}
-                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Side Episode Selector Drawer for Series */}

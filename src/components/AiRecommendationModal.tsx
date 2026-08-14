@@ -69,7 +69,7 @@ export const AiRecommendationModal: React.FC<AiRecommendationModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-black text-white flex items-center gap-2">
-                IOIO AI Кино Санал Болгогч
+                FlickNime AI Кино Санал Болгогч
               </h2>
               <p className="text-xs text-zinc-400">
                 Ямар кино үзмээр байгаагаа өөрийн үгээр бичнэ үү (Gemini AI)

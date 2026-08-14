@@ -21,7 +21,7 @@ app.use(seoRouter);
 
 // Health Check API
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "IOIO TV API Server" });
+  res.json({ status: "ok", service: "FlickNime TV API Server" });
 });
 
 // API Routes

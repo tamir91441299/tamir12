@@ -44,15 +44,11 @@ export default function App() {
             const mergedEps = customEps.map((ep, idx) => {
               const defaultEp = m.episodes?.[idx];
               const epNum = ep.episodeNumber || idx + 1;
-              // Clean up broken drive links or empty links to direct high-speed stream
-              if (!ep.videoUrl || ep.videoUrl.trim() === '' || ep.videoUrl.includes('drive.google.com/file/d/')) {
-                return {
-                  ...ep,
-                  episodeNumber: epNum,
-                  videoUrl: defaultEp?.videoUrl || getDirectPlaybackStream(ep.videoUrl, epNum)
-                };
-              }
-              return { ...ep, episodeNumber: epNum };
+              return {
+                ...ep,
+                episodeNumber: epNum,
+                videoUrl: ep.videoUrl?.trim() || defaultEp?.videoUrl || getDirectPlaybackStream('', epNum)
+              };
             });
             return {
               ...m,
@@ -481,7 +477,7 @@ export default function App() {
               </div>
               <div>
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  IOIO AI Кино Санал Болгогч Цэс
+                  FlickNime AI Кино Санал Болгогч Цэс
                 </h3>
                 <p className="text-xs text-zinc-400">
                   Та юу үзмээр байгаагаа монголоор бичээд AI туслахаас шууд зөвлөгөө аваарай.
