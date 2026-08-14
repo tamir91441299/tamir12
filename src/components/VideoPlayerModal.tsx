@@ -132,6 +132,34 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, serverMode]);
 
+  // Robust Server Switcher that guarantees instant playback
+  const handleServerChange = (mode: 'server1' | 'server2' | 'server3') => {
+    setServerMode(mode);
+    setIsPlaying(true);
+
+    // When switching to direct HTML5 streaming servers (Server 2 or Server 3)
+    if (mode !== 'server1') {
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = currentTime;
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => setIsPlaying(true))
+              .catch((err) => {
+                console.warn('Server switch play caught, trying muted play:', err);
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  setIsMuted(true);
+                  videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                }
+              });
+          }
+        }
+      }, 100);
+    }
+  };
+
   // Change playback speed
   const handlePlaybackSpeed = (speed: number) => {
     setPlaybackSpeed(speed);
@@ -427,32 +455,36 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           <div className="flex items-center bg-zinc-900 border border-cyan-800/80 rounded-lg p-0.5 text-xs shadow-inner">
             <button
               type="button"
-              onClick={() => setServerMode('server1')}
-              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+              id="server1-btn"
+              onClick={() => handleServerChange('server1')}
+              className={`px-2.5 py-1 rounded-md transition-all font-bold cursor-pointer ${
                 serverMode === 'server1'
                   ? 'bg-cyan-500 text-black shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Үндсэн сервер (HD)"
+              title="Үндсэн эх холбоос сервер (Google Drive / Embed)"
             >
-              Сервер 1
+              Сервер 1 (Эх)
             </button>
             <button
               type="button"
-              onClick={() => setServerMode('server2')}
-              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+              id="server2-btn"
+              onClick={() => handleServerChange('server2')}
+              className={`px-2.5 py-1 rounded-md transition-all font-black cursor-pointer flex items-center gap-1 ${
                 serverMode === 'server2'
-                  ? 'bg-cyan-500 text-black shadow-md'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-black shadow-md shadow-amber-500/30'
+                  : 'text-amber-400 hover:text-amber-200 bg-amber-950/30'
               }`}
-              title="Хурдан дамжуулах найдвартай сервер"
+              title="Хурдан дамжуулах найдвартай шууд тоглуулагч сервер"
             >
-              Сервер 2 (Хурдан)
+              <Sparkles className="w-3 h-3" />
+              <span>Сервер 2 (Шууд)</span>
             </button>
             <button
               type="button"
-              onClick={() => setServerMode('server3')}
-              className={`px-2.5 py-1 rounded-md transition-all font-bold ${
+              id="server3-btn"
+              onClick={() => handleServerChange('server3')}
+              className={`px-2.5 py-1 rounded-md transition-all font-bold cursor-pointer ${
                 serverMode === 'server3'
                   ? 'bg-cyan-500 text-black shadow-md'
                   : 'text-zinc-400 hover:text-zinc-200'
@@ -535,15 +567,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setServerMode('server2')}
-                      className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow flex items-center gap-1 hover:scale-105 active:scale-95"
+                      id="banner-server2-btn"
+                      onClick={() => handleServerChange('server2')}
+                      className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition-all cursor-pointer shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 animate-pulse"
                     >
-                      <Sparkles className="w-3 h-3" />
+                      <Sparkles className="w-3.5 h-3.5 fill-black" />
                       <span>🚀 Шууд тоглуулах (Сервер 2)</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setServerMode('server3')}
+                      id="banner-server3-btn"
+                      onClick={() => handleServerChange('server3')}
                       className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-cyan-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
                     >
                       <span>🌐 Сервер 3</span>
@@ -598,9 +632,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 onError={() => {
                   console.warn('Video stream error, switching to next backup server');
                   if (serverMode === 'server1') {
-                    setServerMode('server2');
+                    handleServerChange('server2');
                   } else if (serverMode === 'server2') {
-                    setServerMode('server3');
+                    handleServerChange('server3');
                   }
                 }}
                 onPlay={() => setIsPlaying(true)}
