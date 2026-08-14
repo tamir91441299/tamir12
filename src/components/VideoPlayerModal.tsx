@@ -109,6 +109,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [selectedAudio, setSelectedAudio] = useState(movie?.audioTracks?.[0] || 'Монгол дуу оруулга');
   const [selectedSub, setSelectedSub] = useState(movie?.subtitles?.[0] || 'Монгол хадмал');
   const [selectedQuality, setSelectedQuality] = useState('1080p HD');
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -130,6 +131,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       }
     }
   }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, serverMode]);
+
+  // Change playback speed
+  const handlePlaybackSpeed = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
 
   // Safe Play / Pause toggle
   const togglePlay = () => {
@@ -661,17 +670,49 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
               {/* Bottom Controls Row */}
               <div className="flex items-center justify-between text-white">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <button
                     id="player-play-toggle"
                     onClick={togglePlay}
                     className="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-cyan-400"
+                    title={isPlaying ? "Түр зогсоох (Space)" : "Тоглуулах (Space)"}
                   >
                     {isPlaying ? (
                       <Pause className="w-6 h-6 fill-current" />
                     ) : (
                       <Play className="w-6 h-6 fill-current" />
                     )}
+                  </button>
+
+                  {/* 10s Backward */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                      }
+                    }}
+                    className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer text-xs font-bold flex items-center"
+                    title="10 секунд ухраах (Зүүн сум)"
+                  >
+                    -10s
+                  </button>
+
+                  {/* 10s Forward */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.min(
+                          videoRef.current.duration || 0,
+                          videoRef.current.currentTime + 10
+                        );
+                      }
+                    }}
+                    className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer text-xs font-bold flex items-center"
+                    title="10 секунд гүйлгэх (Баруун сум)"
+                  >
+                    +10s
                   </button>
 
                   {/* Next Episode Button if available */}
@@ -692,6 +733,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       id="player-mute-toggle"
                       onClick={toggleMute}
                       className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                      title="Дуу хаах/нээх (M)"
                     >
                       {isMuted || volume === 0 ? (
                         <VolumeX className="w-5 h-5 text-rose-400" />
@@ -712,7 +754,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 </div>
 
                 {/* Right Player Settings */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Playback speed indicator */}
+                  {playbackSpeed !== 1 && (
+                    <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded">
+                      {playbackSpeed}x
+                    </span>
+                  )}
+
                   {/* Audio/Sub badges */}
                   <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
                     🔊 {selectedAudio}
@@ -770,6 +819,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               {selectedSub === sub && <Check className="w-3.5 h-3.5 text-cyan-400" />}
                             </button>
                           ))}
+                        </div>
+
+                        <div className="border-t border-zinc-800 pt-2">
+                          <div className="font-bold text-cyan-400 mb-1">
+                            Хурд (Speed)
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 mt-1">
+                            {[0.75, 1, 1.25, 1.5].map((spd) => (
+                              <button
+                                key={spd}
+                                onClick={() => handlePlaybackSpeed(spd)}
+                                className={`py-1 rounded text-center cursor-pointer font-bold ${
+                                  playbackSpeed === spd
+                                    ? 'bg-cyan-500 text-black'
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                {spd}x
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         <div className="border-t border-zinc-800 pt-2">

@@ -636,171 +636,198 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
             />
           </div>
 
-          {/* QUESTION EMOJI CARD */}
-          <div className="bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 border border-purple-500/30 rounded-2xl p-8 text-center relative overflow-hidden shadow-inner">
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">
+          {/* QUESTION EMOJI CARD (Цэвэрхэн Асуултын карт) */}
+          <div className="bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 border border-purple-500/30 rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden shadow-inner">
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">
               Асуулт {currentIndex + 1} / {questions.length}
             </div>
 
             {/* Big Emoji Display */}
-            <div className="text-4xl sm:text-6xl py-4 font-normal tracking-widest selection:bg-purple-500/30 drop-shadow-md">
+            <div className="text-5xl sm:text-7xl py-3 font-normal tracking-widest selection:bg-purple-500/30 drop-shadow-md">
               {getEmojiDisplay()}
             </div>
 
-            <p className="text-xs text-zinc-400 font-medium">
+            <p className="text-xs sm:text-sm text-zinc-300 font-medium">
               {activeGameMode === 'character'
                 ? 'Дээрх эможи ямар анимегийн дүрийг илэрхийлж байна вэ?'
                 : 'Дээрх эможи ямар анимег илэрхийлж байна вэ?'}
             </p>
-
-            {/* IMAGE REVEAL (Rendered when question is answered - both correct or incorrect) */}
-            {gameState === 'answered' && (
-              <div className="mt-4 transition-all duration-500 animate-fadeIn flex flex-col items-center">
-                {currentQ?.image && !imgError ? (
-                  <img
-                    src={currentQ.image}
-                    alt={currentQ.answer}
-                    referrerPolicy="no-referrer"
-                    onError={() => setImgError(true)}
-                    className="max-h-[220px] w-auto mx-auto object-contain rounded-xl border-2 border-purple-500/60 shadow-xl shadow-purple-950/50"
-                  />
-                ) : (
-                  <div className="w-48 h-60 rounded-xl bg-gradient-to-br from-purple-900/60 to-pink-900/60 border-2 border-purple-500/50 flex flex-col items-center justify-center p-4 text-center shadow-xl">
-                    <span className="text-4xl mb-2">🎬</span>
-                    <span className="text-sm font-black text-white">{currentQ?.answer}</span>
-                    <span className="text-[10px] text-purple-300 mt-1">{getEmojiDisplay()}</span>
-                  </div>
-                )}
-                <span className="text-xs text-purple-300 font-bold mt-2 bg-purple-950/80 border border-purple-800/80 px-3 py-1 rounded-full shadow-sm">
-                  🎬 {currentQ?.answer}
-                </span>
-              </div>
-            )}
           </div>
 
-          {/* FEEDBACK STATUS BANNER */}
-          {gameState === 'answered' && (
-            <div
-              className={`p-4 rounded-2xl flex items-center justify-between gap-4 border ${
-                isCorrect
-                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
-                  : 'bg-rose-500/10 border-rose-500/40 text-rose-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {isCorrect ? (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
-                ) : (
-                  <XCircle className="w-6 h-6 text-rose-400 flex-shrink-0" />
-                )}
-                <div>
-                  <div className="font-bold text-sm">
-                    {isCorrect ? 'Зөв таалаа! (+15 оноо)' : 'Буруу хариуллаа!'}
-                  </div>
-                  <div className="text-xs opacity-80">
-                    Зөв хариулт: <span className="font-black underline">{currentQ?.answer}</span>
-                  </div>
-                </div>
-              </div>
-
-              {lives > 0 && (
-                <button
-                  id="next-question-btn"
-                  onClick={handleNextQuestion}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow border border-zinc-700 cursor-pointer"
-                >
-                  Дараагийнх ➔
-                </button>
-              )}
+          {/* 4 MULTIPLE CHOICE OPTIONS (ДЭЭР ба ДООР 2 эгнээгээр хуваасан хариултын сонголтууд) */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between text-xs text-zinc-400 font-bold px-1">
+              <span className="flex items-center gap-1.5 text-purple-300">
+                <span>🎯</span> Сонголтууд (Дээр / Доор):
+              </span>
+              <span className="text-[11px] text-zinc-500">
+                {gameState === 'playing' ? 'Нэг хариулт сонгоно уу' : 'Хариулсан'}
+              </span>
             </div>
-          )}
 
-          {/* 4 MULTIPLE CHOICE OPTIONS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-            {parsedOptions.map((option, idx) => {
-              const optionLetters = ['А', 'Б', 'В', 'Г'];
-              const letter = optionLetters[idx] || String.fromCharCode(65 + idx);
-              const cleanAnswer = currentQ?.answer.trim().toLowerCase();
-              const cleanOpt = option.trim().toLowerCase();
-              const isThisAnswer = cleanOpt === cleanAnswer;
-              const isSelected = selectedOption?.trim().toLowerCase() === cleanOpt;
+            {/* ДЭЭД ЭГНЭЭ (Дээр: А ба Б сонголт) */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider pl-1 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                Дээд эгнээ (А, Б):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {parsedOptions.slice(0, 2).map((option, idx) => {
+                  const letter = idx === 0 ? 'А' : 'Б';
+                  const cleanAnswer = currentQ?.answer.trim().toLowerCase();
+                  const cleanOpt = option.trim().toLowerCase();
+                  const isThisAnswer = cleanOpt === cleanAnswer;
+                  const isSelected = selectedOption?.trim().toLowerCase() === cleanOpt;
 
-              let btnStyle =
-                'bg-zinc-800/90 hover:bg-zinc-700/90 border-zinc-700/80 text-zinc-100 hover:border-purple-500/60 shadow-md';
-              let badgeStyle = 'bg-zinc-950 border-zinc-700 text-purple-300';
+                  let btnStyle =
+                    'bg-zinc-800/90 hover:bg-zinc-700/90 border-zinc-700/80 text-zinc-100 hover:border-purple-500/60 shadow-md';
+                  let badgeStyle = 'bg-zinc-950 border-zinc-700 text-purple-300';
 
-              if (gameState === 'answered') {
-                if (isThisAnswer) {
-                  btnStyle = 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-600/30 scale-[1.02]';
-                  badgeStyle = 'bg-emerald-800 border-emerald-300 text-white';
-                } else if (isSelected && !isCorrect) {
-                  btnStyle = 'bg-rose-600 border-rose-400 text-white font-bold opacity-90';
-                  badgeStyle = 'bg-rose-800 border-rose-300 text-white';
-                } else {
-                  btnStyle = 'bg-zinc-900 border-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed';
-                  badgeStyle = 'bg-zinc-950 border-zinc-800 text-zinc-600';
-                }
-              }
+                  if (gameState === 'answered') {
+                    if (isThisAnswer) {
+                      btnStyle = 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-600/30 scale-[1.02]';
+                      badgeStyle = 'bg-emerald-800 border-emerald-300 text-white';
+                    } else if (isSelected && !isCorrect) {
+                      btnStyle = 'bg-rose-600 border-rose-400 text-white font-bold opacity-90';
+                      badgeStyle = 'bg-rose-800 border-rose-300 text-white';
+                    } else {
+                      btnStyle = 'bg-zinc-900 border-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed';
+                      badgeStyle = 'bg-zinc-950 border-zinc-800 text-zinc-600';
+                    }
+                  }
 
-              return (
-                <button
-                  key={idx}
-                  id={`option-btn-${idx}`}
-                  disabled={gameState !== 'playing'}
-                  onClick={() => handleSelectOption(option)}
-                  className={`p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between gap-3 cursor-pointer ${btnStyle}`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className={`w-8 h-8 rounded-xl border flex items-center justify-center text-xs font-black shrink-0 ${badgeStyle}`}>
-                      {letter}
-                    </span>
-                    <span className="font-bold text-sm tracking-wide text-left truncate">{option}</span>
-                  </div>
+                  return (
+                    <button
+                      key={idx}
+                      id={`option-btn-${idx}`}
+                      disabled={gameState !== 'playing'}
+                      onClick={() => handleSelectOption(option)}
+                      className={`p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between gap-3 cursor-pointer ${btnStyle}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`w-8 h-8 rounded-xl border flex items-center justify-center text-xs font-black shrink-0 ${badgeStyle}`}>
+                          {letter}
+                        </span>
+                        <span className="font-bold text-sm tracking-wide text-left truncate">{option}</span>
+                      </div>
 
-                  {gameState === 'answered' && isThisAnswer && (
-                    <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 animate-bounce" />
-                  )}
-                  {gameState === 'answered' && isSelected && !isCorrect && (
-                    <XCircle className="w-5 h-5 text-white flex-shrink-0" />
-                  )}
-                </button>
-              );
-            })}
+                      {gameState === 'answered' && isThisAnswer && (
+                        <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 animate-bounce" />
+                      )}
+                      {gameState === 'answered' && isSelected && !isCorrect && (
+                        <XCircle className="w-5 h-5 text-white flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ДООД ЭГНЭЭ (Доор: В ба Г сонголт) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider pl-1 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-pink-500 inline-block" />
+                Доод эгнээ (В, Г):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {parsedOptions.slice(2, 4).map((option, subIdx) => {
+                  const idx = subIdx + 2;
+                  const letter = idx === 2 ? 'В' : 'Г';
+                  const cleanAnswer = currentQ?.answer.trim().toLowerCase();
+                  const cleanOpt = option.trim().toLowerCase();
+                  const isThisAnswer = cleanOpt === cleanAnswer;
+                  const isSelected = selectedOption?.trim().toLowerCase() === cleanOpt;
+
+                  let btnStyle =
+                    'bg-zinc-800/90 hover:bg-zinc-700/90 border-zinc-700/80 text-zinc-100 hover:border-pink-500/60 shadow-md';
+                  let badgeStyle = 'bg-zinc-950 border-zinc-700 text-pink-300';
+
+                  if (gameState === 'answered') {
+                    if (isThisAnswer) {
+                      btnStyle = 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-600/30 scale-[1.02]';
+                      badgeStyle = 'bg-emerald-800 border-emerald-300 text-white';
+                    } else if (isSelected && !isCorrect) {
+                      btnStyle = 'bg-rose-600 border-rose-400 text-white font-bold opacity-90';
+                      badgeStyle = 'bg-rose-800 border-rose-300 text-white';
+                    } else {
+                      btnStyle = 'bg-zinc-900 border-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed';
+                      badgeStyle = 'bg-zinc-950 border-zinc-800 text-zinc-600';
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      id={`option-btn-${idx}`}
+                      disabled={gameState !== 'playing'}
+                      onClick={() => handleSelectOption(option)}
+                      className={`p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between gap-3 cursor-pointer ${btnStyle}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`w-8 h-8 rounded-xl border flex items-center justify-center text-xs font-black shrink-0 ${badgeStyle}`}>
+                          {letter}
+                        </span>
+                        <span className="font-bold text-sm tracking-wide text-left truncate">{option}</span>
+                      </div>
+
+                      {gameState === 'answered' && isThisAnswer && (
+                        <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 animate-bounce" />
+                      )}
+                      {gameState === 'answered' && isSelected && !isCorrect && (
+                        <XCircle className="w-5 h-5 text-white flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* BOTTOM ANSWER REVEAL & IMAGE CARD (Доор хариулт харуулах хэсэг) */}
+          {/* BOTTOM ANSWER REVEAL & RESULT CARD (Доор гарах хариулт, зураг ба үр дүн) */}
           {gameState === 'answered' && (
-            <div className="mt-4 bg-gradient-to-br from-purple-950/80 via-zinc-900 to-zinc-950 border-2 border-purple-500/50 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in duration-300">
+            <div className="mt-6 bg-gradient-to-br from-purple-950/90 via-zinc-900 to-zinc-950 border-2 border-purple-500/60 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in duration-300">
               <div className="flex items-center justify-between border-b border-purple-800/50 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">✨</span>
-                  <span className="text-xs font-black text-purple-300 uppercase tracking-wider">
-                    Хариулт ба Асуултын Мэдээлэл (Доорх Баталгаажуулалт)
+                  <span className="text-xs sm:text-sm font-black text-purple-300 uppercase tracking-wider">
+                    Хариултын Үр Дүн & Мэдээлэл (Доор)
                   </span>
                 </div>
-                <span className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
-                  isCorrect
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
-                    : 'bg-rose-950 text-rose-300 border-rose-500/50'
-                }`}>
-                  {isCorrect ? '✓ Зөв хариулт' : '✕ Буруу хариулт'}
+                <span
+                  className={`text-xs font-black px-3.5 py-1.5 rounded-full border shadow-md flex items-center gap-1.5 ${
+                    isCorrect
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60'
+                      : 'bg-rose-950 text-rose-300 border-rose-500/60'
+                  }`}
+                >
+                  {isCorrect ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Зөв хариуллаа (+15 оноо)</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4 text-rose-400" />
+                      <span>Буруу хариуллаа</span>
+                    </>
+                  )}
                 </span>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-5 justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
                   {currentQ?.image && !imgError ? (
                     <img
                       src={currentQ.image}
                       alt={currentQ.answer}
                       referrerPolicy="no-referrer"
                       onError={() => setImgError(true)}
-                      className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl border-2 border-purple-400/80 shadow-lg shrink-0"
+                      className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-2xl border-2 border-purple-400/80 shadow-xl shrink-0"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-xl bg-purple-900/60 border border-purple-500/50 flex flex-col items-center justify-center text-center shrink-0">
-                      <span className="text-2xl">🎭</span>
-                      <span className="text-[10px] text-purple-300 font-bold">{getEmojiDisplay()}</span>
+                    <div className="w-24 h-24 rounded-2xl bg-purple-900/70 border border-purple-500/60 flex flex-col items-center justify-center text-center shrink-0 shadow-lg">
+                      <span className="text-3xl">🎭</span>
+                      <span className="text-[10px] text-purple-300 font-bold mt-1">{getEmojiDisplay()}</span>
                     </div>
                   )}
 
@@ -811,8 +838,8 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
                     <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
                       {currentQ?.answer}
                     </div>
-                    <p className="text-xs text-zinc-400">
-                      Эможи илэрхийлэл: <span className="text-white font-mono">{getEmojiDisplay()}</span>
+                    <p className="text-xs text-zinc-300">
+                      Эможи илэрхийлэл: <span className="text-white font-mono bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">{getEmojiDisplay()}</span>
                     </p>
                   </div>
                 </div>
@@ -821,7 +848,7 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
                   <button
                     id="next-question-bottom-btn"
                     onClick={handleNextQuestion}
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white font-black px-6 py-3.5 rounded-xl text-xs transition-all shadow-xl shadow-purple-600/30 cursor-pointer flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shrink-0"
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white font-black px-7 py-3.5 rounded-2xl text-sm transition-all shadow-xl shadow-purple-600/30 cursor-pointer flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shrink-0"
                   >
                     <span>Дараагийн Асуулт</span>
                     <span>➔</span>
