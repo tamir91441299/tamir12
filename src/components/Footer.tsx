@@ -12,11 +12,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div className="space-y-3 md:col-span-2">
-            <div className="flex items-center gap-1.5">
-              <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-xl px-2.5 py-0.5 rounded">
+            <div className="flex items-center gap-2">
+              <div className="rainbow-glow-box text-white font-black text-xl px-2.5 py-0.5 rounded-md">
                 Flick
               </div>
-              <span className="font-extrabold text-cyan-400 text-xl">Nime</span>
+              <span className="font-extrabold rainbow-glow-text text-xl">Nime</span>
             </div>
             <p className="text-zinc-400 text-xs leading-relaxed max-w-md">
               FlickNime нь Монгол хадмал болон дуу оруулгатай анимэ, кино, олон ангит цувралуудыг өндөр чанартайгаар толилуулах онлайн платформ юм.

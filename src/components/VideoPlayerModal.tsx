@@ -44,10 +44,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   onClose,
   onRequestPurchase,
 }) => {
-  if (!movie) return null;
-
-  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(
-    movie.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
+  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
+    movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
       ? Math.max(0, initialEpisodeNumber - 1)
       : 0
   );
@@ -60,13 +58,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   }, [initialEpisodeNumber]);
 
-  const episodes = movie.episodes || [];
+  const episodes = movie?.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];
 
   // Video source
   const videoSrc =
     currentEpisode?.videoUrl ||
-    movie.videoUrl ||
+    movie?.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
   const [serverMode, setServerMode] = useState<'server1' | 'server2' | 'server3'>('server1');
@@ -131,8 +129,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [selectedAudio, setSelectedAudio] = useState(movie.audioTracks[0] || 'Монгол дуу оруулга');
-  const [selectedSub, setSelectedSub] = useState(movie.subtitles[0] || 'Монгол хадмал');
+  const [selectedAudio, setSelectedAudio] = useState(movie?.audioTracks?.[0] || 'Монгол дуу оруулга');
+  const [selectedSub, setSelectedSub] = useState(movie?.subtitles?.[0] || 'Монгол хадмал');
   const [selectedQuality, setSelectedQuality] = useState('1080p HD');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
@@ -356,6 +354,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     const secs = Math.floor(seconds % 60);
     return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  if (!movie) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">

@@ -84,12 +84,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="logo-button"
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-1.5 group cursor-pointer focus:outline-none"
+            className="flex items-center gap-2 group cursor-pointer focus:outline-none"
           >
-            <div className="bg-gradient-to-br from-[#00d2ff] via-[#00a8ff] to-[#3a7bd5] text-white font-black text-2xl tracking-wider px-3 py-1 rounded shadow-lg group-hover:scale-105 transition-transform">
+            <div className="rainbow-glow-box text-white font-black text-2xl tracking-wider px-3.5 py-1 rounded-lg group-hover:scale-105 transition-transform">
               Flick
             </div>
-            <span className="font-extrabold text-2xl text-cyan-400 tracking-tight hidden md:inline-block">
+            <span className="font-extrabold text-2xl rainbow-glow-text tracking-tight hidden md:inline-block">
               Nime
             </span>
           </button>

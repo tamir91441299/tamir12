@@ -38,8 +38,12 @@ export default function App() {
       if (savedEpisodes) {
         const parsedMap: Record<string, Movie['episodes']> = JSON.parse(savedEpisodes);
         return SAMPLE_MOVIES.map((m) => {
-          if (parsedMap[m.id]) {
-            return { ...m, episodes: parsedMap[m.id] };
+          if (parsedMap[m.id] && parsedMap[m.id]!.length > 0) {
+            // Filter out empty or broken video URLs
+            const validCustomEps = parsedMap[m.id]!.filter(ep => ep.videoUrl && ep.videoUrl.trim().length > 0);
+            if (validCustomEps.length > 0) {
+              return { ...m, episodes: parsedMap[m.id] };
+            }
           }
           return m;
         });
@@ -694,19 +698,21 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      <MovieDetailModal
-        movie={selectedMovieForDetails}
-        currentUser={currentUser}
-        onClose={() => setSelectedMovieForDetails(null)}
-        onPlay={(m, ep) => {
-          setSelectedMovieForDetails(null);
-          handlePlayMovie(m, ep);
-        }}
-        onToggleFavorite={toggleFavorite}
-        isFavorite={selectedMovieForDetails ? isFavorite(selectedMovieForDetails.id) : false}
-        isPurchased={selectedMovieForDetails ? isPurchased(selectedMovieForDetails.id) : false}
-        onUpdateEpisodes={handleUpdateMovieEpisodes}
-      />
+      {selectedMovieForDetails && (
+        <MovieDetailModal
+          movie={selectedMovieForDetails}
+          currentUser={currentUser}
+          onClose={() => setSelectedMovieForDetails(null)}
+          onPlay={(m, ep) => {
+            setSelectedMovieForDetails(null);
+            handlePlayMovie(m, ep);
+          }}
+          onToggleFavorite={toggleFavorite}
+          isFavorite={isFavorite(selectedMovieForDetails.id)}
+          isPurchased={isPurchased(selectedMovieForDetails.id)}
+          onUpdateEpisodes={handleUpdateMovieEpisodes}
+        />
+      )}
 
       {selectedMovieForPlayer && (
         <VideoPlayerModal

@@ -46,12 +46,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onUpdateEpisodes,
   currentUser,
 }) => {
-  if (!movie) return null;
-
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
-  const [comments, setComments] = useState<Comment[]>(
-    SAMPLE_COMMENTS.filter((c) => c.movieId === movie.id || c.movieId === 'm1')
+  const [comments, setComments] = useState<Comment[]>(() => 
+    SAMPLE_COMMENTS.filter((c) => (movie && c.movieId === movie.id) || c.movieId === 'm1')
   );
   const [newCommentText, setNewCommentText] = useState('');
   const [userRating, setUserRating] = useState<number | null>(null);
@@ -59,9 +57,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [showTrailer, setShowTrailer] = useState(false);
 
   // Episode state management
-  const [episodesList, setEpisodesList] = useState(movie.episodes || []);
+  const [episodesList, setEpisodesList] = useState<Movie['episodes']>(movie?.episodes || []);
   const [showAddEpForm, setShowAddEpForm] = useState(false);
-  const [newEpNum, setNewEpNum] = useState<number>(episodesList.length + 1);
+  const [newEpNum, setNewEpNum] = useState<number>((movie?.episodes?.length || 0) + 1);
   const [newEpTitle, setNewEpTitle] = useState('');
   const [newEpUrl, setNewEpUrl] = useState('');
   const [newEpDuration, setNewEpDuration] = useState('24 мин');
@@ -70,8 +68,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     if (movie) {
       setEpisodesList(movie.episodes || []);
       setNewEpNum((movie.episodes?.length || 0) + 1);
+      setComments(SAMPLE_COMMENTS.filter((c) => c.movieId === movie.id || c.movieId === 'm1'));
     }
   }, [movie]);
+
+  if (!movie) return null;
 
   const handleSaveNewEpisode = (e: React.FormEvent) => {
     e.preventDefault();

@@ -422,7 +422,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     episodes: [
       { episodeNumber: 1, title: '1-р анги - Сүүлчийн довтлогч (ҮНЭГҮЙ)', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
       { episodeNumber: 2, title: '2-р анги - Чөтгөрийн сонголт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
-      { episodeNumber: 3, title: '3-р анги - Бөмбөгний мэдрэмж', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/19wv60h7EY2Ycj4h-1JjoYY0bdHjcfjVG/view?usp=drivesdk' },
+      { episodeNumber: 3, title: '3-р анги - Бөмбөгний мэдрэмж', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
       { episodeNumber: 4, title: '4-р анги - Зөн билэг ба хүч', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
       { episodeNumber: 5, title: '5-р анги - Дахин төрөлт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
       { episodeNumber: 6, title: '6-р анги - Ирээдүйн баатар', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' },

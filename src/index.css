@@ -1,1 +1,58 @@
 @import "tailwindcss";
+
+@keyframes rainbowGlow {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.8)) drop-shadow(0 0 22px rgba(59, 130, 246, 0.5));
+  }
+  25% {
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.85)) drop-shadow(0 0 26px rgba(236, 72, 153, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.85)) drop-shadow(0 0 28px rgba(249, 115, 22, 0.6));
+  }
+  75% {
+    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.85)) drop-shadow(0 0 26px rgba(6, 182, 212, 0.55));
+  }
+  100% {
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.8)) drop-shadow(0 0 22px rgba(59, 130, 246, 0.5));
+  }
+}
+
+@keyframes rainbowGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.6), 0 0 30px rgba(155, 81, 224, 0.4);
+  }
+  33% {
+    box-shadow: 0 0 18px rgba(255, 42, 122, 0.7), 0 0 35px rgba(243, 156, 18, 0.4);
+  }
+  66% {
+    box-shadow: 0 0 18px rgba(0, 255, 135, 0.7), 0 0 35px rgba(0, 210, 255, 0.5);
+  }
+}
+
+.rainbow-glow-box {
+  background: linear-gradient(135deg, #00d2ff, #9b51e0, #ff2a7a, #f39c12, #00ff87, #00d2ff);
+  background-size: 300% 300%;
+  animation: rainbowGradient 4s ease infinite, pulseGlow 3s ease-in-out infinite;
+}
+
+.rainbow-glow-text {
+  background: linear-gradient(90deg, #00f2fe, #4facfe, #a18cd1, #fbc2eb, #ff0844, #ffb199, #00f2fe);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbowGradient 3s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6)) drop-shadow(0 0 14px rgba(161, 140, 209, 0.4));
+}
