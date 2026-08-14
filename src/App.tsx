@@ -34,16 +34,21 @@ export default function App() {
   // Movies list state with custom episode updates from localStorage
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
     try {
-      const savedEpisodes = localStorage.getItem('ioio_custom_episodes');
+      const savedEpisodes = localStorage.getItem('ioio_custom_episodes') || localStorage.getItem('movie_episodes_map');
       if (savedEpisodes) {
         const parsedMap: Record<string, Movie['episodes']> = JSON.parse(savedEpisodes);
         return SAMPLE_MOVIES.map((m) => {
           if (parsedMap[m.id] && parsedMap[m.id]!.length > 0) {
-            // Filter out empty or broken video URLs
-            const validCustomEps = parsedMap[m.id]!.filter(ep => ep.videoUrl && ep.videoUrl.trim().length > 0);
-            if (validCustomEps.length > 0) {
-              return { ...m, episodes: parsedMap[m.id] };
-            }
+            const customEps = parsedMap[m.id]!;
+            const mergedEps = customEps.map((ep, idx) => {
+              const defaultEp = m.episodes?.[idx];
+              // If ep URL is empty, or broken restricted drive link, fallback to defaultEp
+              if (!ep.videoUrl || ep.videoUrl.trim() === '' || ep.videoUrl.includes('drive.google.com/file/d/19wv60h7EY2Ycj4h-1JjoYY0bdHjcfjVG')) {
+                return { ...ep, videoUrl: defaultEp?.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' };
+              }
+              return ep;
+            });
+            return { ...m, episodes: mergedEps };
           }
           return m;
         });
