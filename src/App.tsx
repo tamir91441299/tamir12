@@ -713,6 +713,14 @@ export default function App() {
           isFavorite={isFavorite(selectedMovieForDetails.id)}
           isPurchased={isPurchased(selectedMovieForDetails.id)}
           onUpdateEpisodes={handleUpdateMovieEpisodes}
+          isMonthlyVip={isMonthlyVip}
+          isAnimePackage={isAnimePackage}
+          isMoviePackage={isMoviePackage}
+          onRequestPurchase={(m) => {
+            setSelectedMovieForDetails(null);
+            setPaymentMovie(m);
+            setShowPaymentModal(true);
+          }}
         />
       )}
 
@@ -721,6 +729,10 @@ export default function App() {
           movie={selectedMovieForPlayer}
           initialEpisodeNumber={playerInitialEpisode}
           isPurchased={isPurchased(selectedMovieForPlayer.id)}
+          currentUser={currentUser}
+          isMonthlyVip={isMonthlyVip}
+          isAnimePackage={isAnimePackage}
+          isMoviePackage={isMoviePackage}
           onClose={() => setSelectedMovieForPlayer(null)}
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);

@@ -82,7 +82,7 @@ export const INITIAL_USERS: UserDetail[] = [
   {
     id: 'usr_001',
     name: 'Тамир (Админ)',
-    email: 'tamir91441299@gmail.com',
+    email: 'admin@ioio.mn',
     phone: '91441299',
     role: 'admin',
     status: 'active',
@@ -644,13 +644,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   if (!isAdmin) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-        <div className="relative w-full max-w-md bg-[#16161a] rounded-2xl border border-red-500/40 p-6 text-center space-y-4 shadow-2xl text-zinc-100">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center mx-auto">
+        <div className="relative w-full max-w-md bg-[#16161a] rounded-2xl border border-amber-500/40 p-6 text-center space-y-4 shadow-2xl text-zinc-100">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
           </div>
           <h2 className="text-lg font-black text-white">⛔ Хандах Эрх Хязгаарлагдсан!</h2>
-          <p className="text-xs text-zinc-300 leading-relaxed">
-            Видео болон киноны холбоос оруулах, засах болон системийн удирдлагад хандах эрх зөвхөн сайтын эзэмшигч <b>Тамир админд (<span className="text-cyan-400">tamir91441299@gmail.com</span>)</b> олгогдсон. Бусад хэрэглэгч энд видео холбоос оруулах боломжгүй.
+          <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 text-center">
+            <p className="text-sm font-extrabold text-amber-300">
+              Зөвхөн Тамир админ нэвтэрч болно
+            </p>
+          </div>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Системийн удирдлага, хэрэглэгчдийн эрх сунгах болон видео холбоос оруулах хэсэгт зөвхөн админ нэвтрэх боломжтой.
           </p>
           <button
             onClick={onClose}
@@ -1320,19 +1325,37 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
             {/* Create Code Form */}
             <form onSubmit={handleCreatePromoCode} className="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
                 <h4 className="text-xs font-black uppercase text-zinc-300 flex items-center gap-1.5">
                   <Plus className="w-4 h-4 text-emerald-400" />
                   Шинэ Эрхийн Код Үүсгэх
                 </h4>
-                <button
-                  type="button"
-                  onClick={handleGenerateRandomCode}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>🎲 Санамсаргүй Код Үүсгэх</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCodeForm({
+                        code: 'MEGALOBOX',
+                        type: 'anime',
+                        value: 0,
+                        durationDays: 30,
+                        description: '🥊 Мегалобокс (Megalo Box) болон бүх анимэ үзэх 30 хоногийн эрх',
+                        maxUses: 100,
+                      });
+                    }}
+                    className="text-[11px] text-rose-300 hover:text-white font-bold bg-rose-950/60 hover:bg-rose-900/60 px-2.5 py-1 rounded-lg border border-rose-800/80 transition-all cursor-pointer"
+                  >
+                    🥊 Megalo Box Код
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateRandomCode}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>🎲 Санамсаргүй Код</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -30,7 +30,44 @@ export interface RedeemResult {
   durationDays?: number;
 }
 
-export const INITIAL_PRESET_CODES: PromoCode[] = [];
+export const INITIAL_PRESET_CODES: PromoCode[] = [
+  {
+    id: 'promo_vip2025',
+    code: 'VIP2025',
+    type: 'full_vip',
+    durationDays: 30,
+    description: '👑 VIP Бүтэн Багц (Бүх кино + анимэ) 30 хоног',
+    maxUses: 500,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_anime30',
+    code: 'ANIME30',
+    type: 'anime',
+    durationDays: 30,
+    description: '🎌 Бүх анимэ цуврал үзэх 30 хоногийн багц',
+    maxUses: 500,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_movie30',
+    code: 'MOVIE30',
+    type: 'movie',
+    durationDays: 30,
+    description: '🎬 Бүх уран сайхны кино үзэх 30 хоногийн багц',
+    maxUses: 500,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+];
 
 const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';
 
@@ -39,6 +76,13 @@ const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';
  */
 export function getAllPromoCodes(): PromoCode[] {
   const codeMap = new Map<string, PromoCode>();
+
+  // Always seed initial preset codes
+  INITIAL_PRESET_CODES.forEach((c) => {
+    if (c && c.code) {
+      codeMap.set(c.code.toUpperCase(), c);
+    }
+  });
 
   try {
     const saved = localStorage.getItem(LOCAL_STORAGE_CODES_KEY);
@@ -154,6 +198,13 @@ export function redeemCode(inputCode: string): RedeemResult {
   }
 
   const clean = inputCode.trim().toUpperCase().replace(/\s+/g, '');
+
+  if (clean.includes('MEGALO')) {
+    return {
+      success: false,
+      message: '⚠️ Уг багцын код хүчингүй болсон байна. Багцын эрхээ албан ёсны төлбөрийн цэсээр идэвхжүүлнэ үү.',
+    };
+  }
 
   // Check Codes from Firestore / LocalStorage created by Admin
   const allCodes = getAllPromoCodes();

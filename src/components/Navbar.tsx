@@ -381,89 +381,117 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile navigation bar */}
-      <div className="md:hidden flex items-center justify-around bg-zinc-950 border-t border-zinc-800 py-2 px-2 text-xs">
-        {onOpenUserManagement && (
+      {/* Mobile navigation bar - Smooth scrollable pill tabs so nothing is clipped */}
+      <div className="md:hidden bg-[#101013] border-t border-zinc-800/90 py-2 px-2 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center gap-1 min-w-max">
+          {onOpenUserManagement && isAdmin && (
+            <button
+              id="mobile-nav-users"
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow cursor-pointer whitespace-nowrap"
+              title="Удирдах хэсэг"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>Удирдах</span>
+            </button>
+          )}
           <button
-            id="mobile-nav-users"
-            onClick={onOpenUserManagement}
-            className="flex flex-col items-center gap-1 text-amber-300 font-extrabold"
-            title="Удирдах хэсэг"
+            id="mobile-nav-home"
+            onClick={() => setActiveTab('home')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'home'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
           >
-            <ShieldCheck className="w-4 h-4 text-amber-400 animate-pulse" />
-            Удирдах
+            <Clapperboard className="w-3.5 h-3.5" />
+            <span>Эхлэл</span>
           </button>
-        )}
-        <button
-          id="mobile-nav-home"
-          onClick={() => setActiveTab('home')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'home' ? 'text-cyan-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Clapperboard className="w-4 h-4" />
-          Эхлэл
-        </button>
-        <button
-          id="mobile-nav-movies"
-          onClick={() => setActiveTab('movies')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'movies' ? 'text-cyan-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Film className="w-4 h-4" />
-          Кино
-        </button>
-        <button
-          id="mobile-nav-series"
-          onClick={() => setActiveTab('series')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'series' ? 'text-cyan-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Tv className="w-4 h-4" />
-          Цуврал
-        </button>
-        <button
-          id="mobile-nav-anime"
-          onClick={() => setActiveTab('anime')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'anime' ? 'text-rose-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-rose-400" />
-          Анимэ
-        </button>
-        <button
-          id="mobile-nav-chinese"
-          onClick={() => setActiveTab('chinese')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'chinese' ? 'text-amber-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Clapperboard className="w-4 h-4 text-amber-400" />
-          Хятад
-        </button>
-        <button
-          id="mobile-nav-ai"
-          onClick={() => setActiveTab('ai')}
-          className={`flex flex-col items-center gap-1 ${
-            activeTab === 'ai' || activeTab === 'games' ? 'text-amber-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          AI Санал & Тоглоом
-        </button>
-        <button
-          id="mobile-nav-auth"
-          onClick={onOpenAuthModal}
-          className={`flex flex-col items-center gap-1 ${
-            currentUser ? 'text-cyan-400 font-bold' : 'text-zinc-400'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          {currentUser ? 'Бүртгэл' : 'Нэвтрэх'}
-        </button>
+          <button
+            id="mobile-nav-movies"
+            onClick={() => setActiveTab('movies')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'movies'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Film className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Кино</span>
+          </button>
+          <button
+            id="mobile-nav-series"
+            onClick={() => setActiveTab('series')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'series'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Tv className="w-3.5 h-3.5 text-purple-400" />
+            <span>Цуврал</span>
+          </button>
+          <button
+            id="mobile-nav-anime"
+            onClick={() => setActiveTab('anime')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'anime'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+            <span>Анимэ</span>
+          </button>
+          <button
+            id="mobile-nav-chinese"
+            onClick={() => setActiveTab('chinese')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'chinese'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Clapperboard className="w-3.5 h-3.5 text-amber-400" />
+            <span>Хятад</span>
+          </button>
+          <button
+            id="mobile-nav-purchased"
+            onClick={() => setActiveTab('purchased')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'purchased'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Авсан ({purchasedCount})</span>
+          </button>
+          <button
+            id="mobile-nav-ai"
+            onClick={() => setActiveTab('ai')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'ai' || activeTab === 'games'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-amber-400/80 hover:text-amber-300 bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>AI & Тоглоом</span>
+          </button>
+          <button
+            id="mobile-nav-auth"
+            onClick={onOpenAuthModal}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              currentUser
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>{currentUser ? currentUser.name : 'Нэвтрэх'}</span>
+          </button>
+        </div>
       </div>
     </header>
   );

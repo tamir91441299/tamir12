@@ -28,7 +28,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         <img
           src={movie.poster}
           alt={movie.titleMongolian}
-          className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
+          draggable={false}
+          onContextMenu={(e) => e.preventDefault()}
+          className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out select-none"
           loading="lazy"
         />
 

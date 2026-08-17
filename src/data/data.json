@@ -89,5 +89,12 @@
     "answer": "JoJo's Bizarre Adventure",
     "options": "Attack on Titan | JoJo's Bizarre Adventure | Noblesse | Bleach",
     "image": "https://upload.wikimedia.org/wikipedia/en/a/aa/JoJo_no_Kimyou_na_Bouken_cover_-_vol1.jpg"
+  },
+  {
+    "id": 14,
+    "emojies": "🥊 🐕 ⚙️ 🦾 🏆",
+    "answer": "Megalo Box",
+    "options": "Megalo Box | Hajime no Ippo | Baki | Ashita no Joe",
+    "image": "https://tse2.mm.bing.net/th/id/OIP.z9MT7uQNPPGdh7irrnHUvgHaLH?r=0&w=1000&h=1500&rs=1&pid=ImgDetMain&o=7&rm=3"
   }
 ]

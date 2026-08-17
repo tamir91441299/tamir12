@@ -29,9 +29,11 @@ import {
   Bug,
   Terminal,
   Copy,
-  RotateCw
+  RotateCw,
+  Lock
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
+import { UserAccount } from './AuthModal';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -47,6 +49,10 @@ interface VideoPlayerModalProps {
   isPurchased?: boolean;
   onClose: () => void;
   onRequestPurchase?: (movie: Movie) => void;
+  currentUser?: UserAccount | null;
+  isMonthlyVip?: boolean;
+  isAnimePackage?: boolean;
+  isMoviePackage?: boolean;
 }
 
 type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
@@ -54,13 +60,38 @@ type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   movie,
   initialEpisodeNumber = 1,
+  isPurchased = false,
   onClose,
+  onRequestPurchase,
+  currentUser,
+  isMonthlyVip = false,
+  isAnimePackage = false,
+  isMoviePackage = false,
 }) => {
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
     movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
       ? Math.max(0, initialEpisodeNumber - 1)
       : 0
   );
+
+  // Access rule: Episode 1 is completely FREE. Episodes 2+ require purchased movie or active package.
+  const checkEpisodeAccess = (epIndex: number): boolean => {
+    if (epIndex <= 0) return true; // 1-р анги үнэгүй
+    if (isAdmin) return true;
+    if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
+    if (movie?.type === 'anime' && (isAnimePackage || (currentUser as any)?.packageType === 'anime')) {
+      return true;
+    }
+    if (movie?.type !== 'anime' && (isMoviePackage || (currentUser as any)?.packageType === 'movie')) {
+      return true;
+    }
+    if (isPurchased) return true;
+    return false;
+  };
+
+  const hasAccessToCurrentEpisode = checkEpisodeAccess(currentEpisodeIndex);
 
   useEffect(() => {
     if (initialEpisodeNumber && initialEpisodeNumber > 0) {
@@ -639,22 +670,76 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           onContextMenu={(e) => e.preventDefault()}
           className="relative w-full h-full flex items-center justify-center group select-none bg-black"
         >
-          {/* Direct HTML5 Player / Embed Switch */}
-          {isEmbed ? (
-            <div className={`w-full h-full p-2 sm:p-4 flex flex-col items-center justify-center relative select-none ${
+          {/* Episode Access Restricted Overlay */}
+          {!hasAccessToCurrentEpisode ? (
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none">
+              <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 shadow-2xl shadow-amber-500/20">
+                <Lock className="w-10 h-10 animate-pulse" />
+              </div>
+              <div className="space-y-2 max-w-md">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-block">
+                  {currentEpisodeIndex + 1}-р анги түгжигдсэн
+                </span>
+                <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
+                  2-р ангиас эхлэн эрх авсан хэрэглэгчид үзнэ
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн багцын ({movie.type === 'anime' ? 'Анимэ' : 'Кино'} эсвэл Бүтэн VIP) эрхээ идэвхжүүлж үзнэ үү.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                {onRequestPurchase && (
+                  <button
+                    type="button"
+                    onClick={() => onRequestPurchase(movie)}
+                    className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                  >
+                    <Zap className="w-4 h-4 fill-current" />
+                    <span>Багцын эрх авах / Төлбөр төлөх</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => selectEpisode(0)}
+                  className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
+                >
+                  <span>1-р анги үнэгүй үзэх</span>
+                </button>
+              </div>
+            </div>
+          ) : isEmbed ? (
+            <div className={`w-full h-full p-2 sm:p-4 flex flex-col items-center justify-center relative select-none no-download-shield ${
               isFullscreen || videoFitMode === 'cover' ? 'max-w-none' : 'max-w-7xl'
             }`}>
-              <iframe
-                ref={iframeRef}
-                src={iframeUrl}
-                onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${iframeUrl}`)}
-                onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа: ${iframeUrl}`)}
-                className="w-full h-full rounded-2xl border border-zinc-800 shadow-2xl bg-black aspect-video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                referrerPolicy="no-referrer"
-                allowFullScreen
-                title={movie.titleMongolian}
-              />
+              <div className="relative w-full h-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-black aspect-video flex items-center justify-center">
+                {/* Pop-out & Download Shield Overlay for Google Drive and Embed Players */}
+                <div
+                  className="absolute top-0 right-0 w-24 h-16 z-20 pointer-events-auto bg-transparent cursor-default select-none"
+                  title="Хуулбарлах болон татахыг хориглосон"
+                  onContextMenu={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                />
+                <div
+                  className="absolute top-0 left-0 right-0 h-10 z-20 pointer-events-auto bg-transparent cursor-default select-none"
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+
+                <iframe
+                  ref={iframeRef}
+                  src={iframeUrl}
+                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${iframeUrl}`)}
+                  onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа: ${iframeUrl}`)}
+                  className="w-full h-full rounded-2xl border-0 bg-black aspect-video pointer-events-auto"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  referrerPolicy="no-referrer"
+                  allowFullScreen
+                  title={movie.titleMongolian}
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              </div>
               
               {/* Google Drive / Embed Helper Bar */}
               <div className="w-full mt-2 space-y-1.5">
@@ -663,6 +748,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="font-bold text-white">
                       {isGoogleDrive ? '📁 Google Drive Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 font-medium">
+                      🔒 Татах боломжгүй хамгаалалттай
                     </span>
                     {isGoogleDrive && (
                       <button
@@ -683,17 +771,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
                     >
                       <Zap className="w-4 h-4 fill-current" />
-                      <span>Шууд Тоглуулагч руу шилжих (Хандалт шаардахгүй)</span>
+                      <span>Шууд Тоглуулагч руу шилжих</span>
                     </button>
-                    <a
-                      href={rawVideoSrc}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 border border-zinc-700"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Drive дээр нээх</span>
-                    </a>
+                    {isAdmin && (
+                      <a
+                        href={rawVideoSrc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 border border-zinc-700"
+                        title="Зөвхөн Админд харагдана"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Админ: Линк шалгах</span>
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -731,8 +822,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 autoPlay
                 playsInline
                 preload="auto"
-                controlsList="nodownload noplaybackrate"
+                controlsList="nodownload noplaybackrate noremoteplayback"
                 disablePictureInPicture
+                disableRemotePlayback
                 onContextMenu={(e) => e.preventDefault()}
                 onWaiting={() => {
                   appendDebugLog('⏳ Видео буфер хийж байна (Waiting/Buffering)...');
@@ -1167,6 +1259,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 })
                 .map(({ ep, idx }) => {
                   const isActive = idx === currentEpisodeIndex;
+                  const isFreeEp = idx === 0;
+                  const hasEpAccess = checkEpisodeAccess(idx);
+
                   return (
                     <button
                       key={ep.episodeNumber}
@@ -1184,7 +1279,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                           className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                             isActive
                               ? 'bg-gradient-to-tr from-cyan-400 to-blue-500 text-black shadow-md'
-                              : 'bg-zinc-800 text-zinc-400'
+                              : hasEpAccess
+                              ? 'bg-zinc-800 text-zinc-300'
+                              : 'bg-zinc-900 text-amber-400 border border-amber-500/30'
                           }`}
                         >
                           {ep.episodeNumber}
@@ -1199,11 +1296,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         </div>
                       </div>
 
-                      {isActive && (
-                        <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-2 py-0.5 rounded-md shrink-0 shadow">
-                          ҮЗЭЖ БАЙНА
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isActive && (
+                          <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-2 py-0.5 rounded-md shadow">
+                            ҮЗЭЖ БАЙНА
+                          </span>
+                        )}
+                        {!isActive && isFreeEp && (
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                            ҮНЭГҮЙ
+                          </span>
+                        )}
+                        {!isActive && !isFreeEp && !hasEpAccess && (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}

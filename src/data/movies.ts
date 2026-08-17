@@ -447,6 +447,114 @@ export const SAMPLE_MOVIES: Movie[] = [
     ]
   },
   {
+    id: 'm_megalo_box',
+    title: 'Megalo Box',
+    titleMongolian: 'Мегалобокс (Megalo Box)',
+    type: 'anime',
+    poster: 'https://tse2.mm.bing.net/th/id/OIP.z9MT7uQNPPGdh7irrnHUvgHaLH?r=0&w=1000&h=1500&rs=1&pid=ImgDetMain&o=7&rm=3',
+    backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80',
+    year: 2021,
+    duration: '13 анги',
+    rating: 9.6,
+    genres: ['Animation', 'Action', 'Sports', 'Sci-Fi', 'Drama'],
+    description: 'Ирээдүйн ертөнцөд "Gear" хэмээх механик араг яс ашиглан тулалддаг Мегалобоксын ертөнц. "Junk Dog" нэрт нэгэн ямар ч механик араг ясгүйгээр зөвхөн өөрийн хүч чадал, эр зоригоороо дээд лиг болох Megalonia-д өрсөлдөхөөр шийднэ. Монгол дуу оруулгатай.',
+    director: 'Хироши Морияма',
+    cast: ['Ёшимаса Хосоя', 'Широ Сайто', 'Хироши Нака', 'Мичиё Мурасэ'],
+    country: 'Япон',
+    price: 4000,
+    isNewEpisode: true,
+    newEpisodeLabel: 'Бүрэн 13 анги орлоо',
+    totalEpisodes: 13,
+    views: 650000,
+    featured: true,
+    featuredRank: 4,
+    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
+    videoUrl: 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk',
+    ageRating: '+16',
+    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
+    subtitles: ['Монгол хадмал'],
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: '1-р анги - Хувь тавилан хуурамч биш (BUY OR DIE?)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 2,
+        title: '2-р анги - Үхлийн өмнөх тулаан (THE MAN ONLY DIES ONCE)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 3,
+        title: '3-р анги - Араатан ба төмөр (GEAR IS DEAD)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 4,
+        title: '4-р анги - Жинхэнэ нэр: Junk Dog (LET\'S DANCE WITH DEATH)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 5,
+        title: '5-р анги - Дээд түвшний өрсөлдөөн (THE MAN FROM UNDERWORLD)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 6,
+        title: '6-р анги - Өнгөрсөн үеийн сүүдэр (UNTIL THE LAST SPARK)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 7,
+        title: '7-р анги - Замналын эхлэл (THE ROAD TO DEATH)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 8,
+        title: '8-р анги - Тэсвэр тэвчээр (DEADLINE)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 9,
+        title: '9-р анги - Сүүлчийн найдварын оч (A DEAD FLOWER NEVER BLOOMS)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 10,
+        title: '10-р анги - Их рингэнд гарах зам (THE DIE IS CAST)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 11,
+        title: '11-р анги - Өшөө авалт ба нөхөрлөл (A DEAD MARCH)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 12,
+        title: '12-р анги - Аваргын эсрэг тулаан (BITE THE DUST)',
+        duration: '24 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      },
+      {
+        episodeNumber: 13,
+        title: '13-р анги - Төгсгөлийн тулаан (BORN TO DIE - ТӨГСГӨЛ)',
+        duration: '25 мин',
+        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+      }
+    ]
+  },
+  {
     id: 'm16',
     title: 'Wanga',
     titleMongolian: 'Ванга (Wanga)',
@@ -832,103 +940,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     text: 'Монгол эрчүүдийн зориг чангийг харуулсан мундаг бүтээл. Заавал үзэх кинонуудын нэг!',
     rating: 10,
     date: '3 хоногийн өмнө',
-    likes: 42   
-  }        
-];
-[
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-  
-
-       
-
-
-
-
-
-
-
-
-
-
-
-
-       
-
-
-
-
-
-
-
-
-
-
-             
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    likes: 42
   }
-
-
-
-
-
-
-
-
-
-
-]
-
-
-
-
-
-
-
-
-
-
-
-
-
+];
