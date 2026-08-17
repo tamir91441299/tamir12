@@ -266,13 +266,8 @@ export default function App() {
 
   const isFavorite = (movieId: string) => favorites.includes(movieId);
 
-  const isPurchased = (movieId: string) => {
-    if (isMonthlyVip || currentUser?.role === 'admin' || currentUser?.isVip) return true;
-    const movie = moviesList.find((m) => m.id === movieId) || SAMPLE_MOVIES.find((m) => m.id === movieId);
-    if (!movie) return true;
-    if (movie.type === 'anime' && isAnimePackage) return true;
-    if ((movie.type === 'movie' || movie.type === 'series') && isMoviePackage) return true;
-    return purchasedMovies.includes(movieId);
+  const isPurchased = (_movieId: string) => {
+    return true;
   };
 
   // Modals state

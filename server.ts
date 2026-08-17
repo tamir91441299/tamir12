@@ -8,6 +8,7 @@ import packagesRouter from "./server/routes/packages.js";
 import paymentsRouter from "./server/routes/payments.js";
 import aiRouter from "./server/routes/ai.js";
 import seoRouter from "./server/routes/seo.js";
+import streamRouter from "./server/routes/stream.js";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/api/movies", moviesRouter);
 app.use("/api/packages", packagesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/ai", aiRouter);
+app.use(streamRouter);
 
 // Vite middleware or static serving
 async function setupServer() {

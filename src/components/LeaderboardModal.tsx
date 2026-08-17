@@ -163,7 +163,7 @@ export function LeaderboardModal({ onClose, currentGameMode }: LeaderboardModalP
 
               return (
                 <div
-                  key={item.id || index}
+                  key={`score_${item.id || 'rec'}_${index}`}
                   className="bg-zinc-950/70 border border-zinc-800/80 hover:border-zinc-700/80 rounded-2xl transition-all overflow-hidden"
                 >
                   <div

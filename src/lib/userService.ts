@@ -71,6 +71,59 @@ export function subscribeNotificationsFromFirestore(callback: (notifications: Ap
 }
 
 /**
+ * Helper to deduplicate users by ID, Email, and Phone
+ */
+export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
+  const map = new Map<string, UserDetail>();
+
+  users.forEach((u, idx) => {
+    if (!u) return;
+    const cleanId = (u.id || '').trim() || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : `user_${idx}_${Date.now()}`);
+    const cleanEmail = (u.email || '').trim().toLowerCase();
+    const cleanPhone = (u.phone || '').trim();
+
+    // Look for existing user with same ID, email or non-empty phone
+    let foundKey: string | null = null;
+    for (const [key, existing] of map.entries()) {
+      if (
+        key === cleanId ||
+        existing.id === cleanId ||
+        (cleanEmail && existing.email && existing.email.toLowerCase() === cleanEmail) ||
+        (cleanPhone && cleanPhone !== '99110000' && existing.phone && existing.phone === cleanPhone)
+      ) {
+        foundKey = key;
+        break;
+      }
+    }
+
+    const baseObj = foundKey ? map.get(foundKey) : null;
+    const targetKey = foundKey || cleanId;
+
+    const merged: UserDetail = {
+      ...baseObj,
+      ...u,
+      id: targetKey,
+      email: u.email || baseObj?.email || '',
+      phone: u.phone || baseObj?.phone || '',
+      name: u.name || baseObj?.name || 'Хэрэглэгч',
+      walletBalance: u.walletBalance ?? baseObj?.walletBalance ?? 0,
+      packageType: u.packageType || baseObj?.packageType || 'free',
+      packageExpiry: u.packageExpiry || baseObj?.packageExpiry || 'Идэвхгүй',
+      role: (u.email === 'tamir91441299@gmail.com' || baseObj?.email === 'tamir91441299@gmail.com') ? 'admin' : (u.role || baseObj?.role || 'user'),
+      status: u.status || baseObj?.status || 'active',
+      registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleDateString('mn-MN'),
+      lastLogin: u.lastLogin || baseObj?.lastLogin || 'Идэвхтэй одоо',
+      watchedCount: Math.max(u.watchedCount ?? 0, baseObj?.watchedCount ?? 0),
+      favoriteCount: Math.max(u.favoriteCount ?? 0, baseObj?.favoriteCount ?? 0),
+    };
+
+    map.set(targetKey, merged);
+  });
+
+  return Array.from(map.values());
+}
+
+/**
  * Save or update user in Firestore "users" collection
  */
 export async function saveUserToFirestore(
@@ -78,7 +131,7 @@ export async function saveUserToFirestore(
   extraData?: Partial<UserDetail>
 ): Promise<void> {
   try {
-    const rawId = user.id || (user.email ? user.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now());
+    const rawId = (user.id || (user.email ? user.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now())).trim();
     const docRef = doc(db, 'users', rawId);
 
     const userPayload: UserDetail = {
@@ -102,13 +155,21 @@ export async function saveUserToFirestore(
     try {
       const savedListStr = localStorage.getItem('ioio_registered_users_list');
       let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
-      const idx = list.findIndex((u) => u.id === rawId || (u.email && userPayload.email && u.email === userPayload.email));
-      const isNew = idx < 0;
-      if (idx >= 0) {
-        list[idx] = { ...list[idx], ...userPayload };
+      if (!Array.isArray(list)) list = [];
+      const cleanEmail = (userPayload.email || '').toLowerCase();
+
+      const existingIndex = list.findIndex(
+        (u) => u && (u.id === rawId || (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail))
+      );
+      const isNew = existingIndex < 0;
+
+      if (existingIndex >= 0) {
+        list[existingIndex] = { ...list[existingIndex], ...userPayload };
       } else {
-        list = [userPayload, ...list];
+        list.unshift(userPayload);
       }
+
+      list = deduplicateUserList(list);
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
 
       // Send real-time notification to Firebase if new user
@@ -141,19 +202,21 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     return onSnapshot(
       usersCol,
       (snapshot) => {
-        const fetchedMap = new Map<string, UserDetail>();
+        const rawList: UserDetail[] = [];
 
         // 1. Preload initial demo users
-        INITIAL_USERS.forEach((u) => fetchedMap.set(u.id, u));
+        INITIAL_USERS.forEach((u) => rawList.push(u));
 
         // 2. Preload localStorage registered users list
         try {
           const savedList = localStorage.getItem('ioio_registered_users_list');
           if (savedList) {
             const parsed: UserDetail[] = JSON.parse(savedList);
-            parsed.forEach((u) => {
-              if (u && u.id) fetchedMap.set(u.id, u);
-            });
+            if (Array.isArray(parsed)) {
+              parsed.forEach((u) => {
+                if (u) rawList.push(u);
+              });
+            }
           }
         } catch (e) {}
 
@@ -164,56 +227,55 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
             const u = JSON.parse(savedUser);
             if (u && (u.email || u.id)) {
               const uId = u.id || u.email.replace(/[^a-zA-Z0-9_-]/g, '_');
-              if (!fetchedMap.has(uId)) {
-                fetchedMap.set(uId, {
-                  id: uId,
-                  name: u.name || 'Хэрэглэгч',
-                  email: u.email || 'user@ioio.mn',
-                  phone: u.phone || '99110000',
-                  registeredAt: u.registeredAt || new Date().toLocaleDateString('mn-MN'),
-                  role: u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
-                  status: 'active',
-                  packageType: 'free',
-                  packageExpiry: 'Идэвхгүй',
-                  walletBalance: 0,
-                  lastLogin: 'Идэвхтэй одоо',
-                  watchedCount: 1,
-                  favoriteCount: 0,
-                });
-              }
+              rawList.push({
+                id: uId,
+                name: u.name || 'Хэрэглэгч',
+                email: u.email || 'user@ioio.mn',
+                phone: u.phone || '99110000',
+                registeredAt: u.registeredAt || new Date().toLocaleDateString('mn-MN'),
+                role: u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+                status: 'active',
+                packageType: 'free',
+                packageExpiry: 'Идэвхгүй',
+                walletBalance: 0,
+                lastLogin: 'Идэвхтэй одоо',
+                watchedCount: 1,
+                favoriteCount: 0,
+              });
             }
           }
         } catch (e) {}
 
-        // 4. Override with real-time Firestore docs
+        // 4. Merge with real-time Firestore docs
         snapshot.forEach((docSnap) => {
           const d = docSnap.data() as UserDetail;
           if (d) {
-            fetchedMap.set(docSnap.id, {
+            rawList.push({
               ...d,
-              id: docSnap.id,
+              id: docSnap.id || d.id,
             });
           }
         });
 
-        const resultList = Array.from(fetchedMap.values());
-        callback(resultList);
+        const deduplicated = deduplicateUserList(rawList);
+        callback(deduplicated);
       },
       (err) => {
         console.error('Error listening to users from Firestore:', err);
         // Fallback to local
-        const fetchedMap = new Map<string, UserDetail>();
-        INITIAL_USERS.forEach((u) => fetchedMap.set(u.id, u));
+        const rawList: UserDetail[] = [...INITIAL_USERS];
         try {
           const savedList = localStorage.getItem('ioio_registered_users_list');
           if (savedList) {
             const parsed: UserDetail[] = JSON.parse(savedList);
-            parsed.forEach((u) => {
-              if (u && u.id) fetchedMap.set(u.id, u);
-            });
+            if (Array.isArray(parsed)) {
+              parsed.forEach((u) => {
+                if (u) rawList.push(u);
+              });
+            }
           }
         } catch (e) {}
-        callback(Array.from(fetchedMap.values()));
+        callback(deduplicateUserList(rawList));
       }
     );
   } catch (err) {
@@ -230,19 +292,19 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
   try {
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
-    const fetchedMap = new Map<string, UserDetail>();
-
-    INITIAL_USERS.forEach((u) => fetchedMap.set(u.id, u));
+    const rawList: UserDetail[] = [...INITIAL_USERS];
 
     snapshot.forEach((docSnap) => {
       const d = docSnap.data() as UserDetail;
-      fetchedMap.set(docSnap.id, {
-        ...d,
-        id: docSnap.id,
-      });
+      if (d) {
+        rawList.push({
+          ...d,
+          id: docSnap.id || d.id,
+        });
+      }
     });
 
-    return Array.from(fetchedMap.values());
+    return deduplicateUserList(rawList);
   } catch (err) {
     console.error('Error fetching users from Firestore:', err);
     return INITIAL_USERS;

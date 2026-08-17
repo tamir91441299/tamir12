@@ -63,12 +63,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [newEpTitle, setNewEpTitle] = useState('');
   const [newEpUrl, setNewEpUrl] = useState('');
   const [newEpDuration, setNewEpDuration] = useState('24 мин');
+  const [epSearch, setEpSearch] = useState('');
+  const [selectedRange, setSelectedRange] = useState<string>('all');
 
   useEffect(() => {
     if (movie) {
       setEpisodesList(movie.episodes || []);
       setNewEpNum((movie.episodes?.length || 0) + 1);
       setComments(SAMPLE_COMMENTS.filter((c) => c.movieId === movie.id || c.movieId === 'm1'));
+      setEpSearch('');
+      setSelectedRange('all');
     }
   }, [movie]);
 
@@ -196,19 +200,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <span className="bg-cyan-500 text-black font-extrabold px-2.5 py-0.5 rounded">
                     {movie.type === 'series' ? 'TV SERIES' : 'MOVIE'}
                   </span>
-                  {isPurchased ? (
-                    <span className="bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded shadow">
-                      ИДЭВХТЭЙ ✓
-                    </span>
-                  ) : movie.type === 'anime' ? (
-                    <span className="bg-rose-600 text-white font-extrabold px-2.5 py-0.5 rounded shadow">
-                      АНИМЭ БАГЦ (4,000 ₮)
-                    </span>
-                  ) : (
-                    <span className="bg-cyan-500 text-black font-extrabold px-2.5 py-0.5 rounded shadow">
-                      КИНО БАГЦ (4,000 ₮)
-                    </span>
-                  )}
+                  <span className="bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded shadow flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    ШУУД ҮЗЭХ
+                  </span>
                   <span className="bg-zinc-800 text-zinc-300 font-bold px-2.5 py-0.5 rounded border border-zinc-700">
                     {movie.year}
                   </span>
@@ -426,26 +421,148 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   </form>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
-                  {episodesList.map((ep) => (
+                {/* Episode Range / Search Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full text-xs">
                     <button
-                      key={ep.episodeNumber}
-                      id={`ep-grid-btn-${ep.episodeNumber}`}
-                      onClick={() => onPlay(movie, ep.episodeNumber)}
-                      className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-cyan-500 hover:bg-zinc-800 transition-all text-left flex flex-col justify-between cursor-pointer group"
+                      type="button"
+                      onClick={() => setSelectedRange('all')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        selectedRange === 'all'
+                          ? 'bg-cyan-500 text-black shadow'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
                     >
-                      <div className="flex items-center justify-between font-bold text-xs text-zinc-200 group-hover:text-cyan-300">
-                        <span>{ep.episodeNumber}-р анги</span>
-                        <Play className="w-3.5 h-3.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <span className="text-[10px] text-zinc-400 truncate mt-1">
-                        {ep.title}
-                      </span>
-                      <span className="text-[10px] text-zinc-500 font-mono">
-                        {ep.duration}
-                      </span>
+                      Бүгд ({episodesList.length})
                     </button>
-                  ))}
+                    {episodesList.length > 25 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('1-25')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '1-25'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          1-25
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('26-50')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '26-50'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          26-50
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('51-75')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '51-75'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          51-75
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('76-100')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '76-100'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          76-100
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('101-148')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '101-148'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          101-148
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Ангийн № эсвэл нэр хайх..."
+                    value={epSearch}
+                    onChange={(e) => setEpSearch(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-800 text-xs text-white px-2.5 py-1 rounded-lg focus:outline-none focus:border-cyan-500 w-44"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
+                  {episodesList
+                    .filter((ep) => {
+                      if (epSearch.trim()) {
+                        const q = epSearch.toLowerCase();
+                        return (
+                          ep.episodeNumber.toString().includes(q) ||
+                          ep.title.toLowerCase().includes(q)
+                        );
+                      }
+                      if (selectedRange === '1-25') return ep.episodeNumber >= 1 && ep.episodeNumber <= 25;
+                      if (selectedRange === '26-50') return ep.episodeNumber >= 26 && ep.episodeNumber <= 50;
+                      if (selectedRange === '51-75') return ep.episodeNumber >= 51 && ep.episodeNumber <= 75;
+                      if (selectedRange === '76-100') return ep.episodeNumber >= 76 && ep.episodeNumber <= 100;
+                      if (selectedRange === '101-148') return ep.episodeNumber >= 101 && ep.episodeNumber <= 148;
+                      return true;
+                    })
+                    .map((ep) => (
+                      <div
+                        key={ep.episodeNumber}
+                        className="relative rounded-xl bg-zinc-900 border border-zinc-800 hover:border-cyan-500 hover:bg-zinc-850 transition-all text-left flex flex-col justify-between group overflow-hidden"
+                      >
+                        <button
+                          id={`ep-grid-btn-${ep.episodeNumber}`}
+                          onClick={() => onPlay(movie, ep.episodeNumber)}
+                          className="p-2.5 w-full text-left cursor-pointer flex-1 flex flex-col justify-between"
+                        >
+                          <div className="flex items-center justify-between font-bold text-xs text-zinc-200 group-hover:text-cyan-300">
+                            <span>{ep.episodeNumber}-р анги</span>
+                            <Play className="w-3.5 h-3.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity text-cyan-400" />
+                          </div>
+                          <span className="text-[10px] text-zinc-400 truncate mt-1 block">
+                            {ep.title}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
+                            {ep.duration}
+                          </span>
+                        </button>
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewEpNum(ep.episodeNumber);
+                              setNewEpTitle(ep.title);
+                              setNewEpUrl(ep.videoUrl);
+                              setNewEpDuration(ep.duration);
+                              setShowAddEpForm(true);
+                            }}
+                            className="absolute top-1.5 right-1.5 p-1 rounded bg-black/70 hover:bg-cyan-500 hover:text-black text-zinc-400 text-[10px] transition-all cursor-pointer"
+                            title="Линк засах"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

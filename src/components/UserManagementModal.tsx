@@ -33,7 +33,12 @@ import {
   Copy,
   Check,
   KeyRound,
-  Gift
+  Gift,
+  Minus,
+  Sliders,
+  Zap,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { Movie } from '../types';
@@ -42,6 +47,7 @@ import {
   subscribeUsersFromFirestore,
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
+  deduplicateUserList,
   AppNotification
 } from '../lib/userService';
 import {
@@ -159,42 +165,49 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   onUpdateMovieEpisodes,
 }) => {
   const [users, setUsers] = useState<UserDetail[]>(() => {
+    const rawList: UserDetail[] = [];
     const saved = localStorage.getItem('ioio_registered_users_list');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u) => {
+            if (u) rawList.push(u);
+          });
+        }
       } catch (e) {
         // fallback
       }
     }
+
+    INITIAL_USERS.forEach((u) => rawList.push(u));
+
     // Include current user if exists
     if (currentUser) {
-      const exists = INITIAL_USERS.find((u) => u.email === currentUser.email || u.phone === currentUser.phone);
-      if (!exists) {
-        const addedCurrent: UserDetail = {
-          ...currentUser,
-          role: 'user',
-          status: 'active',
-          packageType: 'free',
-          packageExpiry: '-',
-          walletBalance: userBalance,
-          lastLogin: 'Идэвхтэй одоо',
-          watchedCount: 1,
-          favoriteCount: 0,
-        };
-        return [addedCurrent, ...INITIAL_USERS];
-      }
+      rawList.unshift({
+        ...currentUser,
+        role: currentUser.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+        status: 'active',
+        packageType: 'free',
+        packageExpiry: '-',
+        walletBalance: userBalance,
+        lastLogin: 'Идэвхтэй одоо',
+        watchedCount: 1,
+        favoriteCount: 0,
+      });
     }
-    return INITIAL_USERS;
+    return deduplicateUserList(rawList);
   });
 
   const [search, setSearch] = useState('');
   const [filterPackage, setFilterPackage] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
 
-  // Edit balance state modal
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [topupAmountInput, setTopupAmountInput] = useState<number>(1000);
+  // Points & Balance Management state
+  const [pointsModalUser, setPointsModalUser] = useState<UserDetail | null>(null);
+  const [pointsOperation, setPointsOperation] = useState<'add' | 'subtract' | 'set'>('add');
+  const [pointsInputAmount, setPointsInputAmount] = useState<number>(4000);
+  const [selectedGrantPkg, setSelectedGrantPkg] = useState<'none' | 'full_vip' | 'movie' | 'anime'>('none');
 
   // New User Form State
   const [showAddUserModal, setShowAddUserModal] = useState<boolean>(false);
@@ -311,7 +324,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   useEffect(() => {
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
-      setUsers(list);
+      setUsers(deduplicateUserList(list));
     });
     const unsubscribeNotifs = subscribeNotificationsFromFirestore((notifs) => {
       setNotifications(notifs);
@@ -327,9 +340,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   }, []);
 
   const saveUsersState = (updatedUsers: UserDetail[]) => {
-    setUsers(updatedUsers);
-    localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedUsers));
-    updatedUsers.forEach((u) => {
+    const deduplicated = deduplicateUserList(updatedUsers);
+    setUsers(deduplicated);
+    localStorage.setItem('ioio_registered_users_list', JSON.stringify(deduplicated));
+    deduplicated.forEach((u) => {
       saveUserToFirestore(u);
     });
   };
@@ -441,22 +455,101 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const handleTopupUserWallet = (id: string) => {
+  const handleOpenPointsModal = (
+    user: UserDetail,
+    defaultOp: 'add' | 'subtract' | 'set' = 'add',
+    defaultAmt: number = 4000
+  ) => {
+    setPointsModalUser(user);
+    setPointsOperation(defaultOp);
+    setPointsInputAmount(defaultAmt);
+    setSelectedGrantPkg('none');
+  };
+
+  const handleAdjustUserPoints = (
+    userId: string,
+    operation: 'add' | 'subtract' | 'set',
+    amount: number,
+    grantPkg: 'none' | 'full_vip' | 'movie' | 'anime' = 'none'
+  ) => {
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+
+    let newBal = target.walletBalance;
+    const safeAmt = Math.max(0, Number(amount) || 0);
+
+    if (operation === 'add') {
+      newBal = target.walletBalance + safeAmt;
+    } else if (operation === 'subtract') {
+      newBal = Math.max(0, target.walletBalance - safeAmt);
+    } else if (operation === 'set') {
+      newBal = safeAmt;
+    }
+
     const updated = users.map((u) => {
-      if (u.id === id) {
-        const newBal = u.walletBalance + topupAmountInput;
-        if (currentUser && u.email === currentUser.email) {
-          onUpdateBalance(newBal);
+      if (u.id === userId) {
+        let pkgUpdates: Partial<UserDetail> = {};
+        if (grantPkg && grantPkg !== 'none') {
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+          pkgUpdates = {
+            packageType: grantPkg,
+            packageExpiry: expiryDate.toISOString().split('T')[0],
+            role: grantPkg === 'full_vip' ? 'vip' : u.role,
+          };
         }
-        return {
+
+        const updatedU: UserDetail = {
           ...u,
           walletBalance: newBal,
+          ...pkgUpdates,
         };
+
+        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id)) {
+          onUpdateBalance(newBal);
+          try {
+            localStorage.setItem('ioio_balance', String(newBal));
+          } catch (e) {}
+        }
+
+        return updatedU;
       }
       return u;
     });
+
     saveUsersState(updated);
-    setEditingUserId(null);
+    setPointsModalUser(null);
+
+    if (selectedUser && selectedUser.id === userId) {
+      const updatedUser = updated.find((u) => u.id === userId);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
+  };
+
+  const handleQuickPointsChange = (userId: string, delta: number) => {
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+
+    const newBal = Math.max(0, target.walletBalance + delta);
+    const updated = users.map((u) => {
+      if (u.id === userId) {
+        const updatedU = { ...u, walletBalance: newBal };
+        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id)) {
+          onUpdateBalance(newBal);
+          try {
+            localStorage.setItem('ioio_balance', String(newBal));
+          } catch (e) {}
+        }
+        return updatedU;
+      }
+      return u;
+    });
+
+    saveUsersState(updated);
+    if (selectedUser && selectedUser.id === userId) {
+      const updatedUser = updated.find((u) => u.id === userId);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
   };
 
   const handleCreateUser = (e: React.FormEvent) => {
@@ -706,9 +799,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
-              {filteredUsers.map((u) => (
+              {filteredUsers.map((u, idx) => (
                 <div
-                  key={u.id}
+                  key={`user_row_${u.id}_${idx}`}
                   className={`bg-zinc-900/90 hover:bg-zinc-800/80 border rounded-2xl p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
                     u.status === 'blocked'
                       ? 'border-rose-900/50 opacity-60'
@@ -760,30 +853,72 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </div>
 
                   {/* Middle: Wallet & Stats */}
-                  <div className="flex items-center gap-4 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 text-xs w-full md:w-auto justify-between md:justify-start">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 text-xs w-full md:w-auto justify-between md:justify-start">
                     <div>
-                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">
-                        Хэтэвч:
+                      <span className="text-[10px] text-zinc-400 block uppercase font-bold flex items-center gap-1">
+                        <CreditCard className="w-3 h-3 text-emerald-400" />
+                        Хэтэвч / Оноо:
                       </span>
-                      <span className="font-black text-emerald-400 text-sm">
-                        {u.walletBalance.toLocaleString()} ₮
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-emerald-400 text-sm">
+                          {u.walletBalance.toLocaleString()} ₮
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="h-6 w-px bg-zinc-800" />
+                    {/* Fast +/- Presets right in the table */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPointsChange(u.id, 4000)}
+                        className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                        title="+4,000₮ (1 сарын кино/анимэ эрхийн оноо нэмэх)"
+                      >
+                        +4k
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPointsChange(u.id, 7000)}
+                        className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                        title="+7,000₮ (1 сарын FULL VIP эрхийн оноо нэмэх)"
+                      >
+                        +7k
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPointsChange(u.id, -4000)}
+                        disabled={u.walletBalance < 4000}
+                        className="bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                        title="-4,000₮ (Эрхийн оноо хасах)"
+                      >
+                        -4k
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPointsModal(u, 'add', 4000)}
+                        className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 px-2 py-1 rounded text-[10px] font-extrabold flex items-center gap-0.5 transition-all cursor-pointer"
+                        title="Оноо нэмэх / хасах дэлгэрэнгүй цонх"
+                      >
+                        <Plus className="w-2.5 h-2.5" />
+                        <Minus className="w-2.5 h-2.5" />
+                        <span>Оноо</span>
+                      </button>
+                    </div>
+
+                    <div className="hidden sm:block h-6 w-px bg-zinc-800" />
 
                     <div>
                       <span className="text-[10px] text-zinc-400 block uppercase font-bold">
-                        Үзсэн Кино:
+                        Үзсэн:
                       </span>
                       <span className="font-bold text-zinc-200">{u.watchedCount} кино</span>
                     </div>
 
-                    <div className="h-6 w-px bg-zinc-800" />
+                    <div className="hidden sm:block h-6 w-px bg-zinc-800" />
 
                     <div>
                       <span className="text-[10px] text-zinc-400 block uppercase font-bold">
-                        Дуусах Хугацаа:
+                        Дуусах:
                       </span>
                       <span className="font-semibold text-amber-300">{u.packageExpiry}</span>
                     </div>
@@ -800,14 +935,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       <Eye className="w-4 h-4 text-cyan-400" />
                     </button>
 
-                    {/* Topup Balance Button */}
+                    {/* Manage Points (+ / -) Button */}
                     <button
-                      onClick={() => setEditingUserId(u.id)}
-                      className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                      title="Хэтэвч Цэнэглэх"
+                      onClick={() => handleOpenPointsModal(u, 'add', 4000)}
+                      className="bg-gradient-to-r from-emerald-950 to-cyan-950 hover:from-emerald-900 hover:to-cyan-900 text-emerald-300 border border-emerald-600/70 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                      title="Оноо Нэмэх / Хасах"
                     >
-                      <DollarSign className="w-3.5 h-3.5" />
-                      <span>Цэнэглэх</span>
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>+/- Оноо</span>
                     </button>
 
                     {/* Change Package Dropdown */}
@@ -995,9 +1130,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     <span>Анги Хадгалах</span>
                   </button>
                 </div>
-                <p className="text-[11px] text-zinc-400 mt-2 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800">
-                  💡 <strong>YouTube линк ба блок:</strong> YouTube-ийн зарим бичлэгийг эзэмшигч нь бусад вэбсайт дээр тоглуулахыг (embed) хаасан байдаг. Тийм бичлэгийг үзэгч систем дээрх <strong>"YouTube дээр нээх"</strong> товчоор саадгүй үзнэ. Мөн <strong>Google Drive</strong> (`/preview` эсвэл `/view`), <strong>Facebook</strong>, эсвэл <strong>Direct MP4</strong> линкүүд шууд тоглогдоно.
-                </p>
+                <div className="text-[11px] text-zinc-400 mt-2 bg-zinc-950/70 p-3 rounded-xl border border-zinc-800 space-y-1.5">
+                  <p>
+                    💡 <strong>Google Drive холбоос оруулахдаа:</strong> Бичлэгийг хэрэглэгчид үзэх үед Gmail эрх нэхэхгүй, шууд тоглуулдаг байлгахын тулд Google Drive дээр тухайн бичлэг эсвэл хавтас дээрээ <strong>Share ➡️ General access</strong> хэсгийг <strong>"Anyone with the link" (Холбоос бүхий хүн бүр)</strong> болгож <strong>Viewer</strong> эрхтэйгээр тохируулан линкийг хуулж тавина уу.
+                  </p>
+                  <p className="text-zinc-500">
+                    📺 <strong>YouTube / Facebook / MP4:</strong> YouTube, Facebook болон шууд mp4/m3u8 бичлэгийн линкийг ч систем автоматаар таньж тоглуулагч дээр шууд тоглуулна.
+                  </p>
+                </div>
               </div>
             </form>
 
@@ -1097,9 +1237,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2.5">
-                {notifications.map((notif) => (
+                {notifications.map((notif, idx) => (
                   <div
-                    key={notif.id}
+                    key={`notif_${notif.id || idx}_${idx}`}
                     className="p-4 rounded-xl bg-zinc-900 border border-amber-500/30 hover:border-amber-500/60 transition-all flex items-start justify-between gap-4 shadow-lg"
                   >
                     <div className="flex items-start gap-3">
@@ -1276,9 +1416,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {promoCodesList.map((c) => (
+                {promoCodesList.map((c, idx) => (
                   <div
-                    key={c.id}
+                    key={`promo_${c.id || c.code}_${idx}`}
                     className="bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 p-3.5 rounded-xl flex flex-col justify-between gap-3 group transition-all relative overflow-hidden"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -1359,53 +1499,283 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         ) : null}
       </div>
 
-      {/* Topup Sub-Modal */}
-      {editingUserId && (
-        <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1e] border border-emerald-500/40 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
-            <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
-              Хэрэглэгчийн Хэтэвч Цэнэглэх
-            </h3>
-            <p className="text-xs text-zinc-400">
-              Цэнэглэх мөнгөн дүнг сонгох эсвэл оруулна уу:
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[1000, 5000, 10000, 20000, 50000, 100000].map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => setTopupAmountInput(amt)}
-                  className={`py-2 text-xs font-black rounded-xl border transition-all ${
-                    topupAmountInput === amt
-                      ? 'bg-emerald-500 text-black border-emerald-400'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
-                  }`}
-                >
-                  +{amt.toLocaleString()} ₮
-                </button>
-              ))}
+      {/* Points & Balance Management Sub-Modal */}
+      {pointsModalUser && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#16161a] border border-cyan-500/40 rounded-2xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl relative text-zinc-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 text-black font-black flex items-center justify-center shadow-lg">
+                  <Zap className="w-5 h-5 text-black" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                    Эрхийн Оноо Удирдах (+ / -)
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    <span className="text-cyan-400 font-bold">{pointsModalUser.name}</span> ({pointsModalUser.email || pointsModalUser.phone})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPointsModalUser(null)}
+                className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <input
-              type="number"
-              value={topupAmountInput}
-              onChange={(e) => setTopupAmountInput(Number(e.target.value))}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl py-2 px-3 text-sm font-bold text-emerald-400 text-center focus:outline-none"
-            />
+            {/* Current Balance & User Package Info */}
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Одоогийн үлдэгдэл оноо:</span>
+                <span className="text-lg font-black text-emerald-400">
+                  {pointsModalUser.walletBalance.toLocaleString()} ₮
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Идэвхтэй багц:</span>
+                <div>{getPackageBadge(pointsModalUser.packageType)}</div>
+              </div>
+            </div>
 
-            <div className="flex gap-2">
+            {/* Operation Mode Tabs: Add (+) | Subtract (-) | Set (=) */}
+            <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
               <button
-                onClick={() => setEditingUserId(null)}
-                className="w-1/2 bg-zinc-800 text-zinc-300 py-2 rounded-xl text-xs font-bold"
+                type="button"
+                onClick={() => setPointsOperation('add')}
+                className={`py-2 text-xs font-black rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  pointsOperation === 'add'
+                    ? 'bg-emerald-500 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
               >
-                Цуцлах
+                <Plus className="w-3.5 h-3.5" />
+                <span>Оноо Нэмэх (+)</span>
               </button>
               <button
-                onClick={() => handleTopupUserWallet(editingUserId)}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-black py-2 rounded-xl text-xs font-black"
+                type="button"
+                onClick={() => setPointsOperation('subtract')}
+                className={`py-2 text-xs font-black rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  pointsOperation === 'subtract'
+                    ? 'bg-rose-500 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
               >
-                Баталгаажуулах
+                <Minus className="w-3.5 h-3.5" />
+                <span>Оноо Хасах (-)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPointsOperation('set')}
+                className={`py-2 text-xs font-black rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  pointsOperation === 'set'
+                    ? 'bg-cyan-500 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Тогтоох (=)</span>
+              </button>
+            </div>
+
+            {/* Quick Presets tailored for permission / package points */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-zinc-400 flex items-center justify-between">
+                <span>Эрх авах онооны бэлэн сонголтууд:</span>
+                <span className="text-zinc-500 text-[10px]">
+                  {pointsOperation === 'add' ? 'Нэмэгдэх дүн' : pointsOperation === 'subtract' ? 'Хасагдах дүн' : 'Шинэ үлдэгдэл'}
+                </span>
+              </span>
+
+              {pointsOperation === 'add' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { label: '+4,000 ₮ (Кино/Анимэ эрх)', val: 4000, color: 'border-cyan-500/40 text-cyan-300 font-bold' },
+                    { label: '+7,000 ₮ (FULL VIP эрх)', val: 7000, color: 'border-amber-500/40 text-amber-300 font-black' },
+                    { label: '+1,000 ₮', val: 1000, color: 'border-zinc-800 text-zinc-300' },
+                    { label: '+5,000 ₮', val: 5000, color: 'border-zinc-800 text-zinc-300' },
+                    { label: '+10,000 ₮', val: 10000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
+                    { label: '+20,000 ₮', val: 20000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => setPointsInputAmount(p.val)}
+                      className={`p-2 text-xs rounded-xl border bg-zinc-900/90 hover:bg-zinc-800 transition-all text-left cursor-pointer ${
+                        pointsInputAmount === p.val
+                          ? 'border-emerald-400 bg-emerald-950/40 ring-2 ring-emerald-500/30'
+                          : p.color
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {pointsOperation === 'subtract' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { label: '-4,000 ₮ (Эрхийн оноо)', val: 4000, color: 'border-rose-500/40 text-rose-300 font-bold' },
+                    { label: '-7,000 ₮ (VIP оноо)', val: 7000, color: 'border-rose-500/40 text-rose-300 font-black' },
+                    { label: '-1,000 ₮', val: 1000, color: 'border-zinc-800 text-zinc-300' },
+                    { label: '-5,000 ₮', val: 5000, color: 'border-zinc-800 text-zinc-300' },
+                    { label: '-10,000 ₮', val: 10000, color: 'border-rose-500/40 text-rose-300 font-bold' },
+                    { label: 'Бүгдийг 0 болгох', val: pointsModalUser.walletBalance, color: 'border-rose-700/60 text-rose-400 font-extrabold' },
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPointsInputAmount(p.val)}
+                      className={`p-2 text-xs rounded-xl border bg-zinc-900/90 hover:bg-zinc-800 transition-all text-left cursor-pointer ${
+                        pointsInputAmount === p.val
+                          ? 'border-rose-400 bg-rose-950/40 ring-2 ring-rose-500/30'
+                          : p.color
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {pointsOperation === 'set' && (
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 4000, 7000, 10000, 20000, 50000].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setPointsInputAmount(val)}
+                      className={`py-2 text-xs font-black rounded-xl border bg-zinc-900/90 hover:bg-zinc-800 transition-all cursor-pointer ${
+                        pointsInputAmount === val
+                          ? 'border-cyan-400 bg-cyan-950/40 text-cyan-300 ring-2 ring-cyan-500/30'
+                          : 'border-zinc-800 text-zinc-300'
+                      }`}
+                    >
+                      {val.toLocaleString()} ₮
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Custom Amount Input */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-zinc-400 uppercase font-bold block">
+                {pointsOperation === 'add'
+                  ? 'Нэмэх дүн (₮):'
+                  : pointsOperation === 'subtract'
+                  ? 'Хасах дүн (₮):'
+                  : 'Шууд тохируулах тогтмол дүн (₮):'}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={pointsInputAmount}
+                  onChange={(e) => setPointsInputAmount(Math.max(0, Number(e.target.value)))}
+                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 px-4 text-base font-black text-center text-white focus:outline-none"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-bold">
+                  ₮
+                </span>
+              </div>
+            </div>
+
+            {/* Live Calculation Preview */}
+            {(() => {
+              const current = pointsModalUser.walletBalance;
+              let nextBal = current;
+              if (pointsOperation === 'add') nextBal = current + pointsInputAmount;
+              else if (pointsOperation === 'subtract') nextBal = Math.max(0, current - pointsInputAmount);
+              else if (pointsOperation === 'set') nextBal = pointsInputAmount;
+
+              return (
+                <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-500 block font-bold">Одоо:</span>
+                    <span className="font-bold text-zinc-300">{current.toLocaleString()} ₮</span>
+                  </div>
+                  <div className="text-center font-black">
+                    <span className="text-[10px] text-zinc-500 block">Өөрчлөлт:</span>
+                    <span
+                      className={
+                        pointsOperation === 'add'
+                          ? 'text-emerald-400'
+                          : pointsOperation === 'subtract'
+                          ? 'text-rose-400'
+                          : 'text-cyan-400'
+                      }
+                    >
+                      {pointsOperation === 'add' ? '+' : pointsOperation === 'subtract' ? '-' : '='}{' '}
+                      {pointsInputAmount.toLocaleString()} ₮
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-500 block font-bold">Шинэ үлдэгдэл:</span>
+                    <span className="font-extrabold text-emerald-400 text-sm">
+                      {nextBal.toLocaleString()} ₮
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Optional Package Grant shortcut */}
+            <div className="space-y-1.5 pt-1 border-t border-zinc-800/80">
+              <label className="text-[10px] text-zinc-400 uppercase font-bold block">
+                🎁 Багцын эрхийг давхар сунгах / олгох (Сонголттой):
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: 'none', label: 'Өөрчлөхгүй' },
+                  { id: 'full_vip', label: 'FULL VIP' },
+                  { id: 'movie', label: 'Кино Багц' },
+                  { id: 'anime', label: 'Анимэ Багц' },
+                ].map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => setSelectedGrantPkg(pkg.id as any)}
+                    className={`py-1.5 px-2 text-[10px] font-bold rounded-lg border transition-all cursor-pointer text-center truncate ${
+                      selectedGrantPkg === pkg.id
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 ring-1 ring-amber-500/40'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    {pkg.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPointsModalUser(null)}
+                className="w-1/3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Болих
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleAdjustUserPoints(
+                    pointsModalUser.id,
+                    pointsOperation,
+                    pointsInputAmount,
+                    selectedGrantPkg
+                  )
+                }
+                className="w-2/3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4 text-black" />
+                <span>Хадгалах & Баталгаажуулах</span>
               </button>
             </div>
           </div>
@@ -1592,6 +1962,74 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
             </div>
 
+            {/* Admin Points Control Section */}
+            <div className="bg-zinc-900/90 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  Эрхийн Оноо & Хэтэвч Удирдах
+                </span>
+                <span className="text-xs font-black text-emerald-400">
+                  Үлдэгдэл: {selectedUser.walletBalance.toLocaleString()} ₮
+                </span>
+              </div>
+
+              {/* Fast single click +/- points presets */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickPointsChange(selectedUser.id, 4000)}
+                  className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="+4,000₮ нэмэх"
+                >
+                  <Plus className="w-3 h-3" />
+                  +4,000 ₮ (Эрх)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPointsChange(selectedUser.id, 7000)}
+                  className="bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/60 p-2 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="+7,000₮ VIP оноо нэмэх"
+                >
+                  <Plus className="w-3 h-3" />
+                  +7,000 ₮ (VIP)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPointsChange(selectedUser.id, -4000)}
+                  disabled={selectedUser.walletBalance < 4000}
+                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="-4,000₮ оноо хасах"
+                >
+                  <Minus className="w-3 h-3" />
+                  -4,000 ₮
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPointsChange(selectedUser.id, -7000)}
+                  disabled={selectedUser.walletBalance < 7000}
+                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 p-2 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="-7,000₮ VIP оноо хасах"
+                >
+                  <Minus className="w-3 h-3" />
+                  -7,000 ₮
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const targetU = selectedUser;
+                  setSelectedUser(null);
+                  handleOpenPointsModal(targetU, 'add', 4000);
+                }}
+                className="w-full bg-zinc-950 hover:bg-zinc-800 text-emerald-300 border border-emerald-500/40 p-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Дэлгэрэнгүй Оноо Нэмэх / Хасах цонх нээх (+ / -)</span>
+              </button>
+            </div>
+
             {/* Admin Package Control Section */}
             <div className="bg-zinc-900/90 border border-amber-500/30 rounded-xl p-3.5 space-y-3">
               <div className="flex items-center justify-between">
@@ -1682,17 +2120,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => {
-                  setEditingUserId(selectedUser.id);
+                  const targetU = selectedUser;
                   setSelectedUser(null);
+                  handleOpenPointsModal(targetU, 'add', 4000);
                 }}
-                className="w-1/2 bg-emerald-600 hover:bg-emerald-500 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1"
+                className="w-1/2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-md transition-all cursor-pointer"
               >
-                <DollarSign className="w-4 h-4" /> Цэнэглэх
+                <Zap className="w-4 h-4" /> +/- Оноо Удирдах
               </button>
               <button
+                type="button"
                 onClick={() => setSelectedUser(null)}
-                className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl text-xs font-bold"
+                className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Хаах
               </button>

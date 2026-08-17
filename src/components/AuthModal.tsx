@@ -45,65 +45,112 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setError(null);
 
+    const cleanEmail = formData.email.trim().toLowerCase();
+    const cleanName = formData.name.trim();
+    const cleanPhone = formData.phone.trim();
+    const cleanPassword = formData.password.trim();
+    const cleanConfirmPassword = formData.confirmPassword.trim();
+
     if (mode === 'register') {
-      if (!formData.name.trim()) {
-        setError('Нэрээ оруулна уу.');
+      if (!cleanName) {
+        setError('⚠️ Заавал өөрийн нэр эсвэл хоч нэрээ оруулна уу.');
         return;
       }
-      if (!formData.email.trim() && !formData.phone.trim()) {
-        setError('Э-мэйл эсвэл Утасны дугаараа оруулна уу.');
+
+      if (!cleanEmail) {
+        setError('⚠️ Заавал Gmail хаягаа оруулна уу (Жишээ нь: yourname@gmail.com).');
         return;
       }
-      if (!formData.password || formData.password.length < 4) {
-        setError('Нууц үг хамгийн багадаа 4 тэмдэгт байх ёстой.');
+
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(cleanEmail)) {
+        setError('⚠️ Зөв Gmail / Э-мэйл хаяг оруулна уу (Жишээ нь: bat@gmail.com).');
         return;
       }
-      if (formData.password !== formData.confirmPassword) {
-        setError('Нууц үг тохирохгүй байна.');
+
+      if (!cleanPassword || cleanPassword.length < 6) {
+        setError('⚠️ Нууц үг заавал хамгийн багадаа 6 тэмдэгттэй байх ёстой.');
         return;
+      }
+
+      if (cleanPassword !== cleanConfirmPassword) {
+        setError('⚠️ Нууц үг тохирохгүй байна. Дахин шалгаж оруулна уу.');
+        return;
+      }
+
+      // Save user credentials locally for login verification
+      try {
+        const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
+        const credMap = credentialsMapStr ? JSON.parse(credentialsMapStr) : {};
+        credMap[cleanEmail] = {
+          password: cleanPassword,
+          name: cleanName,
+          phone: cleanPhone || '99110000',
+        };
+        localStorage.setItem('ioio_user_auth_records', JSON.stringify(credMap));
+      } catch (e) {
+        console.error('Error saving credentials:', e);
       }
 
       const newUser: UserAccount = {
         id: 'user_' + Date.now(),
-        name: formData.name.trim(),
-        email: formData.email.trim() || `${formData.phone.trim()}@ioio.mn`,
-        phone: formData.phone.trim() || '99110000',
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone || '99110000',
         registeredAt: new Date().toLocaleDateString('mn-MN'),
       };
 
       saveUserToFirestore(newUser, {
-        role: newUser.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+        role: cleanEmail === 'tamir91441299@gmail.com' ? 'admin' : 'user',
         status: 'active',
         packageType: 'free',
         walletBalance: 0,
       });
 
-      setSuccessMessage('Амжилттай бүртгэгдлээ! Системд нэвтэрч байна...');
+      setSuccessMessage('🎉 Амжилттай бүртгэгдлээ! Системд нэвтэрч байна...');
       setTimeout(() => {
         onLoginSuccess(newUser);
         onClose();
       }, 1000);
     } else {
-      if (!formData.email.trim() && !formData.phone.trim()) {
-        setError('Э-мэйл эсвэл утасны дугаараа оруулна уу.');
+      // Login mode
+      if (!cleanEmail) {
+        setError('⚠️ Заавал бүртгүүлсэн Gmail хаягаа оруулна уу.');
         return;
       }
-      if (!formData.password) {
-        setError('Нууц үгээ оруулна уу.');
+
+      if (!cleanPassword) {
+        setError('⚠️ Заавал нууц үгээ оруулна уу.');
         return;
+      }
+
+      // Check registered credentials if available
+      try {
+        const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
+        if (credentialsMapStr) {
+          const credMap = JSON.parse(credentialsMapStr);
+          if (credMap[cleanEmail] && credMap[cleanEmail].password) {
+            if (credMap[cleanEmail].password !== cleanPassword) {
+              setError('⚠️ Нууц үг буруу байна. Шалгаад дахин оролдоно уу.');
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error verifying credentials:', e);
       }
 
       const loggedInUser: UserAccount = {
         id: currentUser ? currentUser.id : 'user_' + Date.now(),
-        name: formData.email.split('@')[0] || formData.phone || 'Хэрэглэгч',
-        email: formData.email.trim() || 'user@ioio.mn',
-        phone: formData.phone.trim() || '99106883',
+        name: cleanName || cleanEmail.split('@')[0] || 'Хэрэглэгч',
+        email: cleanEmail,
+        phone: cleanPhone || '99106883',
         registeredAt: new Date().toLocaleDateString('mn-MN'),
       };
 
       saveUserToFirestore(loggedInUser);
 
-      setSuccessMessage('Нэвтрэх амжилттай!');
+      setSuccessMessage('✓ Амжилттай нэвтэрлээ!');
       setTimeout(() => {
         onLoginSuccess(loggedInUser);
         onClose();
@@ -247,17 +294,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {mode === 'register' && (
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                    Нэр / Хоч нэр:
+                  <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span>Нэр / Хоч нэр:</span>
+                    <span className="text-cyan-400 text-[10px] font-semibold">(Заавал)</span>
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       name="name"
+                      required
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Жишээ: Батзориг"
@@ -268,26 +317,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                  Э-мэйл эсвэл Дугаар:
+                <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Gmail хаяг:</span>
+                  <span className="text-cyan-400 text-[10px] font-semibold">(Заавал)</span>
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    type="text"
+                    type="email"
                     name="email"
+                    required
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="Жишээ: name@gmail.com эсвэл 99112233"
-                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                    placeholder="Жишээ: yourname@gmail.com"
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors font-mono"
                   />
                 </div>
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  {mode === 'register' ? 'Бүртгэл баталгаажуулах үндсэн Gmail хаяг' : 'Бүртгүүлсэн Gmail хаягаа оруулна уу'}
+                </p>
               </div>
 
               {mode === 'register' && (
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                    Утасны дугаар:
+                  <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span>Утасны дугаар:</span>
+                    <span className="text-zinc-500 text-[10px] font-normal">(Нэмэлт)</span>
                   </label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -296,22 +351,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="9910XXXX"
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                      placeholder="9910XXXX (заавал биш)"
+                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors font-mono"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                  Нууц үг:
+                <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Нууц үг:</span>
+                  <span className="text-cyan-400 text-[10px] font-semibold">(Заавал, 6+ тэмдэгт)</span>
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
                     name="password"
+                    required
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="••••••••"
@@ -322,14 +379,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               {mode === 'register' && (
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                    Нууц үг давтах:
+                  <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                    <span>Нууц үг баталгаажуулах:</span>
+                    <span className="text-cyan-400 text-[10px] font-semibold">(Заавал)</span>
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       name="confirmPassword"
+                      required
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="••••••••"

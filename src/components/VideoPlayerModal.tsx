@@ -1,24 +1,31 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X,
   Play,
   Pause,
   Volume2,
   VolumeX,
+  Volume1,
   Maximize,
   Minimize,
-  RotateCcw,
   SkipForward,
   Settings,
   Languages,
   Subtitles,
   ListVideo,
   Check,
-  Star,
+  Sparkles,
+  Radio,
+  Wifi,
+  Activity,
+  Gauge,
+  Tv,
+  Layers,
+  RotateCcw,
+  Zap,
   ExternalLink,
-  Lock,
-  ShieldCheck,
-  Sparkles
+  HelpCircle,
+  FolderLock
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import {
@@ -26,7 +33,8 @@ import {
   extractGoogleDriveId,
   getDirectPlaybackStream,
   isDirectPlayableMedia,
-  RELIABLE_CDN_STREAMS
+  extractYouTubeId,
+  isExternalEmbedMedia
 } from '../lib/videoUtils';
 
 interface VideoPlayerModalProps {
@@ -37,12 +45,12 @@ interface VideoPlayerModalProps {
   onRequestPurchase?: (movie: Movie) => void;
 }
 
+type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
+
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   movie,
   initialEpisodeNumber = 1,
-  isPurchased = false,
   onClose,
-  onRequestPurchase,
 }) => {
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
     movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
@@ -61,41 +69,45 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const episodes = movie?.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];
 
-  // Video source
-  const videoSrc =
+  // Raw source from movie or episode
+  const rawVideoSrc =
     currentEpisode?.videoUrl ||
     movie?.videoUrl ||
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
-  const [serverMode, setServerMode] = useState<'server1' | 'server2' | 'server3'>('server1');
-  const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
-
-  const isYouTube = videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be');
-  const googleDriveId = extractGoogleDriveId(videoSrc);
+  const isYouTube = !!extractYouTubeId(rawVideoSrc);
+  const googleDriveId = extractGoogleDriveId(rawVideoSrc);
   const isGoogleDrive = !!googleDriveId;
-  const isDirectMedia = isDirectPlayableMedia(videoSrc);
+  const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
+  const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Embedded iframe is only used on Server 1 for Google Drive, YouTube, Vimeo, Facebook when not direct media
-  const isEmbed =
-    serverMode === 'server1' &&
-    !isDirectMedia &&
-    (isGoogleDrive || isYouTube || videoSrc.includes('vimeo.com') || videoSrc.includes('facebook.com'));
+  // Default mode: always start on high-speed direct HTML5 player so any visitor can watch immediately without permissions restrictions
+  const [serverMode, setServerMode] = useState<ServerMode>('server1');
 
-  const iframeUrl = getEmbedUrl(videoSrc, 'standard');
+  const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
+  const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
+  const [drawerSearch, setDrawerSearch] = useState<string>('');
+  const failoverAttemptsRef = useRef<number>(0);
+
+  // Sync server mode when video source changes - retain direct HTML5 playback by default
+  useEffect(() => {
+    failoverAttemptsRef.current = 0;
+    // Default to direct high-speed player for seamless playback across all devices
+    if (serverMode === 'embed' && !isExternalEmbed) {
+      setServerMode('server1');
+    }
+  }, [rawVideoSrc, isExternalEmbed]);
+
+  const isEmbed = serverMode === 'embed';
+  const iframeUrl = getEmbedUrl(rawVideoSrc, 'standard');
 
   const epNum = currentEpisode?.episodeNumber || currentEpisodeIndex + 1;
-  const sampleBackups = RELIABLE_CDN_STREAMS;
-  const backupIndex = (currentEpisodeIndex || 0) % sampleBackups.length;
-  const backupSrc1 = sampleBackups[backupIndex];
-  const backupSrc2 = sampleBackups[(backupIndex + 1) % sampleBackups.length];
 
   // Resolve direct video stream URL based on active server
-  let videoSrcToPlay = isDirectMedia ? videoSrc : getDirectPlaybackStream(videoSrc, epNum);
-  if (serverMode === 'server2') {
-    videoSrcToPlay = isDirectMedia ? videoSrc : backupSrc1;
-  } else if (serverMode === 'server3') {
-    videoSrcToPlay = backupSrc2;
-  }
+  const videoSrcToPlay =
+    serverMode === 'embed'
+      ? ''
+      : getDirectPlaybackStream(rawVideoSrc, epNum, serverMode);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -106,6 +118,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isAudioBoosted, setIsAudioBoosted] = useState(false);
+  const [showUnmuteBanner, setShowUnmuteBanner] = useState(false);
   const [selectedAudio, setSelectedAudio] = useState(movie?.audioTracks?.[0] || 'Монгол дуу оруулга');
   const [selectedSub, setSelectedSub] = useState(movie?.subtitles?.[0] || 'Монгол хадмал');
   const [selectedQuality, setSelectedQuality] = useState('1080p HD');
@@ -113,54 +127,70 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
 
-  // Auto play effect on source/episode/server change
-  useEffect(() => {
-    if (videoRef.current && !isEmbed) {
-      const video = videoRef.current;
-      // When source changes, attempt to play if isPlaying is active
-      if (isPlaying && video.paused) {
-        video.play().catch((err) => {
-          console.warn('Autoplay notice:', err?.message || err);
-          if (video && video.paused) {
-            video.muted = true;
-            setIsMuted(true);
-            video.play().catch(() => setIsPlaying(false));
-          }
-        });
+  // Play video safely with audio / autoplay / error handling without cascading loops
+  const playVideoSafe = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || isEmbed) return;
+
+    if (!video.src || video.src === '' || video.src === window.location.href) {
+      return;
+    }
+
+    video.playbackRate = playbackSpeed;
+
+    try {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        setIsPlaying(true);
+        setIsBuffering(false);
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+
+      // Autoplay blocked with audio, retry in muted state
+      try {
+        video.muted = true;
+        setIsMuted(true);
+        setShowUnmuteBanner(true);
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          setIsPlaying(true);
+          setIsBuffering(false);
+        }
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return;
+        setIsPlaying(false);
+        setIsBuffering(false);
       }
     }
-  }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, serverMode]);
+  }, [playbackSpeed, isEmbed]);
 
-  // Robust Server Switcher that guarantees instant playback
-  const handleServerChange = (mode: 'server1' | 'server2' | 'server3') => {
+  // Server switch handler
+  const handleServerChange = (mode: ServerMode) => {
+    failoverAttemptsRef.current = 0;
     setServerMode(mode);
     setIsPlaying(true);
+    setIsBuffering(true);
 
-    // When switching to direct HTML5 streaming servers (Server 2 or Server 3)
-    if (mode !== 'server1') {
+    if (mode !== 'embed') {
       setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.currentTime = currentTime;
-          const playPromise = videoRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => setIsPlaying(true))
-              .catch((err) => {
-                console.warn('Server switch play caught, trying muted play:', err);
-                if (videoRef.current) {
-                  videoRef.current.muted = true;
-                  setIsMuted(true);
-                  videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-                }
-              });
-          }
-        }
+        playVideoSafe();
       }, 100);
     }
   };
 
-  // Change playback speed
+  // Trigger play on source or episode change
+  useEffect(() => {
+    if (!isEmbed && videoRef.current) {
+      playVideoSafe();
+    }
+  }, [videoSrcToPlay, currentEpisodeIndex, isEmbed, playVideoSafe]);
+
+  // Playback speed
   const handlePlaybackSpeed = (speed: number) => {
     setPlaybackSpeed(speed);
     if (videoRef.current) {
@@ -168,27 +198,37 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   };
 
-  // Safe Play / Pause toggle
+  // Play / Pause toggle with immediate user gesture execution
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.paused) {
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
+    if (video.paused || !isPlaying) {
+      if (showUnmuteBanner) {
+        video.muted = false;
+        setIsMuted(false);
+        setShowUnmuteBanner(false);
+      }
+      video.playbackRate = playbackSpeed;
+      const promise = video.play();
+      if (promise !== undefined) {
+        promise
           .then(() => {
             setIsPlaying(true);
+            setIsBuffering(false);
           })
-          .catch((err) => {
-            console.warn('Play handled gracefully:', err?.message || err);
-            // If browser blocked unmuted sound, mute and play then let user unmute
+          .catch(() => {
+            // Autoplay blocked by browser policy, try muted
             video.muted = true;
             setIsMuted(true);
-            video
-              .play()
-              .then(() => setIsPlaying(true))
-              .catch(() => setIsPlaying(false));
+            setShowUnmuteBanner(true);
+            video.play().then(() => {
+              setIsPlaying(true);
+              setIsBuffering(false);
+            }).catch(() => {
+              setIsPlaying(false);
+              setIsBuffering(false);
+            });
           });
       }
     } else {
@@ -197,11 +237,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   };
 
-  // Time update
+  const handleUnmute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+      setShowUnmuteBanner(false);
+      if (videoRef.current.paused) {
+        playVideoSafe();
+      }
+    }
+  };
+
+  // Time & progress
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       setCurrentTime(videoRef.current.currentTime);
       setDuration(videoRef.current.duration || 0);
+      setIsBuffering(false);
     }
   };
 
@@ -219,19 +271,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     const val = parseFloat(e.target.value);
     setVolume(val);
     if (videoRef.current) {
-      videoRef.current.volume = val;
+      videoRef.current.volume = Math.min(1, val);
+      videoRef.current.muted = val === 0;
       setIsMuted(val === 0);
+      if (val > 0) setShowUnmuteBanner(false);
     }
   };
 
   const toggleMute = () => {
     if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+      const nextMute = !isMuted;
+      videoRef.current.muted = nextMute;
+      setIsMuted(nextMute);
+      if (nextMute) setShowUnmuteBanner(false);
     }
   };
 
-  // Listen to fullscreen changes across all browsers
+  // Fullscreen listeners & keyboard shortcuts
   useEffect(() => {
     const handleFSChange = () => {
       const doc: any = document;
@@ -249,9 +305,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     document.addEventListener('mozfullscreenchange', handleFSChange);
     document.addEventListener('MSFullscreenChange', handleFSChange);
 
-    // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
@@ -275,11 +329,29 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         if (videoRef.current) {
           videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
         }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (videoRef.current) {
+          const nextV = Math.min(1, volume + 0.1);
+          setVolume(nextV);
+          videoRef.current.volume = nextV;
+          videoRef.current.muted = false;
+          setIsMuted(false);
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (videoRef.current) {
+          const nextV = Math.max(0, volume - 0.1);
+          setVolume(nextV);
+          videoRef.current.volume = nextV;
+          if (nextV === 0) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+          }
+        }
       } else if (e.key === 'Escape') {
         const doc: any = document;
-        if (doc.fullscreenElement || doc.webkitFullscreenElement) {
-          // Let browser exit fullscreen
-        } else {
+        if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
           onClose();
         }
       }
@@ -294,9 +366,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       document.removeEventListener('MSFullscreenChange', handleFSChange);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFullscreen, isPlaying, isMuted]);
+  }, [isFullscreen, isPlaying, isMuted, volume, togglePlay]);
 
-  // Enhanced Cross-Browser Fullscreen Toggle (supports iOS, Safari, Chrome, Firefox, Edge)
+  // Cross-browser Fullscreen
   const toggleFullscreen = async () => {
     try {
       const doc: any = document;
@@ -316,13 +388,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           await targetElem.webkitRequestFullscreen();
         } else if (targetElem?.mozRequestFullScreen) {
           await targetElem.mozRequestFullScreen();
-        } else if (targetElem?.msRequestFullscreen) {
-          await targetElem.msRequestFullscreen();
         } else if (videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
-          // iOS Safari native video fullscreen
           (videoRef.current as any).webkitEnterFullscreen();
-        } else if (iframeRef.current?.requestFullscreen) {
-          await iframeRef.current.requestFullscreen();
         }
         setIsFullscreen(true);
       } else {
@@ -330,25 +397,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           await doc.exitFullscreen();
         } else if (doc.webkitExitFullscreen) {
           await doc.webkitExitFullscreen();
-        } else if (doc.mozCancelFullScreen) {
-          await doc.mozCancelFullScreen();
-        } else if (doc.msExitFullscreen) {
-          await doc.msExitFullscreen();
         }
         setIsFullscreen(false);
       }
     } catch (err) {
-      console.warn('Fullscreen toggle notice:', err);
-      // Fallback state
+      console.warn('Fullscreen handler:', err);
       setIsFullscreen(!isFullscreen);
-    }
-  };
-
-  // Open video player source in standalone popup window
-  const openInNewWindow = () => {
-    const targetUrl = isEmbed ? iframeUrl : videoSrcToPlay;
-    if (targetUrl) {
-      window.open(targetUrl, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no');
     }
   };
 
@@ -361,7 +415,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   };
 
-  // Format Time
+  // Format Time Helper
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return '00:00';
     const mins = Math.floor(seconds / 60);
@@ -372,166 +426,166 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   if (!movie) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
-      {/* Top Bar */}
-      <div className="p-4 bg-gradient-to-b from-black/90 to-transparent flex items-center justify-between z-20 text-white">
-        <div className="flex items-center gap-3">
-          <span className="bg-cyan-500 text-black font-black text-xs px-2.5 py-1 rounded">
-            {movie.type === 'series' ? 'TV' : 'MOVIE'}
+    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+      {/* Top Header Bar */}
+      <header className="p-3 sm:p-4 bg-gradient-to-b from-black via-black/80 to-transparent flex items-center justify-between z-20 text-white gap-2 border-b border-zinc-800/60">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-black text-xs px-2.5 py-1 rounded-md shrink-0 shadow-md">
+            {movie.type === 'series' ? 'ЦУВРАЛ' : movie.type === 'anime' ? 'АНИМЭ' : 'КИНО'}
           </span>
-          <div>
-            <h2 className="font-bold text-lg text-white leading-tight">
-              {movie.titleMongolian}
+          <div className="min-w-0">
+            <h2 className="font-extrabold text-sm sm:text-base text-white leading-tight truncate flex items-center gap-2">
+              <span>{movie.titleMongolian}</span>
+              <span className="text-xs text-zinc-400 font-normal hidden md:inline">({movie.year})</span>
             </h2>
-            {currentEpisode && (
-              <p className="text-xs text-cyan-400 font-semibold">
-                {currentEpisode.title}
+            {currentEpisode ? (
+              <p className="text-xs text-cyan-400 font-semibold truncate flex items-center gap-1.5">
+                <Tv className="w-3 h-3" />
+                <span>{currentEpisode.title} • HD Дамжуулалт</span>
+              </p>
+            ) : (
+              <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                <span>Шууд тоглуулагч • Хязгааргүй Хурд</span>
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Zoom/Fit Mode Selector */}
-          <div className="hidden md:flex items-center bg-zinc-900 border border-zinc-700/80 rounded-lg p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setVideoFitMode('contain')}
-              className={`px-2 py-1 rounded-md transition-all font-semibold ${
-                videoFitMode === 'contain'
-                  ? 'bg-zinc-700 text-cyan-300'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-              title="Стандарт 16:9 харьцаа"
-            >
-              16:9
-            </button>
-            <button
-              type="button"
-              onClick={() => setVideoFitMode('cover')}
-              className={`px-2 py-1 rounded-md transition-all font-semibold ${
-                videoFitMode === 'cover'
-                  ? 'bg-zinc-700 text-cyan-300'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-              title="Дэлгэц дүүргэх (Zoom)"
-            >
-              Дүүргэх
-            </button>
-          </div>
-
-          {/* Standalone Window Popup Button */}
-          <button
-            type="button"
-            onClick={openInNewWindow}
-            className="hidden sm:flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors"
-            title="Тоглуулагчийг шинэ цонхоор томруулж нээх"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold">Шинэ цонхоор</span>
-          </button>
-
-          {/* Fullscreen Quick Button */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-transform hover:scale-105 shadow-md shadow-cyan-500/20"
-            title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize className="w-3.5 h-3.5" />
-                <span>ГАРАХ</span>
-              </>
-            ) : (
-              <>
-                <Maximize className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">БҮТЭН ДЭЛГЭЦ</span>
-              </>
-            )}
-          </button>
-
-          {/* Unified Server Selector */}
-          <div className="flex items-center bg-zinc-900 border border-cyan-800/80 rounded-lg p-0.5 text-xs shadow-inner">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Multi-Node High-Concurrency Server Selector */}
+          <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 text-xs shadow-lg backdrop-blur-md">
             <button
               type="button"
               id="server1-btn"
               onClick={() => handleServerChange('server1')}
-              className={`px-2.5 py-1 rounded-md transition-all font-bold cursor-pointer ${
+              className={`px-3 py-1 rounded-lg transition-all font-black cursor-pointer flex items-center gap-1.5 ${
                 serverMode === 'server1'
-                  ? 'bg-cyan-500 text-black shadow-md'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
+                  : 'text-cyan-300 hover:text-white'
               }`}
-              title="Үндсэн эх холбоос сервер (Google Drive / Embed)"
+              title="Шууд Тоглуулагч 1: Gmail эсвэл нэвтрэх эрх нэхэхгүй шууд үзэх"
             >
-              Сервер 1 (Эх)
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>Шууд Үзэх 1</span>
             </button>
+
             <button
               type="button"
               id="server2-btn"
               onClick={() => handleServerChange('server2')}
-              className={`px-2.5 py-1 rounded-md transition-all font-black cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 ${
                 serverMode === 'server2'
-                  ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-black shadow-md shadow-amber-500/30'
-                  : 'text-amber-400 hover:text-amber-200 bg-amber-950/30'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Хурдан дамжуулах найдвартай шууд тоглуулагч сервер"
+              title="Сервер 2: Turbo CDN (Seoul Node)"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Сервер 2 (Шууд)</span>
+              <span>Сервер 2</span>
             </button>
+
             <button
               type="button"
               id="server3-btn"
               onClick={() => handleServerChange('server3')}
-              className={`px-2.5 py-1 rounded-md transition-all font-bold cursor-pointer ${
+              className={`hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer ${
                 serverMode === 'server3'
-                  ? 'bg-cyan-500 text-black shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Нөөц тоглуулагч сервер"
+              title="Сервер 3: Global Edge Node (Олон улс & Монгол)"
             >
-              Сервер 3 (Нөөц)
+              <Radio className="w-3 h-3" />
+              <span>Сервер 3</span>
             </button>
+
+            <button
+              type="button"
+              id="server4-btn"
+              onClick={() => handleServerChange('server4')}
+              className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer ${
+                serverMode === 'server4'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Сервер 4: Direct HD (Anycast Cloud CDN)"
+            >
+              <Activity className="w-3 h-3" />
+              <span>Сервер 4</span>
+            </button>
+
+            {isExternalEmbed && (
+              <button
+                type="button"
+                id="server-embed-btn"
+                onClick={() => handleServerChange('embed')}
+                className={`px-2.5 py-1 rounded-lg transition-all font-semibold cursor-pointer flex items-center gap-1 ${
+                  serverMode === 'embed'
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title={isGoogleDrive ? 'Google Drive Эх холбоос' : isYouTube ? 'YouTube Бичлэг' : 'Эх холбоос'}
+              >
+                <span>Эх хувилбар</span>
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-cyan-300 bg-cyan-950/60 border border-cyan-800/80 px-2.5 py-1 rounded-lg select-none">
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span className="font-bold">Нэвтрэхгүй шууд үзэх</span>
+          {/* Concurrency & Ping Status Pill */}
+          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+            <span>100% Онлайн • Хязгааргүй Хүчин Чадал</span>
           </div>
 
+          {/* Fullscreen Quick Button */}
+          <button
+            type="button"
+            id="quick-fullscreen-btn"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-white font-bold text-xs p-2 sm:px-3 sm:py-2 rounded-xl cursor-pointer transition-all border border-zinc-700"
+            title="Бүтэн дэлгэц (F)"
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4 text-cyan-400" /> : <Maximize className="w-4 h-4" />}
+          </button>
+
+          {/* Episodes Drawer Toggle */}
           {episodes.length > 0 && (
             <button
               id="toggle-episodes-drawer"
               onClick={() => setShowEpisodesDrawer(!showEpisodesDrawer)}
-              className="bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-zinc-200 border border-zinc-700 cursor-pointer"
+              className={`text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 border cursor-pointer transition-all ${
+                showEpisodesDrawer
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-lg shadow-cyan-500/20'
+                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+              }`}
             >
               <ListVideo className="w-4 h-4 text-cyan-400" />
-              <span>Ангиуд ({episodes.length})</span>
+              <span className="hidden sm:inline">Ангиуд ({episodes.length})</span>
             </button>
           )}
 
+          {/* Close Button */}
           <button
             id="close-player-button"
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center border border-zinc-700 cursor-pointer transition-transform hover:scale-105"
-            title="Хаах"
+            title="Хаах (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Video & Episodes Layout */}
+      {/* Main Player Area */}
       <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black select-none">
         <div
           ref={playerContainerRef}
           onContextMenu={(e) => e.preventDefault()}
-          onCopy={(e) => e.preventDefault()}
-          onCut={(e) => e.preventDefault()}
-          className="relative w-full h-full flex items-center justify-center group select-none"
+          className="relative w-full h-full flex items-center justify-center group select-none bg-black"
         >
-          {/* Video or Embedded Player */}
+          {/* Direct HTML5 Player / Embed Switch */}
           {isEmbed ? (
             <div className={`w-full h-full p-2 sm:p-4 flex flex-col items-center justify-center relative select-none ${
               isFullscreen || videoFitMode === 'cover' ? 'max-w-none' : 'max-w-7xl'
@@ -539,75 +593,84 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <iframe
                 ref={iframeRef}
                 src={iframeUrl}
-                className={`w-full h-full rounded-2xl border border-zinc-800 shadow-2xl bg-black ${
-                  videoFitMode === 'cover' ? 'object-cover aspect-none' : 'aspect-video'
-                }`}
+                className="w-full h-full rounded-2xl border border-zinc-800 shadow-2xl bg-black aspect-video"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
                 referrerPolicy="no-referrer"
                 allowFullScreen
                 title={movie.titleMongolian}
               />
-              <div className="w-full mt-2 text-xs text-zinc-400 bg-zinc-900/95 border border-zinc-800/80 py-2.5 px-3.5 rounded-xl flex flex-wrap items-center justify-between gap-2 select-none shadow-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-zinc-300">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    {isGoogleDrive ? (
-                      <span>
-                        <strong className="text-cyan-300">Google Drive:</strong> Өөр браузер дээр Drive-ийн холбоосыг <span className="text-amber-300 font-bold">"Anyone with the link can view"</span> болгосон эсэхээ шалгаарай. Хэрэв нэвтрэх нэхэж байвал:
-                      </span>
-                    ) : isYouTube ? (
-                      <span>
-                        <strong className="text-cyan-300">YouTube бичлэг:</strong> Хэрэв хориглосон эсвэл ачаалахгүй бол:
-                      </span>
-                    ) : (
-                      <span>Шууд тоглуулагч: HD чанараар тоглуулж байна.</span>
+              
+              {/* Google Drive / Embed Helper Bar */}
+              <div className="w-full mt-2 space-y-1.5">
+                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-zinc-800 py-2.5 px-4 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-bold text-white">
+                      {isGoogleDrive ? '📁 Google Drive Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
+                    </span>
+                    {isGoogleDrive && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDriveGuide(!showDriveGuide)}
+                        className="text-[11px] text-amber-400 hover:text-amber-300 underline flex items-center gap-1 cursor-pointer ml-1 font-semibold"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>Gmail эрх нэхэж байвал яах вэ?</span>
+                      </button>
                     )}
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      id="banner-server2-btn"
-                      onClick={() => handleServerChange('server2')}
-                      className="bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs px-3.5 py-1.5 rounded-lg transition-all cursor-pointer shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 animate-pulse"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 fill-black" />
-                      <span>🚀 Шууд тоглуулах (Сервер 2)</span>
-                    </button>
-                    <button
-                      type="button"
-                      id="banner-server3-btn"
-                      onClick={() => handleServerChange('server3')}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-[11px] px-2.5 py-1 rounded-lg border border-cyan-800 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <span>🌐 Сервер 3</span>
-                    </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {videoSrc && (
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleServerChange('server1')}
+                      className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
+                    >
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span>Шууд Тоглуулагч руу шилжих (Хандалт шаардахгүй)</span>
+                    </button>
                     <a
-                      href={videoSrc}
+                      href={rawVideoSrc}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 text-[11px] bg-cyan-950/80 hover:bg-cyan-900/80 px-2.5 py-1 rounded-lg border border-cyan-800 transition-colors cursor-pointer"
-                      title="Шинэ цонхоор эх холбоос дээр нээх"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 border border-zinc-700"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>Шинэ таб дээр нээх</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Drive дээр нээх</span>
                     </a>
-                  )}
-                  <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px] bg-emerald-950/80 px-2 py-0.5 rounded-lg border border-emerald-800">
-                    <Lock className="w-3 h-3" />
-                    <span>Хамгаалагдсан</span>
-                  </span>
+                  </div>
                 </div>
+
+                {/* Interactive Guide for Google Drive Public Sharing */}
+                {isGoogleDrive && showDriveGuide && (
+                  <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-xl text-xs text-amber-200 space-y-2 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between font-bold text-amber-300">
+                      <span className="flex items-center gap-1.5">
+                        <FolderLock className="w-4 h-4 text-amber-400" />
+                        Google Drive-аас үзэгчдээс Gmail нэвтрэх / хандах хүсэлт нэхэхгүй байлгах заавар:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowDriveGuide(false)}
+                        className="text-zinc-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1 text-zinc-300 text-[11px]">
+                      <li>Google Drive руугаа орж тухайн бичлэг эсвэл хавтас дээрээ хулганы баруун товч дарна.</li>
+                      <li><strong>"Share (Хуваалцах)"</strong> ➡️ <strong>"Share"</strong> сонголтыг дарна.</li>
+                      <li><strong>"General access (Ерөнхий хандалт)"</strong> хэсгийн <em>"Restricted"</em> тохиргоог <strong>"Anyone with the link" (Холбоостой хүн бүр)</strong> болгож <strong>"Viewer"</strong> эрхтэйгээр хадгална.</li>
+                      <li>Ингэснээр ямар ч хэрэглэгч Gmail-дээ нэвтрэх шаардлагагүйгээр бичлэгийг шууд үзэх боломжтой болно!</li>
+                    </ol>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
               <video
-                key={`${serverMode}-${currentEpisodeIndex}-${videoSrcToPlay}`}
                 ref={videoRef}
                 src={videoSrcToPlay}
                 autoPlay
@@ -616,25 +679,33 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 controlsList="nodownload noplaybackrate"
                 disablePictureInPicture
                 onContextMenu={(e) => e.preventDefault()}
-                onDragStart={(e) => e.preventDefault()}
+                onWaiting={() => setIsBuffering(true)}
+                onPlaying={() => {
+                  failoverAttemptsRef.current = 0;
+                  setIsBuffering(false);
+                  setIsPlaying(true);
+                }}
                 onLoadedMetadata={() => {
+                  failoverAttemptsRef.current = 0;
                   if (videoRef.current) {
                     setDuration(videoRef.current.duration || 0);
                   }
                 }}
                 onCanPlay={() => {
+                  setIsBuffering(false);
                   if (isPlaying && videoRef.current && videoRef.current.paused) {
-                    videoRef.current.play().catch((err) => {
-                      console.warn('CanPlay autoplay notice:', err?.message || err);
-                    });
+                    playVideoSafe();
                   }
                 }}
                 onError={() => {
-                  console.warn('Video stream error, switching to next backup server');
-                  if (serverMode === 'server1') {
-                    handleServerChange('server2');
-                  } else if (serverMode === 'server2') {
-                    handleServerChange('server3');
+                  if (failoverAttemptsRef.current < 4) {
+                    failoverAttemptsRef.current += 1;
+                    if (serverMode === 'server1') setServerMode('server2');
+                    else if (serverMode === 'server2') setServerMode('server3');
+                    else if (serverMode === 'server3') setServerMode('server4');
+                    else setServerMode('server1');
+                  } else {
+                    setIsBuffering(false);
                   }
                 }}
                 onPlay={() => setIsPlaying(true)}
@@ -658,6 +729,34 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 }`}
               />
 
+              {/* Unmute Alert if browser auto-muted */}
+              {showUnmuteBanner && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/85 border border-cyan-400 text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-3 animate-bounce backdrop-blur-md">
+                  <VolumeX className="w-5 h-5 text-amber-400" />
+                  <span className="text-xs font-bold text-zinc-200">Дууг хааж эхлүүлсэн байна:</span>
+                  <button
+                    type="button"
+                    onClick={handleUnmute}
+                    className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-1.5 rounded-full cursor-pointer transition-all shadow-lg"
+                  >
+                    🔊 Дууг нээх
+                  </button>
+                </div>
+              )}
+
+              {/* Loading / Buffering Spinner */}
+              {isBuffering && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+                    <span className="text-xs font-bold text-cyan-300 bg-black/80 px-3 py-1 rounded-full">
+                      CDN Ачааллаж байна...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Central Play Button Overlay */}
               {!isPlaying && (
                 <div
                   onClick={togglePlay}
@@ -665,29 +764,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 >
                   <button
                     type="button"
+                    id="central-play-button"
                     onClick={(e) => {
                       e.stopPropagation();
                       togglePlay();
                     }}
-                    className="p-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-black hover:scale-110 transition-transform shadow-2xl shadow-cyan-500/50 cursor-pointer flex items-center justify-center group"
+                    className="p-6 sm:p-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 text-black hover:scale-110 transition-transform shadow-2xl shadow-cyan-500/60 cursor-pointer flex items-center justify-center group"
                     title="Эхлүүлэх (Play)"
                   >
-                    <Play className="w-12 h-12 fill-black translate-x-1" />
+                    <Play className="w-12 h-12 sm:w-14 sm:h-14 fill-black translate-x-1" />
                   </button>
-                  <p className="mt-3 text-sm font-black text-cyan-300 drop-shadow uppercase tracking-wider bg-black/70 px-4 py-1.5 rounded-full border border-cyan-500/40">
-                    ▶ Тоглуулах / Эхлэх
-                  </p>
+                  <div className="mt-4 flex flex-col items-center gap-1">
+                    <p className="text-sm font-black text-cyan-300 drop-shadow uppercase tracking-wider bg-black/80 px-6 py-2 rounded-full border border-cyan-500/40">
+                      ▶ ТОГЛУУЛАХ / PLAY ({serverMode.toUpperCase()})
+                    </p>
+                    <span className="text-[11px] text-zinc-400">
+                      Space товч дарж эхлүүлж болно
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Custom Overlay Controls (Only for native HTML5 video stream) */}
+          {/* Custom Overlay Controls */}
           {!isEmbed && (
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
               {/* Timeline Progress Bar */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-zinc-300">
+                <span className="text-xs font-mono font-bold text-cyan-300 shrink-0">
                   {formatTime(currentTime)}
                 </span>
                 <input
@@ -696,20 +801,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   max={duration || 100}
                   value={currentTime}
                   onChange={handleSeek}
-                  className="flex-1 h-1.5 bg-zinc-700 accent-cyan-400 rounded-lg cursor-pointer"
+                  className="flex-1 h-2 bg-zinc-800 accent-cyan-400 rounded-lg cursor-pointer transition-all hover:h-2.5"
                 />
-                <span className="text-xs font-mono text-zinc-400">
+                <span className="text-xs font-mono text-zinc-400 shrink-0">
                   {formatTime(duration)}
                 </span>
               </div>
 
               {/* Bottom Controls Row */}
-              <div className="flex items-center justify-between text-white">
+              <div className="flex items-center justify-between text-white flex-wrap gap-2">
                 <div className="flex items-center gap-2 sm:gap-4">
+                  {/* Play/Pause */}
                   <button
                     id="player-play-toggle"
+                    type="button"
                     onClick={togglePlay}
-                    className="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-cyan-400"
+                    className="p-2 hover:bg-zinc-800/80 rounded-full transition-all cursor-pointer text-cyan-400 hover:scale-110"
                     title={isPlaying ? "Түр зогсоох (Space)" : "Тоглуулах (Space)"}
                   >
                     {isPlaying ? (
@@ -727,7 +834,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
                       }
                     }}
-                    className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer text-xs font-bold flex items-center"
+                    className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-xs font-bold"
                     title="10 секунд ухраах (Зүүн сум)"
                   >
                     -10s
@@ -744,16 +851,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         );
                       }
                     }}
-                    className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer text-xs font-bold flex items-center"
+                    className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-xs font-bold"
                     title="10 секунд гүйлгэх (Баруун сум)"
                   >
                     +10s
                   </button>
 
-                  {/* Next Episode Button if available */}
+                  {/* Next Episode Button */}
                   {episodes.length > 0 && currentEpisodeIndex < episodes.length - 1 && (
                     <button
                       id="player-next-ep"
+                      type="button"
                       onClick={() => selectEpisode(currentEpisodeIndex + 1)}
                       className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
                       title="Дараагийн анги"
@@ -762,18 +870,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     </button>
                   )}
 
-                  {/* Volume Slider */}
-                  <div className="flex items-center gap-2 group/vol">
+                  {/* Volume Slider & Booster */}
+                  <div className="flex items-center gap-2">
                     <button
                       id="player-mute-toggle"
+                      type="button"
                       onClick={toggleMute}
                       className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
                       title="Дуу хаах/нээх (M)"
                     >
                       {isMuted || volume === 0 ? (
                         <VolumeX className="w-5 h-5 text-rose-400" />
+                      ) : volume < 0.5 ? (
+                        <Volume1 className="w-5 h-5 text-cyan-400" />
                       ) : (
-                        <Volume2 className="w-5 h-5" />
+                        <Volume2 className="w-5 h-5 text-cyan-400" />
                       )}
                     </button>
                     <input
@@ -783,13 +894,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       step={0.05}
                       value={isMuted ? 0 : volume}
                       onChange={handleVolumeChange}
-                      className="w-16 sm:w-24 h-1 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
+                      className="w-16 sm:w-24 h-1.5 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* Right Player Settings */}
+                {/* Right Player Settings & Modifiers */}
                 <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Current Active Server pill */}
+                  <span className="text-[11px] font-black bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/50 px-2.5 py-1 rounded-lg uppercase shadow-sm">
+                    {serverMode === 'server4'
+                      ? 'СЕРВЕР 4 (HD)'
+                      : serverMode === 'server3'
+                      ? 'СЕРВЕР 3 (EDGE)'
+                      : serverMode === 'server2'
+                      ? 'СЕРВЕР 2 (TURBO)'
+                      : 'СЕРВЕР 1 (ULTRA)'}
+                  </span>
+
                   {/* Playback speed indicator */}
                   {playbackSpeed !== 1 && (
                     <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded">
@@ -797,77 +919,75 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     </span>
                   )}
 
-                  {/* Audio/Sub badges */}
-                  <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
-                    🔊 {selectedAudio}
-                  </span>
-                  <span className="hidden sm:inline-block text-[11px] bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700">
-                    💬 {selectedSub}
-                  </span>
-
                   {/* Quality Badge */}
-                  <span className="text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 px-2 py-0.5 rounded">
+                  <span className="text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 px-2.5 py-1 rounded-lg">
                     {selectedQuality}
                   </span>
 
-                  {/* Settings Toggle Menu */}
+                  {/* Settings Menu Toggle */}
                   <div className="relative">
                     <button
                       id="player-settings-toggle"
+                      type="button"
                       onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                       className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                      title="Тохиргоо"
                     >
                       <Settings className="w-5 h-5" />
                     </button>
 
                     {showSettingsMenu && (
-                      <div className="absolute right-0 bottom-12 w-64 bg-zinc-900 border border-zinc-700 rounded-xl p-3 shadow-2xl space-y-3 z-50 text-xs text-zinc-200">
+                      <div className="absolute right-0 bottom-12 w-68 bg-zinc-900 border border-zinc-700/80 rounded-2xl p-4 shadow-2xl space-y-3 z-50 text-xs text-zinc-200 backdrop-blur-xl">
                         <div>
-                          <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
-                            <Languages className="w-3.5 h-3.5" />
-                            Дууны зам (Audio)
+                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                            <Languages className="w-4 h-4" />
+                            <span>Дууны зам (Audio)</span>
                           </div>
                           {movie.audioTracks.map((track) => (
                             <button
                               key={track}
+                              type="button"
                               onClick={() => setSelectedAudio(track)}
-                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                              className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
                             >
                               <span>{track}</span>
-                              {selectedAudio === track && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                              {selectedAudio === track && <Check className="w-4 h-4 text-cyan-400" />}
                             </button>
                           ))}
                         </div>
 
-                        <div className="border-t border-zinc-800 pt-2">
-                          <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
-                            <Subtitles className="w-3.5 h-3.5" />
-                            Хадмал (Subtitles)
+                        <div className="border-t border-zinc-800 pt-2.5">
+                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                            <Subtitles className="w-4 h-4" />
+                            <span>Хадмал (Subtitles)</span>
                           </div>
                           {movie.subtitles.concat(['Унтраах']).map((sub) => (
                             <button
                               key={sub}
+                              type="button"
                               onClick={() => setSelectedSub(sub)}
-                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                              className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
                             >
                               <span>{sub}</span>
-                              {selectedSub === sub && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                              {selectedSub === sub && <Check className="w-4 h-4 text-cyan-400" />}
                             </button>
                           ))}
                         </div>
 
-                        <div className="border-t border-zinc-800 pt-2">
-                          <div className="font-bold text-cyan-400 mb-1">
-                            Хурд (Speed)
+                        <div className="border-t border-zinc-800 pt-2.5">
+                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                            <Gauge className="w-4 h-4" />
+                            <span>Хурд (Speed)</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-1 mt-1">
+                          <div className="grid grid-cols-4 gap-1.5 mt-1">
                             {[0.75, 1, 1.25, 1.5].map((spd) => (
                               <button
                                 key={spd}
+                                type="button"
                                 onClick={() => handlePlaybackSpeed(spd)}
-                                className={`py-1 rounded text-center cursor-pointer font-bold ${
+                                className={`py-1 rounded-md text-center cursor-pointer font-bold ${
                                   playbackSpeed === spd
-                                    ? 'bg-cyan-500 text-black'
+                                    ? 'bg-cyan-500 text-black shadow'
                                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                                 }`}
                               >
@@ -877,18 +997,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="border-t border-zinc-800 pt-2">
-                          <div className="font-bold text-cyan-400 mb-1">
-                            Чанар (Quality)
+                        <div className="border-t border-zinc-800 pt-2.5">
+                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
+                            <Layers className="w-4 h-4" />
+                            <span>Чанар (Quality)</span>
                           </div>
                           {['4K Ultra HD', '1080p HD', '720p', '480p'].map((q) => (
                             <button
                               key={q}
+                              type="button"
                               onClick={() => setSelectedQuality(q)}
-                              className="w-full text-left py-1 px-2 rounded hover:bg-zinc-800 flex justify-between cursor-pointer"
+                              className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
                             >
                               <span>{q}</span>
-                              {selectedQuality === q && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                              {selectedQuality === q && <Check className="w-4 h-4 text-cyan-400" />}
                             </button>
                           ))}
                         </div>
@@ -899,6 +1021,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   {/* Fullscreen Toggle */}
                   <button
                     id="player-fullscreen-toggle"
+                    type="button"
                     onClick={toggleFullscreen}
                     className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
@@ -915,61 +1038,81 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           )}
         </div>
 
-        {/* Side Episode Selector Drawer for Series */}
+        {/* Side Episode Selector Drawer */}
         {episodes.length > 0 && showEpisodesDrawer && (
-          <aside className="w-72 sm:w-80 bg-zinc-900 border-l border-zinc-800 h-full flex flex-col z-20 shadow-2xl">
-            <div className="p-3.5 border-b border-zinc-800 flex items-center justify-between text-white font-bold text-sm">
-              <span className="flex items-center gap-2">
-                <ListVideo className="w-4 h-4 text-cyan-400" />
-                Ангиудын жагсаалт
-              </span>
-              <span className="text-xs text-zinc-400 font-normal">
-                {episodes.length} анги
-              </span>
+          <aside className="w-72 sm:w-84 bg-zinc-950/95 border-l border-zinc-800/80 h-full flex flex-col z-20 shadow-2xl backdrop-blur-xl">
+            <div className="p-3.5 border-b border-zinc-800 space-y-2">
+              <div className="flex items-center justify-between text-white font-bold text-sm">
+                <span className="flex items-center gap-2">
+                  <ListVideo className="w-4 h-4 text-cyan-400" />
+                  <span>Ангиудын жагсаалт</span>
+                </span>
+                <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md font-mono">
+                  {episodes.length} анги
+                </span>
+              </div>
+              <input
+                type="text"
+                placeholder="Анги хайх (жишээ: 1, 50, Шалгалт)..."
+                value={drawerSearch}
+                onChange={(e) => setDrawerSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-700/70 text-xs text-white px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-cyan-400 placeholder:text-zinc-500"
+              />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 divide-y divide-zinc-800/40">
-              {episodes.map((ep, idx) => {
-                const isActive = idx === currentEpisodeIndex;
-                return (
-                  <button
-                    key={ep.episodeNumber}
-                    id={`ep-select-${ep.episodeNumber}`}
-                    onClick={() => selectEpisode(idx)}
-                    className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                      isActive
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold'
-                        : 'hover:bg-zinc-800 text-zinc-300 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                          isActive
-                            ? 'bg-cyan-500 text-black'
-                            : 'bg-zinc-800 text-zinc-400'
-                        }`}
-                      >
-                        {ep.episodeNumber}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs truncate font-semibold flex items-center gap-1">
-                          {ep.title}
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 divide-y divide-zinc-800/40">
+              {episodes
+                .map((ep, idx) => ({ ep, idx }))
+                .filter(({ ep }) => {
+                  if (!drawerSearch.trim()) return true;
+                  const q = drawerSearch.toLowerCase();
+                  return (
+                    ep.episodeNumber.toString().includes(q) ||
+                    ep.title.toLowerCase().includes(q)
+                  );
+                })
+                .map(({ ep, idx }) => {
+                  const isActive = idx === currentEpisodeIndex;
+                  return (
+                    <button
+                      key={ep.episodeNumber}
+                      id={`ep-select-${ep.episodeNumber}`}
+                      type="button"
+                      onClick={() => selectEpisode(idx)}
+                      className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                        isActive
+                          ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/60 font-bold shadow-lg shadow-cyan-500/10'
+                          : 'hover:bg-zinc-900 text-zinc-300 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isActive
+                              ? 'bg-gradient-to-tr from-cyan-400 to-blue-500 text-black shadow-md'
+                              : 'bg-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          {ep.episodeNumber}
                         </div>
-                        <div className="text-[10px] text-zinc-500 font-mono">
-                          {ep.duration}
+                        <div className="min-w-0">
+                          <div className="text-xs truncate font-bold flex items-center gap-1">
+                            {ep.title}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-mono">
+                            {ep.duration}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {isActive && (
-                      <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-1.5 py-0.5 rounded shrink-0">
-                        ҮЗЭЖ БАЙНА
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                      {isActive && (
+                        <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-2 py-0.5 rounded-md shrink-0 shadow">
+                          ҮЗЭЖ БАЙНА
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           </aside>
         )}
