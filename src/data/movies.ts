@@ -508,19 +508,19 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 6,
         title: '6-р анги - Өнгөрсөн үеийн сүүдэр (UNTIL THE LAST SPARK)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1cEj4Pibhe0PYDkrXkilR03l7x_vh0OeS/view?usp=drivesdk'
       },
       {
         episodeNumber: 7,
         title: '7-р анги - Замналын эхлэл (THE ROAD TO DEATH)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1TL3N-dfs0Nhw9_ohfW97oB7oBpe5RA5H/view?usp=drivesdk'
       },
       {
         episodeNumber: 8,
         title: '8-р анги - Тэсвэр тэвчээр (DEADLINE)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1Qr8imgMDmdF_cqm7UBuT7UCZbk4tadcc/view?usp=drivesdk'
       },
       {
         episodeNumber: 9,
