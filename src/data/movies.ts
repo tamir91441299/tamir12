@@ -550,7 +550,7 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 13,
         title: '13-р анги - Төгсгөлийн тулаан (BORN TO DIE - ТӨГСГӨЛ)',
         duration: '25 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1LwKywIHf1Ep6we9UVNSQXkT7r5W3H1H6/view?usp=drivesdk'
       }
     ]
   },
