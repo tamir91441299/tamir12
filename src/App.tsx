@@ -11,21 +11,23 @@ import { AuthModal, UserAccount } from './components/AuthModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
+import { AiMoviesView } from './components/AiMoviesView';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
 import { SAMPLE_MOVIES } from './data/movies';
-import { Movie } from './types';
+import { Movie, TabType, MovieSubcategory } from './types';
 import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
   AppNotification
 } from './lib/userService';
-import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus } from 'lucide-react';
+import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'movies' | 'series' | 'anime' | 'chinese' | 'ai' | 'favorites' | 'purchased' | 'games'>('home');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [selectedMovieCategory, setSelectedMovieCategory] = useState<MovieSubcategory>('all');
   const [selectedGameMode, setSelectedGameMode] = useState<'character' | 'title'>('character');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -272,7 +274,36 @@ export default function App() {
   const filteredMovies = useMemo(() => {
     return moviesList.filter((movie) => {
       // Tab filter
-      if (activeTab === 'movies' && movie.type !== 'movie') return false;
+      if (activeTab === 'movies') {
+        if (movie.type !== 'movie') return false;
+
+        // Subcategory filtering for movies
+        if (selectedMovieCategory === 'mongolian') {
+          if (movie.country !== 'Монгол' && !movie.genres.includes('Монгол') && !movie.genres.includes('Монгол кино')) return false;
+        } else if (selectedMovieCategory === 'hollywood') {
+          if (['Монгол', 'Хятад', 'Өмнөд Солонгос', 'Япон'].includes(movie.country) && !movie.genres.includes('Холливуд')) return false;
+        } else if (selectedMovieCategory === 'korean') {
+          if (movie.country !== 'Өмнөд Солонгос' && !movie.genres.includes('Солонгос') && !movie.genres.includes('Солонгос кино')) return false;
+        } else if (selectedMovieCategory === 'chinese') {
+          if (movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
+        } else if (selectedMovieCategory === 'new') {
+          if (movie.year < 2025) return false;
+        } else if (selectedMovieCategory === 'top_rated') {
+          if (movie.rating < 8.8) return false;
+        } else if (selectedMovieCategory === 'action') {
+          if (!movie.genres.includes('Action') && !movie.genres.includes('Action & Adventure') && !movie.genres.includes('Тулаант')) return false;
+        } else if (selectedMovieCategory === 'horror') {
+          if (!movie.genres.includes('Horror') && !movie.genres.includes('Thriller') && !movie.genres.includes('Аймшиг')) return false;
+        } else if (selectedMovieCategory === 'comedy') {
+          if (!movie.genres.includes('Comedy') && !movie.genres.includes('Инээдэм') && !movie.genres.includes('Комеди')) return false;
+        } else if (selectedMovieCategory === 'scifi') {
+          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix');
+          if (!isAiSciFi) return false;
+        } else if (selectedMovieCategory === 'vip') {
+          if (!movie.price || movie.price <= 0) return false;
+        }
+      }
+
       if (activeTab === 'series' && movie.type !== 'series') return false;
       if (activeTab === 'anime' && movie.type !== 'anime' && !movie.genres.includes('Animation') && !movie.genres.includes('Анимэ')) return false;
       if (activeTab === 'chinese' && movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
@@ -420,6 +451,8 @@ export default function App() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        selectedMovieCategory={selectedMovieCategory}
+        onSelectMovieCategory={setSelectedMovieCategory}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         movies={SAMPLE_MOVIES}
@@ -467,21 +500,35 @@ export default function App() {
               </div>
               <div>
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  FlickNime AI Кино Санал Болгогч Цэс
+                  FlickNime AI Кино & Санал Болгогч Сан
                 </h3>
                 <p className="text-xs text-zinc-400">
-                  Та юу үзмээр байгаагаа монголоор бичээд AI туслахаас шууд зөвлөгөө аваарай.
+                  Хиймэл оюун ухаант кино сан, AI зохиолч, тааварт тоглоом болон хувийн зөвлөгчтэй ажиллаарай.
                 </p>
               </div>
             </div>
 
-            <button
-              id="open-ai-callout"
-              onClick={() => setActiveTab('ai')}
-              className="bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap"
-            >
-              AI Цэс Рүү Очих
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                id="open-ai-movies-callout"
+                onClick={() => {
+                  setSelectedMovieCategory('scifi');
+                  setActiveTab('movies');
+                }}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+              >
+                <Cpu className="w-4 h-4" />
+                <span>AI & Sci-Fi Кино Үзэх</span>
+              </button>
+
+              <button
+                id="open-ai-callout"
+                onClick={() => setActiveTab('ai')}
+                className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap border border-zinc-700"
+              >
+                AI Зөвлөх
+              </button>
+            </div>
           </div>
         )}
 
@@ -528,8 +575,16 @@ export default function App() {
           </div>
         )}
 
-        {/* Main Content: AI Assistant & Games View / Catalog */}
-        {activeTab === 'ai' ? (
+        {/* Main Content: AI Movies / AI Assistant & Games View / Catalog */}
+        {activeTab === 'ai_movies' ? (
+          <AiMoviesView
+            movies={SAMPLE_MOVIES}
+            onSelectMovie={(m) => setSelectedMovieForDetails(m)}
+            onPlayMovie={(m) => handlePlayMovie(m)}
+            onToggleFavorite={toggleFavorite}
+            isFavorite={isFavorite}
+          />
+        ) : activeTab === 'ai' ? (
           <AiAssistantView
             movies={SAMPLE_MOVIES}
             onSelectMovie={(m) => setSelectedMovieForDetails(m)}
@@ -548,6 +603,54 @@ export default function App() {
           <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Catalog View */}
           <div className="flex-1 space-y-8 min-w-0">
+            {/* Quick Movie Subcategories Bar when viewing Movies tab */}
+            {activeTab === 'movies' && (
+              <div className="bg-[#17171c] border border-zinc-800 rounded-2xl p-3 shadow-lg">
+                <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                  <span className="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Film className="w-4 h-4" />
+                    Киноны Ангилал & Сонголтууд ({filteredMovies.length} кино):
+                  </span>
+                  {selectedMovieCategory !== 'all' && (
+                    <button
+                      onClick={() => setSelectedMovieCategory('all')}
+                      className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
+                    >
+                      Бүгдийг үзэх
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {[
+                    { id: 'all' as MovieSubcategory, label: '🎬 Бүх Кино', color: 'hover:border-cyan-500' },
+                    { id: 'mongolian' as MovieSubcategory, label: '🇲🇳 Монгол', color: 'hover:border-rose-500' },
+                    { id: 'hollywood' as MovieSubcategory, label: '🇺🇸 Холливуд', color: 'hover:border-blue-500' },
+                    { id: 'korean' as MovieSubcategory, label: '🇰🇷 Солонгос', color: 'hover:border-pink-500' },
+                    { id: 'chinese' as MovieSubcategory, label: '🇨🇳 Хятад', color: 'hover:border-amber-500' },
+                    { id: 'new' as MovieSubcategory, label: '⚡ 2026/2025 Шинэ', color: 'hover:border-emerald-500' },
+                    { id: 'top_rated' as MovieSubcategory, label: '⭐ Шилдэг 9.0+', color: 'hover:border-amber-400' },
+                    { id: 'action' as MovieSubcategory, label: '💥 Тулаант', color: 'hover:border-red-500' },
+                    { id: 'horror' as MovieSubcategory, label: '👻 Аймшиг', color: 'hover:border-purple-500' },
+                    { id: 'comedy' as MovieSubcategory, label: '😂 Инээдэм', color: 'hover:border-yellow-500' },
+                    { id: 'scifi' as MovieSubcategory, label: '🤖 Sci-Fi & AI', color: 'hover:border-cyan-400' },
+                    { id: 'vip' as MovieSubcategory, label: '💎 VIP / Багц', color: 'hover:border-amber-400' },
+                  ].map((subCat) => (
+                    <button
+                      key={subCat.id}
+                      onClick={() => setSelectedMovieCategory(subCat.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                        selectedMovieCategory === subCat.id
+                          ? 'bg-cyan-500 text-black border-cyan-400 shadow-md font-black'
+                          : `bg-zinc-900 text-zinc-300 border-zinc-800 hover:text-white ${subCat.color}`
+                      }`}
+                    >
+                      {subCat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'favorites' && (
               <div className="border-l-4 border-rose-500 pl-3">
                 <h2 className="text-xl font-black uppercase text-white flex items-center gap-2">
@@ -571,7 +674,29 @@ export default function App() {
               <MovieGrid
                 title={
                   activeTab === 'movies'
-                    ? 'БҮХ КИНОНУУД'
+                    ? selectedMovieCategory === 'mongolian'
+                      ? '🇲🇳 МОНГОЛ УРАН САЙХНЫ КИНОНУУД'
+                      : selectedMovieCategory === 'hollywood'
+                      ? '🇺🇸 ХОЛЛИВУД & ОЛОН УЛСЫН КИНОНУУД'
+                      : selectedMovieCategory === 'korean'
+                      ? '🇰🇷 СОЛОНГОС КИНОНУУД'
+                      : selectedMovieCategory === 'chinese'
+                      ? '🇨🇳 ХЯТАД КИНО & ТУЛААНТ БҮТЭЭЛҮҮД'
+                      : selectedMovieCategory === 'new'
+                      ? '⚡ 2026/2025 ОНЫ ШИНЭ НЭЭЛТ КИНОНУУД'
+                      : selectedMovieCategory === 'top_rated'
+                      ? '⭐ ШИЛДЭГ ҮНЭЛГЭЭТЭЙ (IMDB 9.0+) КИНОНУУД'
+                      : selectedMovieCategory === 'action'
+                      ? '💥 ТУЛААНТ & АДАЛ ЯВДАЛТ КИНОНУУД'
+                      : selectedMovieCategory === 'horror'
+                      ? '👻 АЙМШИГ & ТРИЛЛЕР КИНОНУУД'
+                      : selectedMovieCategory === 'comedy'
+                      ? '😂 ИНЭЭДЭМ & ХӨГЖИЛТЭЙ КИНОНУУД'
+                      : selectedMovieCategory === 'scifi'
+                      ? '🤖 SCI-FI & ХИЙМЭЛ ОЮУН УХААНТ КИНОНУУД'
+                      : selectedMovieCategory === 'vip'
+                      ? '💎 VIP & БАГЦЫН КИНОНУУД'
+                      : '🎬 БҮХ УРАН САЙХНЫ КИНОНУУД'
                     : activeTab === 'series'
                     ? 'ОЛОН АНГИТ ЦУВРАЛУУД'
                     : activeTab === 'anime'

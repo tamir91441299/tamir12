@@ -1,5 +1,31 @@
 export type MovieType = 'movie' | 'series' | 'anime';
 
+export type TabType =
+  | 'home'
+  | 'movies'
+  | 'series'
+  | 'anime'
+  | 'chinese'
+  | 'ai_movies'
+  | 'ai'
+  | 'favorites'
+  | 'purchased'
+  | 'games';
+
+export type MovieSubcategory =
+  | 'all'
+  | 'mongolian'
+  | 'hollywood'
+  | 'korean'
+  | 'chinese'
+  | 'new'
+  | 'top_rated'
+  | 'action'
+  | 'horror'
+  | 'comedy'
+  | 'scifi'
+  | 'vip';
+
 export interface Episode {
   episodeNumber: number;
   title: string;

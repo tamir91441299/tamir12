@@ -54,6 +54,9 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
     } else if (searchQuery && searchQuery.trim()) {
       pageTitle = `"${searchQuery}" Хайлтын үр дүн | FlickNime`;
       metaDescription = `FlickNime дээр "${searchQuery}" түлхүүр үгээр кино, цуврал, анимэ хайх.`;
+    } else if (activeTab === 'ai_movies') {
+      pageTitle = 'AI Кино Сан & Хиймэл Оюун Ухааны Кинонууд | FlickNime AI';
+      metaDescription = 'Хиймэл оюун ухаан, робот, сайберпанк, ирээдүйн технологийн шилдэг кинонуудыг үзэх, AI кино зохиол үүсгэгч болон зөвлөгчтэй ажиллах.';
     } else if (activeTab === 'movies') {
       pageTitle = 'Бүх Уран Сайхны Кинонууд | FlickNime';
       metaDescription = 'Сүүлийн үеийн Холливуд, Солонгос болон Монгол уран сайхны кинонуудыг монгол дуу оруулгатайгаар үзээрэй.';
