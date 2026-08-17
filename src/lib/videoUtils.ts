@@ -4,8 +4,12 @@
  */
 
 export function extractYouTubeId(url: string): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:v=|v\/|embed\/|shorts\/|live\/|youtu\.be\/|\/)([a-zA-Z0-9_-]{11})/);
+  if (!url || typeof url !== 'string') return null;
+  const clean = url.trim();
+  if (!clean.includes('youtube.com') && !clean.includes('youtu.be')) {
+    return null;
+  }
+  const match = clean.match(/(?:v=|v\/|embed\/|shorts\/|live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (match && match[1]) {
     return match[1];
   }

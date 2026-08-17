@@ -80,6 +80,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             id={`card-play-${movie.id}`}
             onClick={(e) => {
               e.stopPropagation();
+              console.log(`🎬 [MovieCard] Play button clicked for "${movie.titleMongolian}" (ID: ${movie.id}), videoUrl: ${movie.videoUrl}`);
               onPlay(movie);
             }}
             className="w-13 h-13 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-black flex items-center justify-center shadow-2xl shadow-cyan-500/50 hover:scale-115 active:scale-95 transition-all cursor-pointer"

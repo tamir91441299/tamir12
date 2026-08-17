@@ -32,28 +32,24 @@ export default function App() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'movie' | 'series' | 'anime' | 'all'>('all');
 
-  // Movies list state with custom episode updates from localStorage
+  // Movies list state: Prioritizes code definition (SAMPLE_MOVIES) and syncs custom additions
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
     try {
-      const savedEpisodes = localStorage.getItem('ioio_custom_episodes') || localStorage.getItem('movie_episodes_map');
+      // Clear legacy/stale dummy map keys if present
+      localStorage.removeItem('movie_episodes_map');
+      const savedEpisodes = localStorage.getItem('ioio_custom_episodes');
       if (savedEpisodes) {
         const parsedMap: Record<string, Movie['episodes']> = JSON.parse(savedEpisodes);
         return SAMPLE_MOVIES.map((m) => {
+          // If code has defined episodes, use code's episodes as the primary truth
+          if (m.episodes && m.episodes.length > 0) {
+            return m;
+          }
           if (parsedMap[m.id] && parsedMap[m.id]!.length > 0) {
-            const customEps = parsedMap[m.id]!;
-            const mergedEps = customEps.map((ep, idx) => {
-              const defaultEp = m.episodes?.[idx];
-              const epNum = ep.episodeNumber || idx + 1;
-              return {
-                ...ep,
-                episodeNumber: epNum,
-                videoUrl: ep.videoUrl?.trim() || defaultEp?.videoUrl || getDirectPlaybackStream('', epNum)
-              };
-            });
             return {
               ...m,
-              episodes: mergedEps,
-              totalEpisodes: Math.max(m.totalEpisodes || 0, mergedEps.length)
+              episodes: parsedMap[m.id]!,
+              totalEpisodes: Math.max(m.totalEpisodes || 0, parsedMap[m.id]!.length)
             };
           }
           return m;
@@ -278,11 +274,15 @@ export default function App() {
   const [paymentMovie, setPaymentMovie] = useState<Movie | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
-  // Sync tab clicks
+  // Sync tab clicks & reset conflicting filters when tab changes
   useEffect(() => {
     if (activeTab === 'ai') {
       setShowAiModal(true);
     }
+    // Auto reset sidebar type filter when switching major tabs so anime or other views don't get blocked
+    setSelectedType('all');
+    setSelectedGenre(null);
+    setSelectedYear(null);
   }, [activeTab]);
 
   // Filter logic
@@ -296,10 +296,21 @@ export default function App() {
       if (activeTab === 'favorites' && !favorites.includes(movie.id)) return false;
       if (activeTab === 'purchased' && !purchasedMovies.includes(movie.id)) return false;
 
-      // Sidebar type filter
-      if (selectedType === 'movie' && movie.type !== 'movie') return false;
-      if (selectedType === 'series' && movie.type !== 'series') return false;
-      if (selectedType === 'anime' && movie.type !== 'anime') return false;
+      // Sidebar type filter (apply only when not on specialized tab, or if compatible)
+      if (selectedType !== 'all') {
+        if (activeTab === 'home' || activeTab === 'favorites' || activeTab === 'purchased') {
+          if (selectedType === 'movie' && movie.type !== 'movie') return false;
+          if (selectedType === 'series' && movie.type !== 'series') return false;
+          if (selectedType === 'anime' && movie.type !== 'anime' && !movie.genres.includes('Animation') && !movie.genres.includes('Анимэ')) return false;
+        } else if (activeTab === 'anime') {
+          // Inside anime tab, allowing filtering movies vs series
+          if (selectedType === 'movie' && movie.type !== 'movie' && !movie.genres.includes('Animation')) return false;
+          if (selectedType === 'series' && movie.type !== 'series') return false;
+        } else if (activeTab === 'chinese') {
+          if (selectedType === 'movie' && movie.type !== 'movie') return false;
+          if (selectedType === 'series' && movie.type !== 'series') return false;
+        }
+      }
 
       // Year filter
       if (selectedYear !== null && movie.year !== selectedYear) return false;
@@ -362,6 +373,7 @@ export default function App() {
   };
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
+    console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}, videoUrl: ${movie.videoUrl}`);
     setSelectedMovieForPlayer(movie);
     setPlayerInitialEpisode(episodeNumber);
   };
@@ -596,6 +608,7 @@ export default function App() {
                 onToggleFavorite={toggleFavorite}
                 isFavorite={isFavorite}
                 isPurchased={isPurchased}
+                onResetFilters={resetFilters}
               />
             ) : (
               /* Default Home Sections */

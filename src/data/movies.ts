@@ -497,9 +497,9 @@ export const SAMPLE_MOVIES: Movie[] = [
     ageRating: '+13',
     audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
     subtitles: ['Монгол хадмал'],                                                                                                                                                                                                                                                     
-    episodes: [                                                                                                                                                                                                                                                                                                                                                                               
+    episodes: [                                                                                                                                                                                                                                                                                                                                         
       // 1 - 21: Хантерийн Шалгалтын Бүлэг (Hunter Exam Arc)
-      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1WCr-q9bfKyl5dlIL6J_-n_bqvcKPd4ff/view?usp=drivesdk' },
+      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk' },
       { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Movie } from '../types';
 import { MovieCard } from './MovieCard';
 
@@ -13,6 +13,7 @@ interface MovieGridProps {
   isFavorite: (movieId: string) => boolean;
   isPurchased?: (movieId: string) => boolean;
   onSeeAll?: () => void;
+  onResetFilters?: () => void;
 }
 
 export const MovieGrid: React.FC<MovieGridProps> = ({
@@ -25,12 +26,22 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
   isFavorite,
   isPurchased,
   onSeeAll,
+  onResetFilters,
 }) => {
   if (!movies || movies.length === 0) {
     return (
-      <div className="bg-[#17171a] rounded-2xl p-8 text-center text-zinc-400 border border-zinc-800 my-4">
-        <p className="text-base font-semibold">Илэрц олдсонгүй.</p>
-        <p className="text-xs text-zinc-500 mt-1">Та өөр шүүлтүүр сонгож үзнэ үү.</p>
+      <div className="bg-[#17171a] rounded-2xl p-8 text-center text-zinc-400 border border-zinc-800 my-4 space-y-3">
+        <p className="text-base font-semibold text-zinc-300">Илэрц олдсонгүй.</p>
+        <p className="text-xs text-zinc-500">Шүүлтүүр эсвэл хайлтын үгээ өөрчилж үзнэ үү.</p>
+        {onResetFilters && (
+          <button
+            onClick={onResetFilters}
+            className="inline-flex items-center gap-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Бүх шүүлтүүрийг арилгах</span>
+          </button>
+        )}
       </div>
     );
   }

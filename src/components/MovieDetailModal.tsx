@@ -171,15 +171,26 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#17171a] via-[#17171a]/50 to-transparent" />
 
-                {/* Big Trailer Button on Backdrop */}
+                {/* Big Direct Play Button on Backdrop */}
                 <button
-                  id="preview-trailer-button"
-                  onClick={() => setShowTrailer(true)}
-                  className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-cyan-500/90 text-black flex items-center justify-center shadow-2xl hover:scale-110 transition-transform cursor-pointer"
-                  title="Трейлер үзэх"
+                  id="preview-play-backdrop-button"
+                  onClick={() => onPlay(movie, 1)}
+                  className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-black flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10"
+                  title="Шууд үзэх"
                 >
-                  <Play className="w-8 h-8 fill-black ml-1" />
+                  <Play className="w-8 h-8 fill-black ml-1 group-hover:scale-110 transition-transform" />
                 </button>
+
+                {movie.trailerUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTrailer(true)}
+                    className="absolute bottom-4 right-4 z-10 bg-black/70 hover:bg-black text-zinc-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700 backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Film className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Трейлер үзэх</span>
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -198,7 +209,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <div className="flex-1 space-y-3 text-center sm:text-left">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs">
                   <span className="bg-cyan-500 text-black font-extrabold px-2.5 py-0.5 rounded">
-                    {movie.type === 'series' ? 'TV SERIES' : 'MOVIE'}
+                    {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV SERIES' : 'MOVIE'}
                   </span>
                   <span className="bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded shadow flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
@@ -240,7 +251,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-3">
                   <button
                     id="modal-play-now"
-                    onClick={() => onPlay(movie)}
+                    onClick={() => {
+                      console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian, 'videoUrl:', movie.videoUrl);
+                      onPlay(movie);
+                    }}
                     className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-500/20 hover:scale-105 transition-all cursor-pointer"
                   >
                     <Play className="w-5 h-5 fill-black" />
@@ -529,7 +543,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       >
                         <button
                           id={`ep-grid-btn-${ep.episodeNumber}`}
-                          onClick={() => onPlay(movie, ep.episodeNumber)}
+                          onClick={() => {
+                            console.log(`🎬 [MovieDetailModal] Episode clicked: ${ep.episodeNumber}-р анги ("${ep.title}") for "${movie.titleMongolian}", URL: ${ep.videoUrl || movie.videoUrl}`);
+                            onPlay(movie, ep.episodeNumber);
+                          }}
                           className="p-2.5 w-full text-left cursor-pointer flex-1 flex flex-col justify-between"
                         >
                           <div className="flex items-center justify-between font-bold text-xs text-zinc-200 group-hover:text-cyan-300">

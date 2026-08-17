@@ -25,7 +25,11 @@ import {
   Zap,
   ExternalLink,
   HelpCircle,
-  FolderLock
+  FolderLock,
+  Bug,
+  Terminal,
+  Copy,
+  RotateCw
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import {
@@ -81,33 +85,66 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Default mode: always start on high-speed direct HTML5 player so any visitor can watch immediately without permissions restrictions
-  const [serverMode, setServerMode] = useState<ServerMode>('server1');
+  // Default mode: use embed mode for Google Drive/YouTube so video plays reliably without CORS/proxy blocks
+  const [serverMode, setServerMode] = useState<ServerMode>(() => {
+    return isExternalEmbedMedia(rawVideoSrc) ? 'embed' : 'server1';
+  });
 
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
   const [drawerSearch, setDrawerSearch] = useState<string>('');
   const failoverAttemptsRef = useRef<number>(0);
 
-  // Sync server mode when video source changes - retain direct HTML5 playback by default
-  useEffect(() => {
-    failoverAttemptsRef.current = 0;
-    // Default to direct high-speed player for seamless playback across all devices
-    if (serverMode === 'embed' && !isExternalEmbed) {
-      setServerMode('server1');
-    }
-  }, [rawVideoSrc, isExternalEmbed]);
+  const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [videoElementState, setVideoElementState] = useState<{
+    readyState?: number;
+    networkState?: number;
+    paused?: boolean;
+    error?: string | null;
+  }>({});
+
+  const appendDebugLog = useCallback((msg: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const formatted = `[${timestamp}] ${msg}`;
+    console.log(`🎬 [FlickNime Debug]`, msg);
+    setDebugLogs((prev) => [formatted, ...prev.slice(0, 49)]);
+  }, []);
 
   const isEmbed = serverMode === 'embed';
   const iframeUrl = getEmbedUrl(rawVideoSrc, 'standard');
-
   const epNum = currentEpisode?.episodeNumber || currentEpisodeIndex + 1;
-
-  // Resolve direct video stream URL based on active server
   const videoSrcToPlay =
     serverMode === 'embed'
       ? ''
       : getDirectPlaybackStream(rawVideoSrc, epNum, serverMode);
+
+  // Debug initial loading
+  useEffect(() => {
+    appendDebugLog(`Ачаалласан кино: "${movie?.titleMongolian}" (${movie?.type})`);
+    appendDebugLog(`Сонгосон анги: ${currentEpisode ? currentEpisode.title : 'Кино (1-р анги)'}`);
+    appendDebugLog(`Эх холбоос (Raw URL): ${rawVideoSrc}`);
+    appendDebugLog(`Google Drive ID: ${googleDriveId || 'Байхгүй'}`);
+    appendDebugLog(`YouTube ID: ${extractYouTubeId(rawVideoSrc) || 'Байхгүй'}`);
+    appendDebugLog(`Тоглуулах горим (Server Mode): ${serverMode}`);
+    if (serverMode === 'embed') {
+      appendDebugLog(`Iframe Embed URL: ${iframeUrl}`);
+    } else {
+      appendDebugLog(`Direct Video Stream URL: ${videoSrcToPlay}`);
+    }
+  }, [movie, currentEpisodeIndex, serverMode, rawVideoSrc, iframeUrl, videoSrcToPlay, appendDebugLog]);
+
+  // Sync server mode when video source changes
+  useEffect(() => {
+    failoverAttemptsRef.current = 0;
+    if (isExternalEmbed) {
+      appendDebugLog(`Автомат Embed горим идэвхжлээ (Google Drive / YouTube илэрсэн).`);
+      setServerMode('embed');
+    } else if (serverMode === 'embed' && !isExternalEmbed) {
+      appendDebugLog(`Автомат Direct горим руу шилжлээ.`);
+      setServerMode('server1');
+    }
+  }, [rawVideoSrc, isExternalEmbed, appendDebugLog]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -455,6 +492,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Multi-Node High-Concurrency Server Selector */}
           <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 text-xs shadow-lg backdrop-blur-md">
+            {isExternalEmbed && (
+              <button
+                type="button"
+                id="server-embed-btn"
+                onClick={() => handleServerChange('embed')}
+                className={`px-3 py-1 rounded-lg transition-all font-black cursor-pointer flex items-center gap-1.5 ${
+                  serverMode === 'embed'
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
+                    : 'text-amber-300 hover:text-white'
+                }`}
+                title={isGoogleDrive ? 'Google Drive Тоглуулагч (HD)' : isYouTube ? 'YouTube Бичлэг' : 'Үндсэн тоглуулагч'}
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>{isGoogleDrive ? 'Drive HD' : isYouTube ? 'YouTube' : 'Үндсэн'}</span>
+              </button>
+            )}
+
             <button
               type="button"
               id="server1-btn"
@@ -464,10 +518,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
                   : 'text-cyan-300 hover:text-white'
               }`}
-              title="Шууд Тоглуулагч 1: Gmail эсвэл нэвтрэх эрх нэхэхгүй шууд үзэх"
+              title="Шууд Тоглуулагч 1: CDN Шууд дамжуулагч"
             >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>Шууд Үзэх 1</span>
+              <Activity className="w-3.5 h-3.5" />
+              <span>Шууд 1</span>
             </button>
 
             <button
@@ -514,22 +568,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <Activity className="w-3 h-3" />
               <span>Сервер 4</span>
             </button>
-
-            {isExternalEmbed && (
-              <button
-                type="button"
-                id="server-embed-btn"
-                onClick={() => handleServerChange('embed')}
-                className={`px-2.5 py-1 rounded-lg transition-all font-semibold cursor-pointer flex items-center gap-1 ${
-                  serverMode === 'embed'
-                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title={isGoogleDrive ? 'Google Drive Эх холбоос' : isYouTube ? 'YouTube Бичлэг' : 'Эх холбоос'}
-              >
-                <span>Эх хувилбар</span>
-              </button>
-            )}
           </div>
 
           {/* Concurrency & Ping Status Pill */}
@@ -538,6 +576,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <Wifi className="w-3.5 h-3.5 text-emerald-400" />
             <span>100% Онлайн • Хязгааргүй Хүчин Чадал</span>
           </div>
+
+          {/* Debug Console & Diagnostic Overlay Toggle Button */}
+          <button
+            type="button"
+            id="debug-panel-toggle-btn"
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className={`flex items-center gap-1 font-bold text-xs p-2 sm:px-3 sm:py-2 rounded-xl cursor-pointer transition-all border ${
+              showDebugPanel
+                ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
+            }`}
+            title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
+          >
+            <Bug className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Дебаг</span>
+          </button>
 
           {/* Fullscreen Quick Button */}
           <button
@@ -593,9 +647,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <iframe
                 ref={iframeRef}
                 src={iframeUrl}
+                onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${iframeUrl}`)}
+                onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа: ${iframeUrl}`)}
                 className="w-full h-full rounded-2xl border border-zinc-800 shadow-2xl bg-black aspect-video"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
                 referrerPolicy="no-referrer"
                 allowFullScreen
                 title={movie.titleMongolian}
@@ -679,37 +734,76 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 controlsList="nodownload noplaybackrate"
                 disablePictureInPicture
                 onContextMenu={(e) => e.preventDefault()}
-                onWaiting={() => setIsBuffering(true)}
+                onWaiting={() => {
+                  appendDebugLog('⏳ Видео буфер хийж байна (Waiting/Buffering)...');
+                  setIsBuffering(true);
+                }}
                 onPlaying={() => {
                   failoverAttemptsRef.current = 0;
                   setIsBuffering(false);
                   setIsPlaying(true);
+                  appendDebugLog('▶️ Видео хэвийн тоглож байна (Playing)');
+                  if (videoRef.current) {
+                    setVideoElementState({
+                      readyState: videoRef.current.readyState,
+                      networkState: videoRef.current.networkState,
+                      paused: videoRef.current.paused,
+                      error: null,
+                    });
+                  }
                 }}
                 onLoadedMetadata={() => {
                   failoverAttemptsRef.current = 0;
                   if (videoRef.current) {
-                    setDuration(videoRef.current.duration || 0);
+                    const dur = videoRef.current.duration || 0;
+                    setDuration(dur);
+                    appendDebugLog(`ℹ️ Видеоны мэдээлэл (Metadata) ачааллаа. Хугацаа: ${formatTime(dur)}`);
+                    setVideoElementState({
+                      readyState: videoRef.current.readyState,
+                      networkState: videoRef.current.networkState,
+                      paused: videoRef.current.paused,
+                      error: null,
+                    });
                   }
                 }}
                 onCanPlay={() => {
                   setIsBuffering(false);
+                  appendDebugLog('✅ Видео тоглуулахад бэлэн (CanPlay)');
                   if (isPlaying && videoRef.current && videoRef.current.paused) {
                     playVideoSafe();
                   }
                 }}
-                onError={() => {
+                onError={(e) => {
+                  const mediaErr = videoRef.current?.error;
+                  const errCode = mediaErr ? mediaErr.code : 'UNKNOWN';
+                  const errMsg = mediaErr ? mediaErr.message : 'No message';
+                  appendDebugLog(`❌ Видео тоглуулахад алдаа гарлаа: Код=${errCode} Мэдээлэл=${errMsg}`);
+                  setVideoElementState((prev) => ({
+                    ...prev,
+                    error: `Error Code: ${errCode} (${errMsg || 'Media playback error'})`,
+                  }));
+
                   if (failoverAttemptsRef.current < 4) {
                     failoverAttemptsRef.current += 1;
-                    if (serverMode === 'server1') setServerMode('server2');
-                    else if (serverMode === 'server2') setServerMode('server3');
-                    else if (serverMode === 'server3') setServerMode('server4');
-                    else setServerMode('server1');
+                    const nextMode: ServerMode =
+                      serverMode === 'server1' ? 'server2' :
+                      serverMode === 'server2' ? 'server3' :
+                      serverMode === 'server3' ? 'server4' : 'server1';
+                    appendDebugLog(`🔄 Автомат нөөц сервер рүү шилжиж байна: ${nextMode}`);
+                    setServerMode(nextMode);
                   } else {
                     setIsBuffering(false);
+                    appendDebugLog(`⚠️ Бүх шууд серверүүд алдаа заалаа. Та "Drive HD" / "Embed" сервер сонгох эсвэл "Drive дээр нээх" линкээр орно уу.`);
                   }
                 }}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                onPlay={() => {
+                  setIsPlaying(true);
+                  appendDebugLog('▶️ Видео тоглуулж эхэллээ (Play event)');
+                }}
+                onPause={() => {
+                  setIsPlaying(false);
+                  appendDebugLog('⏸️ Видео түр зогслоо (Pause event)');
+                }}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={() => {
                   if (currentEpisodeIndex < episodes.length - 1) {
@@ -1117,6 +1211,276 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </aside>
         )}
       </div>
+
+      {/* Interactive Debug Diagnostic Modal */}
+      {showDebugPanel && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-zinc-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
+              <div className="flex items-center gap-2 text-white font-black text-sm sm:text-base">
+                <Bug className="w-5 h-5 text-amber-400" />
+                <span>Тоглуулагчийн Дебаг Консоль (Diagnostic Panel)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const info = JSON.stringify(
+                      {
+                        movie: movie?.titleMongolian,
+                        episode: currentEpisode ? currentEpisode.title : 1,
+                        rawVideoSrc,
+                        googleDriveId,
+                        serverMode,
+                        isEmbed,
+                        iframeUrl: isEmbed ? iframeUrl : null,
+                        videoSrcToPlay: !isEmbed ? videoSrcToPlay : null,
+                        videoElementState,
+                        isPlaying,
+                        isBuffering,
+                        isMuted,
+                        currentTime,
+                        duration,
+                        debugLogs,
+                      },
+                      null,
+                      2
+                    );
+                    navigator.clipboard.writeText(info);
+                    appendDebugLog('📋 Бүх дебаг мэдээлэл санах ойд хуулагдлаа (Copied to Clipboard).');
+                  }}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-zinc-700 cursor-pointer transition-all"
+                  title="Дебаг мэдээллийг хуулах"
+                >
+                  <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Мэдээлэл хуулах</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDebugPanel(false)}
+                  className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center cursor-pointer transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              {/* Quick Summary Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-1.5">
+                  <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Кино & Ангийн Мэдээлэл
+                  </div>
+                  <div className="text-white font-bold truncate">
+                    {movie.titleMongolian} ({movie.titleEnglish})
+                  </div>
+                  <div className="text-cyan-400 font-semibold">
+                    Анги: {currentEpisode ? currentEpisode.title : '1-р анги'}
+                  </div>
+                  <div className="text-zinc-400 text-[11px]">
+                    Төрөл: <span className="text-white">{movie.type}</span> | Жил: {movie.year}
+                  </div>
+                </div>
+
+                <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-1.5">
+                  <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Тоглуулагчийн Төлөв
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[11px]">
+                    <span className={`px-2 py-0.5 rounded font-bold ${
+                      serverMode === 'embed' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    }`}>
+                      Горим: {serverMode}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded font-bold ${
+                      isPlaying ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                    }`}>
+                      {isPlaying ? '▶️ Тоглож байна' : '⏸️ Зогссон'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded font-bold ${
+                      isBuffering ? 'bg-amber-500/20 text-amber-300 animate-pulse' : 'bg-zinc-800 text-zinc-300'
+                    }`}>
+                      {isBuffering ? '⏳ Буферлэж байна' : 'Хэвийн'}
+                    </span>
+                  </div>
+                  <div className="text-zinc-400 text-[11px]">
+                    Хугацаа: <span className="font-mono text-white">{formatTime(currentTime)} / {formatTime(duration)}</span> | Дуу: <span className="text-white">{isMuted ? 'Хаасан' : `${Math.round(volume * 100)}%`}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Source URLs */}
+              <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-2">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Холбоос & Сервер Шинжилгээ
+                </div>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-black/50 p-2 rounded-lg border border-zinc-800/80">
+                    <span className="text-zinc-400 shrink-0 font-sans font-bold">Эх URL (Raw):</span>
+                    <span className="text-cyan-300 truncate max-w-md" title={rawVideoSrc}>{rawVideoSrc}</span>
+                    <a
+                      href={rawVideoSrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:underline flex items-center gap-1 shrink-0 font-sans font-semibold text-[11px]"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Шинэ цонхонд нээх
+                    </a>
+                  </div>
+
+                  {googleDriveId && (
+                    <div className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-zinc-800/80">
+                      <span className="text-zinc-400 font-sans font-bold">Google Drive File ID:</span>
+                      <span className="text-amber-300 font-bold">{googleDriveId}</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-black/50 p-2 rounded-lg border border-zinc-800/80">
+                    <span className="text-zinc-400 shrink-0 font-sans font-bold">Идэвхтэй тоглуулах URL:</span>
+                    <span className="text-emerald-300 truncate max-w-md" title={isEmbed ? iframeUrl : videoSrcToPlay}>
+                      {isEmbed ? iframeUrl : videoSrcToPlay}
+                    </span>
+                    {!isEmbed && videoSrcToPlay && (
+                      <a
+                        href={videoSrcToPlay}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 hover:underline flex items-center gap-1 shrink-0 font-sans font-semibold text-[11px]"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Урсгал шалгах
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions & Server Switcher */}
+              <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-2">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Шуурхай Оношилгоо & Сервер Солих
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleServerChange('embed')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                      serverMode === 'embed'
+                        ? 'bg-amber-400 text-black shadow-md'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    ⚡ Drive / YouTube Embed горим
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleServerChange('server1')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                      serverMode === 'server1'
+                        ? 'bg-cyan-400 text-black shadow-md'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    📡 Шууд 1 (Proxy Stream)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleServerChange('server2')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                      serverMode === 'server2'
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    🌐 Сервер 2 (Seoul Turbo)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleServerChange('server3')}
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
+                      serverMode === 'server3'
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    🌍 Сервер 3 (Global Edge)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.load();
+                        playVideoSafe();
+                        appendDebugLog('🔄 Видео тоглуулагчийг гараар дахин дуудлаа (Force Reload).');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 cursor-pointer transition-all"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Дахин ачааллах</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Real-time Event Log Console */}
+              <div className="bg-black/90 border border-zinc-800 p-3 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-zinc-400 font-mono text-[11px] font-bold">
+                    <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Бодит цагийн Дебаг Лог (Live Debug Logs)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDebugLogs([])}
+                    className="text-zinc-500 hover:text-zinc-300 text-[10px] underline cursor-pointer"
+                  >
+                    Цэвэрлэх
+                  </button>
+                </div>
+                <div className="bg-zinc-950 p-2.5 rounded-lg border border-zinc-900 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px] select-text">
+                  {debugLogs.length === 0 ? (
+                    <div className="text-zinc-600 italic">Одоогоор лог алга...</div>
+                  ) : (
+                    debugLogs.map((log, i) => (
+                      <div
+                        key={i}
+                        className={`leading-relaxed ${
+                          log.includes('❌')
+                            ? 'text-rose-400'
+                            : log.includes('✅')
+                            ? 'text-emerald-400'
+                            : log.includes('⚠️')
+                            ? 'text-amber-400'
+                            : 'text-zinc-300'
+                        }`}
+                      >
+                        {log}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-zinc-900/90 border-t border-zinc-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDebugPanel(false)}
+                className="bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs px-5 py-2 rounded-xl cursor-pointer transition-all shadow-lg"
+              >
+                Хаах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

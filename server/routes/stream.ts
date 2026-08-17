@@ -129,16 +129,19 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
  */
 router.get("/api/stream/drive/:fileId", async (req: Request, res: Response) => {
   const { fileId } = req.params;
+  console.log(`📡 [Stream Proxy] Request for Drive File ID: "${fileId}"`);
   if (!fileId || typeof fileId !== "string" || fileId.length < 10) {
+    console.warn(`⚠️ [Stream Proxy] Invalid File ID "${fileId}", falling back.`);
     res.redirect(302, FALLBACK_VIDEOS[0]);
     return;
   }
 
   try {
     const { url: targetUrl, cookies } = await resolveGoogleDriveStreamUrl(fileId);
+    console.log(`✅ [Stream Proxy] Resolved target stream URL for "${fileId}":`, targetUrl);
     pipeStreamWithRange(targetUrl, req, res, fileId, 0, cookies);
   } catch (err) {
-    console.error("Stream drive error:", err);
+    console.error("❌ [Stream Proxy] Error resolving stream drive:", err);
     if (!res.headersSent) {
       res.redirect(302, FALLBACK_VIDEOS[0]);
     }
