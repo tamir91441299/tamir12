@@ -32,29 +32,12 @@ export default function App() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'movie' | 'series' | 'anime' | 'all'>('all');
 
-  // Movies list state: Prioritizes code definition (SAMPLE_MOVIES) and syncs custom additions
+  // Movies list state: Fresh code definition from SAMPLE_MOVIES
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
     try {
-      // Clear legacy/stale dummy map keys if present
+      // Clear legacy stale cache keys from previous sessions to prevent outdated URLs
       localStorage.removeItem('movie_episodes_map');
-      const savedEpisodes = localStorage.getItem('ioio_custom_episodes');
-      if (savedEpisodes) {
-        const parsedMap: Record<string, Movie['episodes']> = JSON.parse(savedEpisodes);
-        return SAMPLE_MOVIES.map((m) => {
-          // If code has defined episodes, use code's episodes as the primary truth
-          if (m.episodes && m.episodes.length > 0) {
-            return m;
-          }
-          if (parsedMap[m.id] && parsedMap[m.id]!.length > 0) {
-            return {
-              ...m,
-              episodes: parsedMap[m.id]!,
-              totalEpisodes: Math.max(m.totalEpisodes || 0, parsedMap[m.id]!.length)
-            };
-          }
-          return m;
-        });
-      }
+      localStorage.removeItem('ioio_custom_episodes');
     } catch (e) {
       console.error(e);
     }

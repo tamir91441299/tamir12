@@ -274,6 +274,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
+  const handleResetMovieEpisodes = () => {
+    if (!currentSelectedMovie) return;
+    const defaultMovie = SAMPLE_MOVIES.find((m) => m.id === currentSelectedMovie.id);
+    if (defaultMovie && onUpdateMovieEpisodes) {
+      onUpdateMovieEpisodes(currentSelectedMovie.id, defaultMovie.episodes || []);
+    }
+  };
+
   const handleGenerateRandomCode = () => {
     const prefixes = ['VIP', 'CINEMA', 'FLICK', 'BONUS', 'IOIO', 'PROMO'];
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
@@ -1143,14 +1151,25 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
             {/* Existing Episodes List */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
                   <Video className="w-4 h-4 text-cyan-400" />
                   Нийт оруулсан ангиуд ({currentMovieEpisodes.length})
                 </h4>
-                <span className="text-xs text-zinc-500">
-                  1-р анги нь бүх хэрэглэгчдэд ҮНЭГҮЙ үзэх боломжтой
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-500 hidden sm:inline">
+                    1-р анги нь бүх хэрэглэгчдэд ҮНЭГҮЙ үзэх боломжтой
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetMovieEpisodes}
+                    className="flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                    title="Эх анхны ангиудын тохиргоог сэргээх"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Анхны утгаар сэргээх</span>
+                  </button>
+                </div>
               </div>
 
               {currentMovieEpisodes.length === 0 ? (

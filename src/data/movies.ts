@@ -500,7 +500,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     episodes: [                                                                                                                                                                                                                                                                                                                                         
       // 1 - 21: Хантерийн Шалгалтын Бүлэг (Hunter Exam Arc)
       { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk' },
-      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
+      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1uoJkjQn8gw9Ia-7W3kLr-lb6rWnkWziK/view?usp=drivesdk' },
       { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 5, title: '5-р анги - Хисокагийн жинхэнэ төрх', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
