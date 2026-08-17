@@ -526,25 +526,25 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 9,
         title: '9-р анги - Сүүлчийн найдварын оч (A DEAD FLOWER NEVER BLOOMS)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1Qr8imgMDmdF_cqm7UBuT7UCZbk4tadcc/view?usp=drivesdk&usp=embed_facebook'
       },
       {
         episodeNumber: 10,
         title: '10-р анги - Их рингэнд гарах зам (THE DIE IS CAST)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1uwTlD9BWXCmki9oksaoS_MwwFnC3R9EQ/view?usp=drivesdk'
       },
       {
         episodeNumber: 11,
         title: '11-р анги - Өшөө авалт ба нөхөрлөл (A DEAD MARCH)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1ZCYwUMQjxW7cNffRL5rS_fwo_yhPzA2V/view?usp=drivesdk'
       },
       {
         episodeNumber: 12,
         title: '12-р анги - Аваргын эсрэг тулаан (BITE THE DUST)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk'
+        videoUrl: 'https://drive.google.com/file/d/1xuUzFXt29eJFGC6av5PANQJ6keNzt5zV/view?usp=drivesdk'
       },
       {
         episodeNumber: 13,
