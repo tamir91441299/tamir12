@@ -99,6 +99,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   if (!movie) return null;
 
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
+  const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
 
   // Check access permission for specific episode
   // Rule: 1-р анги үнэгүй, 1-ээс цааш ангиудыг зөвхөн эрх авсан хэрэглэгчид үзнэ
@@ -188,13 +189,29 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       13: '13-р анги - Төгсгөлийн тулаан (BORN TO DIE - ТӨГСГӨЛ)'
     };
 
+    const default91DaysTitles: Record<number, string> = {
+      1: '1-р анги - Үдэшлэгийн шөнө (Night of the Murder)',
+      2: '2-р анги - Хуурмаг дүр төрх (Phantom of Falsehood)',
+      3: '3-р анги - Хаашаа чиглэсэн буун дуу (Where the Footsteps Lead)',
+      4: '4-р анги - Ялагдал ба Холбоотон (Lose to Win, and What Comes After)',
+      5: '5-р анги - Цусны үнэр (Blood Will Have Blood)',
+      6: '6-р анги - Хүн алахын тулд (To Slaughter a Pig)',
+      7: '7-р анги - Муу ёрын өдөр (A Poor Player)',
+      8: '8-р анги - Далд хөшиг (Behind the Curtain)',
+      9: '9-р анги - Хар харгис сэтгэл (Black and Deep Desires)',
+      10: '10-р анги - Баталгаагүй замнал (Proof of Good Faith)',
+      11: '11-р анги - Бүх зүйл хоосон (All for Nothing)',
+      12: '12-р анги - Салхи өнгөрөх мөч (Treading on Dirty Ground - Төгсгөл)',
+      13: '13-р анги - Гунигт бөгөөд богинохон (Shoe Sole Bottle - OVA)'
+    };
+
     const newEpList: Episode[] = [];
 
     for (let i = 1; i <= targetCount; i++) {
       // Find URL: either corresponding line, or first link
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
-      const title = existing?.title || (isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
+      const title = existing?.title || (is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
       const duration = existing?.duration || '24 мин';
 
       newEpList.push({
