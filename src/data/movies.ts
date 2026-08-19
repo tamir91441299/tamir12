@@ -577,7 +577,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     featured: true,
     featuredRank: 2,
     trailerUrl: 'https://www.youtube.com/embed/a9rZ24kXvEE',
-    videoUrl: 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk',
+    videoUrl: 'https://drive.google.com/file/d/1vJn-t0_68Z0PVFz2IaQeOV0ZmOpnxuhA/view?usp=drivesdk',
     ageRating: '+16',
     audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
     subtitles: ['Монгол хадмал'],
