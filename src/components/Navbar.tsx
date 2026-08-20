@@ -210,17 +210,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-[#121214]/95 backdrop-blur-md border-b border-zinc-800/80 text-white">
       {/* Top micro banner */}
       <div className="bg-gradient-to-r from-amber-600/20 via-cyan-600/20 to-purple-600/20 border-b border-zinc-800 text-xs py-1 px-4 text-center text-zinc-300 flex justify-between items-center">
-        <span className="hidden sm:inline-block text-zinc-400">
+        <span className="text-zinc-400">
           🎬 FlickNime — Монгол хадмал болон дуу оруулгатай анимэ & кино сан
         </span>
-        <div className="flex items-center gap-3 mx-auto sm:mx-0 text-cyan-300 font-medium">
-          <button
-            onClick={() => setActiveTab('ai')}
-            className="flex items-center gap-1 hover:text-cyan-200 cursor-pointer transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
-            <span>🤖 AI Кино зөвлөх ашиглах</span>
-          </button>
+        <div className="flex items-center gap-3">
           <a
             href="https://www.facebook.com/share/r/17wruEiwvA/"
             target="_blank"
@@ -228,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold px-2.5 py-0.5 rounded text-[11px] transition-all shadow-sm hover:scale-105"
             title="Facebook дээр үзэх"
           >
-            <span>Facebook Reels 🎬</span>
+            <span>Facebook 🎬</span>
           </a>
         </div>
       </div>
@@ -377,6 +370,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
+            {/* AI КИНО */}
+            <button
+              id="nav-ai-movies"
+              onClick={() => setActiveTab('ai_movies')}
+              className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'ai_movies'
+                  ? 'bg-cyan-950/80 text-cyan-300 font-bold border-b-2 border-cyan-400 shadow-md shadow-cyan-500/20'
+                  : 'text-cyan-400 hover:text-white hover:bg-zinc-800/50'
+              }`}
+            >
+              <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <span>AI КИНО</span>
+              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-gradient-to-r from-cyan-400 to-purple-500 text-black font-mono">
+                HOT
+              </span>
+            </button>
+
             {/* ОЛОН АНГИТ */}
             <button
               id="nav-series"
@@ -403,21 +413,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-4 h-4 text-rose-400" />
               АНИМЭ
-            </button>
-
-            {/* AI САНАЛ БОЛГОГЧ */}
-            <button
-              id="nav-ai"
-              onClick={() => setActiveTab('ai')}
-              className={`px-2.5 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
-                activeTab === 'ai' || activeTab === 'games'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold border-b-2 border-amber-400'
-                  : 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800/50'
-              }`}
-              title="AI Санал Болгогч & Тоглоом"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>ЗӨВЛӨХ</span>
             </button>
 
             {/* АВСАН */}
@@ -778,6 +773,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <button
+            id="mobile-nav-ai-movies"
+            onClick={() => setActiveTab('ai_movies')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'ai_movies'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-cyan-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            <span>AI Кино</span>
+          </button>
+
+          <button
             id="mobile-nav-series"
             onClick={() => setActiveTab('series')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
@@ -814,19 +822,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Авсан ({purchasedCount})</span>
-          </button>
-
-          <button
-            id="mobile-nav-ai"
-            onClick={() => setActiveTab('ai')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'ai' || activeTab === 'games'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'text-amber-400/80 hover:text-amber-300 bg-zinc-900/80 border border-zinc-800'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Зөвлөх</span>
           </button>
         </div>
       </div>

@@ -297,7 +297,7 @@ export default function App() {
         } else if (selectedMovieCategory === 'comedy') {
           if (!movie.genres.includes('Comedy') && !movie.genres.includes('Инээдэм') && !movie.genres.includes('Комеди')) return false;
         } else if (selectedMovieCategory === 'scifi') {
-          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix');
+          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.description.toLowerCase().includes('сүйрэл') || movie.titleMongolian.toLowerCase().includes('сүйрэл') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix') || movie.title.toLowerCase().includes('apocalypse');
           if (!isAiSciFi) return false;
         } else if (selectedMovieCategory === 'vip') {
           if (!movie.price || movie.price <= 0) return false;
@@ -338,7 +338,9 @@ export default function App() {
         const matchTitle = movie.title.toLowerCase().includes(query);
         const matchMongolian = movie.titleMongolian.toLowerCase().includes(query);
         const matchGenre = movie.genres.some((g) => g.toLowerCase().includes(query));
-        if (!matchTitle && !matchMongolian && !matchGenre) return false;
+        const matchDesc = movie.description.toLowerCase().includes(query);
+        const matchId = movie.id.toLowerCase().includes(query);
+        if (!matchTitle && !matchMongolian && !matchGenre && !matchDesc && !matchId) return false;
       }
 
       return true;
@@ -489,90 +491,6 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
             isFavorite={isFavorite}
           />
-        )}
-
-        {/* AI Banner Callout (Shown on Home view) */}
-        {activeTab === 'home' && (
-          <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
-                <Sparkles className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  FlickNime AI Кино & Санал Болгогч Сан
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Хиймэл оюун ухаант кино сан, AI зохиолч, тааварт тоглоом болон хувийн зөвлөгчтэй ажиллаарай.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                id="open-ai-movies-callout"
-                onClick={() => {
-                  setSelectedMovieCategory('scifi');
-                  setActiveTab('movies');
-                }}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
-              >
-                <Cpu className="w-4 h-4" />
-                <span>AI & Sci-Fi Кино Үзэх</span>
-              </button>
-
-              <button
-                id="open-ai-callout"
-                onClick={() => setActiveTab('ai')}
-                className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap border border-zinc-700"
-              >
-                AI Зөвлөх
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Anime Game Callout Banner (Shown on Home view) */}
-        {activeTab === 'home' && (
-          <div className="mb-6 bg-gradient-to-r from-purple-950/90 via-zinc-900 to-pink-950/90 border border-purple-500/40 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl shadow-purple-950/30">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
-                <Gamepad2 className="w-6 h-6 animate-bounce text-purple-300" />
-              </div>
-              <div>
-                <h3 className="font-black text-sm text-white flex items-center gap-2">
-                  🎮 АНИМЭ ЭМОЖИ ТААВАР ТОГЛООМ (3 АМЬТАЙ, 15s ТАЙМЕР)
-                </h3>
-                <p className="text-xs text-purple-200/80">
-                  Анимэний гол дүрүүдийг таах эсвэл цувралуудын нэрийг эможиноос таагаарай!
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
-              <button
-                id="open-anime-character-game-btn"
-                onClick={() => {
-                  setSelectedGameMode('character');
-                  setActiveTab('games');
-                }}
-                className="bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-400/50"
-              >
-                <span>🎭 АНИМЭ ДҮР ТААХ</span>
-              </button>
-
-              <button
-                id="open-anime-title-game-btn"
-                onClick={() => {
-                  setSelectedGameMode('title');
-                  setActiveTab('games');
-                }}
-                className="bg-zinc-800 hover:bg-zinc-700 text-purple-200 hover:text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-2 border border-purple-500/40"
-              >
-                <span>🎬 АНИМЭ НЭР ТААХ</span>
-              </button>
-            </div>
-          </div>
         )}
 
         {/* Main Content: AI Movies / AI Assistant & Games View / Catalog */}
