@@ -43,8 +43,8 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: 'One Piece (Ван Пис)',
     titleMongolian: 'Ван Пис: Их Эрдэнэсийн Эрэлд (One Piece)',
     type: 'anime',
-    poster: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
-    backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
+    poster: 'https://wallpapers.com/images/hd/one-piece-pictures-sttm4i3gccsq45ca.jpg',
+    backdrop: 'https://wallpapers.com/images/hd/one-piece-pictures-sttm4i3gccsq45ca.jpg',
     year: 2025,
     duration: 'Олон ангит',
     rating: 9.9,
@@ -71,8 +71,10 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: 'Spy x Family (Тагнуулч гэр бүл)',
     titleMongolian: 'Тагнуулч гэр бүл: Бүх анги (Spy x Family S1)',
     type: 'anime',
-    poster: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
-    backdrop: 'https://tse2.mm.bing.net/th/id/OIP.hr9ooUjpiwzd7Y4friledwHaMR?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
+     
+    
+    poster: 'https://i.pinimg.com/736x/37/b7/db/37b7dbaa0f00af4b3888d9782615ee9c.jpg',
+    backdrop: 'https://i.pinimg.com/736x/37/b7/db/37b7dbaa0f00af4b3888d9782615ee9c.jpg',
     year: 2024,
     duration: '25 анги',
     rating: 9.3,
@@ -275,8 +277,8 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: 'My Hero Academia S1',
     titleMongolian: 'Миний Баатрын Академи: 1-р улирал (13 анги)',
     type: 'anime',
-    poster: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80',
-    backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
+    poster: 'https://th.bing.com/th/id/OSK.CIgVxfoVDpGIPwKAkwyOpwHaLH?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
+    backdrop: 'https://th.bing.com/th/id/OSK.CIgVxfoVDpGIPwKAkwyOpwHaLH?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
     year: 2024,
     duration: '13 анги',
     rating: 9.1,
@@ -301,42 +303,42 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 1,
         title: '1-р анги - Изуку Мидория: Гарал үүсэл',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl:  'https://drive.google.com/file/d/1iYlA5sjPde_efhLsAMOYee9P97RgsjPB/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 2,
         title: '2-р анги - Баатар болох нөхцөл',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1iVKu4knukOvSvVGDsY5LuEPrdViviJZD/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 3,
         title: '3-р анги - Ширүүн шалгалт',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1oHcvzo1kcbwpqV__dduxgZaSs_gnE8EV/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 4,
         title: '4-р анги - Гарааны шугам',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1jjSBOPsIqXEZHSIF5sd5aaSN-FKi0K8h/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 5,
         title: '5-р анги - Юүэй сургуулийн анхны өдөр',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1lkye7Ooy6qjPuGfDRA_ugsJtr7ijIkh3/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 6,
         title: '6-р анги - Баатрын өмсгөл & Тулааны хичээл',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1Yiw53fhOze1axyJbXBFUP0eVi8xiKjqV/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
@@ -873,8 +875,8 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: 'Megalo Box',
     titleMongolian: 'Мегалобокс (Megalo Box)',
     type: 'anime',
-    poster: 'https://m.media-amazon.com/images/M/MV5BMjA3NTY3Nzk5NF5BMl5BanBnXkFtZTgwNTQ0MDkyNTM@._V1_FMjpg_UX1000_.jpg',
-    backdrop: 'https://images5.alphacoders.com/911/thumb-1920-911475.png',
+    poster: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    backdrop: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
     year: 2021,
     duration: '13 анги',
     rating: 9.6,
@@ -981,7 +983,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: '91 Days',
     titleMongolian: '91 Өдөр (91 Days)',
     type: 'anime',
-    poster: 'https://m.media-amazon.com/images/M/MV5BMGU5MTQwM2UtYTgzYS00ODhkLWE3ZDItZmZjNTlmOTYyNzU0XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    poster: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/sharedimages/2024/04/91-days.jpg',
     backdrop: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/sharedimages/2024/04/91-days.jpg',
     year: 2024,
     duration: '13 анги',
@@ -1137,10 +1139,10 @@ export const SAMPLE_MOVIES: Movie[] = [
     subtitles: ['Монгол хадмал'],                                                                                                                                                                                                                                                     
     episodes: [                                                                                                                                                                                                                                                                                                                                         
       // 1 - 21: Хантерийн Шалгалтын Бүлэг (Hunter Exam Arc)
-      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk' },
-      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1uoJkjQn8gw9Ia-7W3kLr-lb6rWnkWziK/view?usp=drivesdk' },
-      { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
-      { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
+      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1jwmkVvro0C_BxcUH4ageHGurXgqbh7eN/view?usp=drivesdk' },
+      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1HdhKN1dFVEL9lP_EQMlLDT2Y67bz3Gjw/view?usp=drivesdk' },
+      { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1ecglhOuiMlxz3_cgLkC4MIKU8hLbnmbE/view?usp=drivesdk' },
+      { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/13x3I5GpPNo0l8L-rirm4Zq_g5LeN7ms4/view?usp=drivesdk' },
       { episodeNumber: 5, title: '5-р анги - Хисокагийн жинхэнэ төрх', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 6, title: '6-р анги - Хоёр дахь шалгалт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 7, title: '7-р анги - Агаарын хөлөг дээрх тоглоом', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },

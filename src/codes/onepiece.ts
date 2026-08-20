@@ -131,124 +131,16 @@ export const ONE_PIECE_100_EPISODES: Episode[] = Array.from({ length: 100 }, (_,
 });
 
 /**
- * One Piece тусгай эрхийн болон урамшууллын кодууд (1-100 анги, багцууд)
+ * One Piece тусгай эрхийн код
  */
 export const ONE_PIECE_PROMO_CODES: PromoCode[] = [
   {
-    id: 'promo_onepiece_100',
-    code: 'ONEPIECE100',
-    type: 'anime',
-    durationDays: 60,
-    description: '🏴‍☠️ One Piece: 1-ээс 100-р анги бүрэн үзэх 60 хоногийн тусгай VIP код',
-    maxUses: 5000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_op100',
-    code: 'OP100',
-    type: 'anime',
-    durationDays: 45,
-    description: '👒 One Piece: 100 ангийн багц түргэн идэвхжүүлэх код',
-    maxUses: 5000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_onepiece_main',
+    id: 'promo_onepiece',
     code: 'ONEPIECE',
     type: 'anime',
     durationDays: 30,
-    description: '🏴‍☠️ "One Piece" Бүх 1-100 анги & Анимэ 30 хоног үзэх VIP эрх',
-    maxUses: 5000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_onepiece_2025',
-    code: 'ONEPIECE2025',
-    type: 'anime',
-    durationDays: 30,
-    description: '👒 One Piece: 1-100 анги & Wano шинэ ангиуд үзэх 30 хоногийн багц',
-    maxUses: 3000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_luffy',
-    code: 'LUFFY',
-    type: 'anime',
-    durationDays: 30,
-    description: '🍖 Straw Hat Luffy - One Piece бүх 1-100 анги үзэх код',
-    maxUses: 3000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_luffy100',
-    code: 'LUFFY100',
-    type: 'anime',
-    durationDays: 60,
-    description: '👑 Luffy Gear & East Blue - 100 анги үзэх 60 хоногийн VIP эрх',
-    maxUses: 3000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_eastblue',
-    code: 'EASTBLUE',
-    type: 'anime',
-    durationDays: 30,
-    description: '🌊 One Piece: East Blue Saga (1-61 анги) үзэх код',
-    maxUses: 2000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_alabasta',
-    code: 'ALABASTA',
-    type: 'anime',
-    durationDays: 30,
-    description: '🏜️ One Piece: Arabasta Saga (62-100+ анги) үзэх код',
-    maxUses: 2000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_one_piece_space',
-    code: 'ONE_PIECE',
-    type: 'anime',
-    durationDays: 30,
-    description: '⚓ One Piece албан ёсны промо код (30 хоног)',
-    maxUses: 2000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_pirateking',
-    code: 'PIRATEKING',
-    type: 'full_vip',
-    durationDays: 90,
-    description: '👑 Pirate King VIP - Бүх кино болон One Piece 1-100 анги 90 хоног үзэх супер багц',
-    maxUses: 1000,
+    description: '🏴‍☠️ "One Piece" 1-100 анги үзэх код',
+    maxUses: 10000,
     usedCount: 0,
     createdAt: '2025.01.01',
     createdBy: 'Тамир Админ',
@@ -262,18 +154,7 @@ export const ONE_PIECE_PROMO_CODES: PromoCode[] = [
 export function isOnePieceCode(code: string): boolean {
   if (!code) return false;
   const clean = code.trim().toUpperCase().replace(/[\s_-]/g, '');
-  return (
-    clean === 'ONEPIECE' ||
-    clean === 'ONEPIECE100' ||
-    clean === 'OP100' ||
-    clean === 'ONEPIECE2025' ||
-    clean === 'LUFFY' ||
-    clean === 'LUFFY100' ||
-    clean === 'EASTBLUE' ||
-    clean === 'ALABASTA' ||
-    clean === 'WANOKUNI' ||
-    clean === 'PIRATEKING'
-  );
+  return clean === 'ONEPIECE';
 }
 
 export function getOnePieceCodeDetails(code: string): PromoCode | undefined {
@@ -283,3 +164,4 @@ export function getOnePieceCodeDetails(code: string): PromoCode | undefined {
     (c) => c.code.toUpperCase().replace(/[\s_-]/g, '') === clean
   );
 }
+

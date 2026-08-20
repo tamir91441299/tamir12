@@ -32,6 +32,7 @@ import { SAMPLE_COMMENTS } from '../data/movies';
 import { getEmbedUrl } from '../lib/videoUtils';
 import { redeemCode } from '../lib/codeService';
 import { UserAccount } from './AuthModal';
+import { getMovieSeasons, getEpisodeSeason } from '../lib/seasonUtils';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -693,89 +694,124 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   </form>
                 )}
 
-                {/* Episode Range / Search Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRange('all')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                        selectedRange === 'all'
-                          ? 'bg-cyan-500 text-black shadow'
-                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                      }`}
-                    >
-                      Бүгд ({episodesList.length})
-                    </button>
-                    {episodesList.length > 25 && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRange('1-25')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                            selectedRange === '1-25'
-                              ? 'bg-cyan-500 text-black shadow'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          1-25
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRange('26-50')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                            selectedRange === '26-50'
-                              ? 'bg-cyan-500 text-black shadow'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          26-50
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRange('51-75')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                            selectedRange === '51-75'
-                              ? 'bg-cyan-500 text-black shadow'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          51-75
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRange('76-100')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                            selectedRange === '76-100'
-                              ? 'bg-cyan-500 text-black shadow'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          76-100
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedRange('101-148')}
-                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                            selectedRange === '101-148'
-                              ? 'bg-cyan-500 text-black shadow'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          101-148
-                        </button>
-                      </>
-                    )}
-                  </div>
+                {/* S1, S2 Seasons & Episode Range Bar */}
+                {(() => {
+                  const seasons = getMovieSeasons(movie, episodesList);
+                  const activeSeasonObj = selectedRange.startsWith('season_')
+                    ? seasons.find((s) => `season_${s.seasonNumber}` === selectedRange)
+                    : null;
 
-                  <input
-                    type="text"
-                    placeholder="Ангийн № эсвэл нэр хайх..."
-                    value={epSearch}
-                    onChange={(e) => setEpSearch(e.target.value)}
-                    className="bg-zinc-900 border border-zinc-800 text-xs text-white px-2.5 py-1 rounded-lg focus:outline-none focus:border-cyan-500 w-44"
-                  />
-                </div>
+                  return (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full text-xs no-scrollbar">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRange('all')}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                              selectedRange === 'all'
+                                ? 'bg-cyan-500 text-black shadow font-black'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                            }`}
+                          >
+                            Бүгд ({episodesList.length})
+                          </button>
+
+                          {seasons.length > 1 &&
+                            seasons.map((s) => {
+                              const sKey = `season_${s.seasonNumber}`;
+                              const isSelected = selectedRange === sKey;
+                              return (
+                                <button
+                                  key={s.seasonNumber}
+                                  type="button"
+                                  onClick={() => setSelectedRange(sKey)}
+                                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                                    isSelected
+                                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow font-black ring-1 ring-cyan-300'
+                                      : 'bg-zinc-800/90 text-cyan-300 hover:bg-zinc-700 border border-cyan-500/20'
+                                  }`}
+                                  title={s.seasonTitle}
+                                >
+                                  <span>{s.seasonLabel}</span>
+                                  <span className="text-[10px] opacity-75 font-mono">({s.episodesCount})</span>
+                                </button>
+                              );
+                            })}
+
+                          {seasons.length <= 1 && episodesList.length > 25 && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRange('1-25')}
+                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                                  selectedRange === '1-25'
+                                    ? 'bg-cyan-500 text-black shadow'
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                1-25
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRange('26-50')}
+                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                                  selectedRange === '26-50'
+                                    ? 'bg-cyan-500 text-black shadow'
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                26-50
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRange('51-75')}
+                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                                  selectedRange === '51-75'
+                                    ? 'bg-cyan-500 text-black shadow'
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                51-75
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRange('76-100')}
+                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                                  selectedRange === '76-100'
+                                    ? 'bg-cyan-500 text-black shadow'
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                76-100
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        <input
+                          type="text"
+                          placeholder="Ангийн № эсвэл нэр хайх..."
+                          value={epSearch}
+                          onChange={(e) => setEpSearch(e.target.value)}
+                          className="bg-zinc-900 border border-zinc-800 text-xs text-white px-2.5 py-1 rounded-lg focus:outline-none focus:border-cyan-500 w-44"
+                        />
+                      </div>
+
+                      {activeSeasonObj && (
+                        <div className="text-[11px] text-amber-300 font-bold bg-zinc-900/60 px-3 py-1 rounded-lg border border-zinc-800 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>{activeSeasonObj.seasonTitle}</span>
+                          </span>
+                          <span className="text-zinc-400 font-mono text-[10px]">
+                            {activeSeasonObj.startEpisode} - {activeSeasonObj.endEpisode}-р ангиуд
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
                   {episodesList
@@ -787,6 +823,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           ep.title.toLowerCase().includes(q)
                         );
                       }
+                      if (selectedRange.startsWith('season_')) {
+                        const sNum = parseInt(selectedRange.replace('season_', ''), 10);
+                        const seasons = getMovieSeasons(movie, episodesList);
+                        const targetSeason = seasons.find((s) => s.seasonNumber === sNum);
+                        if (targetSeason) {
+                          return ep.episodeNumber >= targetSeason.startEpisode && ep.episodeNumber <= targetSeason.endEpisode;
+                        }
+                      }
                       if (selectedRange === '1-25') return ep.episodeNumber >= 1 && ep.episodeNumber <= 25;
                       if (selectedRange === '26-50') return ep.episodeNumber >= 26 && ep.episodeNumber <= 50;
                       if (selectedRange === '51-75') return ep.episodeNumber >= 51 && ep.episodeNumber <= 75;
@@ -797,6 +841,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     .map((ep) => {
                       const isFreeEp = ep.episodeNumber === 1;
                       const hasEpAccess = userHasAccessToEpisode(ep.episodeNumber);
+                      const epSeason = getEpisodeSeason(movie, ep.episodeNumber, episodesList);
+                      const seasonsCount = getMovieSeasons(movie, episodesList).length;
 
                       return (
                         <div
@@ -813,8 +859,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                             className="p-2.5 w-full text-left cursor-pointer flex-1 flex flex-col justify-between"
                           >
                             <div className="flex items-center justify-between font-bold text-xs text-zinc-200">
-                              <span className={hasEpAccess ? 'group-hover:text-cyan-300' : 'group-hover:text-amber-300'}>
-                                {ep.episodeNumber}-р анги
+                              <span className={`flex items-center gap-1.5 ${hasEpAccess ? 'group-hover:text-cyan-300' : 'group-hover:text-amber-300'}`}>
+                                {seasonsCount > 1 && epSeason && (
+                                  <span className="text-[10px] bg-zinc-800 text-cyan-400 px-1 py-0.2 rounded font-mono font-semibold">
+                                    {epSeason.seasonLabel}
+                                  </span>
+                                )}
+                                <span>{ep.episodeNumber}-р анги</span>
                               </span>
                               {hasEpAccess ? (
                                 <Play className="w-3.5 h-3.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity text-cyan-400" />

@@ -33,6 +33,8 @@ export interface Episode {
   videoUrl: string;
   thumbnail?: string;
   releaseDate?: string;
+  season?: number;
+  seasonTitle?: string;
 }
 
 export interface Comment {
