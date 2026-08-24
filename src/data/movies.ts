@@ -352,21 +352,21 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 8,
         title: '8-р анги - Бакугогийн ухаарал',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1EcjzJh_Y-p7FfxD5R4RsAA4iUbFasw43/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 9,
         title: '9-р анги - Ангийн дарга сонгогдсон нь',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/10gRVvR_dVZ_seD4spInvdmFsAo2OA8Tp/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
         episodeNumber: 10,
         title: '10-р анги - USJ Аврах төвийн халдлага',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1UBVIA2klzF1l6DMkpseGEZtxggkpHZRP/view?usp=drivesdk',
         releaseDate: '2024'
       },
       {
