@@ -32,7 +32,7 @@ export const MY_HERO_ACADEMIA_S1: Movie = {
       episodeNumber: 1,
       title: '1-р анги - Изуку Мидория: Эхлэл (Izuku Midoriya: Origin)',
       duration: '24 мин',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+      videoUrl: 'https://drive.google.com/file/d/1iYlA5sjPde_efhLsAMOYee9P97RgsjPB/view?usp=drivesdk'
     },
     {
       episodeNumber: 2,
