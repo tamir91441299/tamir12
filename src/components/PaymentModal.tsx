@@ -155,16 +155,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#17171a] border border-cyan-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-[#17171a] border border-cyan-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col max-h-[92vh] my-auto">
         {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-zinc-900 via-[#121214] to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
+        <div className="p-4 bg-gradient-to-r from-zinc-900 via-[#121214] to-zinc-900 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-extrabold text-base text-white">
+              <h2 className="font-extrabold text-sm sm:text-base text-white">
                 БАГЦ ИДЭВХЖҮҮЛЭХ / ЭРХ АВАХ
               </h2>
               <p className="text-[11px] text-zinc-400">
@@ -176,14 +176,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <button
             id="close-payment-modal"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center cursor-pointer transition-colors"
+            className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5 space-y-4">
+        {/* Content with smooth independent scrolling */}
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {/* Package Selection */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">

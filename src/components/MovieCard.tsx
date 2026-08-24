@@ -22,27 +22,45 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     <div className="group relative bg-[#131317] rounded-2xl overflow-hidden border border-zinc-800/80 hover:border-cyan-500/60 transition-all duration-300 flex flex-col h-full shadow-lg hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1.5">
       {/* Poster Image Container */}
       <div
-        className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900 cursor-pointer"
+        className="relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-b from-zinc-800 to-zinc-950 cursor-pointer flex items-center justify-center"
         onClick={() => onOpenDetails(movie)}
       >
-        <img
-          src={movie.poster}
-          alt={movie.titleMongolian}
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            const target = e.currentTarget;
-            if (!target.src.includes('unsplash.com/photo-1578632767115-351597cf2477')) {
-              target.src = 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80';
-            }
-          }}
-          draggable={false}
-          onContextMenu={(e) => e.preventDefault()}
-          className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out select-none"
-          loading="lazy"
-        />
+        {movie.poster ? (
+          <img
+            src={movie.poster}
+            alt={movie.titleMongolian}
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.style.display = 'none';
+            }}
+            draggable={false}
+            onContextMenu={(e) => e.preventDefault()}
+            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out select-none"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-gradient-to-br from-zinc-900 via-[#16161b] to-zinc-950">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-cyan-500/50 transition-all">
+              {movie.type === 'anime' ? (
+                <Sparkles className="w-6 h-6 text-rose-400" />
+              ) : movie.type === 'series' ? (
+                <Tv className="w-6 h-6 text-blue-400" />
+              ) : (
+                <Film className="w-6 h-6 text-purple-400" />
+              )}
+            </div>
+            <p className="text-xs font-black text-zinc-200 line-clamp-2 px-1">
+              {movie.titleMongolian || movie.title}
+            </p>
+            <span className="text-[10px] text-zinc-500 font-semibold mt-1">
+              {movie.year} • {movie.genres?.[0] || 'Кино'}
+            </span>
+          </div>
+        )}
 
         {/* Ambient Bottom Gradient on Poster */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#131317] via-transparent to-black/30 opacity-60 group-hover:opacity-80 transition-opacity" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#131317] via-transparent to-black/30 opacity-60 group-hover:opacity-80 transition-opacity pointer-events-none" />
 
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none gap-1 z-10">

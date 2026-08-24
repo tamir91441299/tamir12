@@ -104,9 +104,9 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('ioio_favorites');
-      return saved ? JSON.parse(saved) : ['m1', 'm7'];
+      return saved ? JSON.parse(saved) : ['m_91_days'];
     } catch {
-      return ['m1', 'm7'];
+      return ['m_91_days'];
     }
   });
 
@@ -114,9 +114,9 @@ export default function App() {
   const [purchasedMovies, setPurchasedMovies] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('ioio_purchased');
-      return saved ? JSON.parse(saved) : ['m1']; // 'm1' pre-purchased for demo
+      return saved ? JSON.parse(saved) : ['m_91_days'];
     } catch {
-      return ['m1'];
+      return ['m_91_days'];
     }
   });
 

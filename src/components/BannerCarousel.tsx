@@ -34,19 +34,25 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   return (
     <div className="relative w-full rounded-3xl overflow-hidden bg-zinc-950 shadow-2xl border border-zinc-800/80 mb-8 group/banner">
       {/* Background image & Ambient Overlays */}
-      <div className="relative h-[360px] sm:h-[440px] md:h-[500px] w-full overflow-hidden">
-        <img
-          src={currentMovie.backdrop || currentMovie.poster}
-          alt={currentMovie.titleMongolian}
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            const target = e.currentTarget;
-            if (!target.src.includes('unsplash.com/photo-1534447677768-be436bb09401')) {
-              target.src = 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80';
-            }
-          }}
-          className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 ease-out"
-        />
+      <div className="relative h-[360px] sm:h-[440px] md:h-[500px] w-full overflow-hidden bg-gradient-to-r from-zinc-950 via-[#101014] to-zinc-900">
+        {(currentMovie.backdrop || currentMovie.poster) ? (
+          <img
+            src={currentMovie.backdrop || currentMovie.poster}
+            alt={currentMovie.titleMongolian}
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.style.display = 'none';
+            }}
+            className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-[#121217] to-zinc-950 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-3xl bg-zinc-800/40 border border-zinc-700/30 flex items-center justify-center">
+              <Sparkles className="w-12 h-12 text-cyan-400/40" />
+            </div>
+          </div>
+        )}
 
         {/* Ambient Cinema Gradient Masks */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0d] via-[#0a0a0d]/60 to-transparent" />

@@ -290,20 +290,24 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               />
             ) : (
               <>
-                <img
-                  src={movie.backdrop || movie.poster}
-                  alt={movie.titleMongolian}
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (!target.src.includes('unsplash.com/photo-1534447677768-be436bb09401')) {
-                      target.src = 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80';
-                    }
-                  }}
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="w-full h-full object-cover select-none pointer-events-none"
-                />
+                {(movie.backdrop || movie.poster) ? (
+                  <img
+                    src={movie.backdrop || movie.poster}
+                    alt={movie.titleMongolian}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                    }}
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="w-full h-full object-cover select-none pointer-events-none"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-zinc-950 via-[#14141a] to-zinc-900 flex items-center justify-center">
+                    <Sparkles className="w-16 h-16 text-cyan-400/20" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#17171a] via-[#17171a]/50 to-transparent" />
 
                 {/* Big Direct Play Button on Backdrop */}
@@ -334,20 +338,29 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="p-4 sm:p-6 space-y-6 -mt-12 relative z-10">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               {/* Poster Image */}
-              <img
-                src={movie.poster}
-                alt={movie.titleMongolian}
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  if (!target.src.includes('unsplash.com/photo-1578632767115-351597cf2477')) {
-                    target.src = 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80';
-                  }
-                }}
-                draggable={false}
-                onContextMenu={(e) => e.preventDefault()}
-                className="w-36 sm:w-48 aspect-[2/3] object-cover rounded-xl shadow-2xl border-2 border-zinc-700/80 shrink-0 mx-auto sm:mx-0 select-none"
-              />
+              {movie.poster ? (
+                <img
+                  src={movie.poster}
+                  alt={movie.titleMongolian}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                  }}
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-36 sm:w-48 aspect-[2/3] object-cover rounded-xl shadow-2xl border-2 border-zinc-700/80 shrink-0 mx-auto sm:mx-0 select-none"
+                />
+              ) : (
+                <div className="w-36 sm:w-48 aspect-[2/3] rounded-xl shadow-2xl border-2 border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-950 flex flex-col items-center justify-center shrink-0 mx-auto sm:mx-0 p-4 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-zinc-800/80 flex items-center justify-center mb-2">
+                    <Sparkles className="w-6 h-6 text-rose-400" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-300 line-clamp-2">
+                    {movie.titleMongolian || movie.title}
+                  </span>
+                </div>
+              )}
 
               {/* Title & Metadata */}
               <div className="flex-1 space-y-3 text-center sm:text-left">

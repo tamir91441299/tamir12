@@ -162,58 +162,14 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
 
   sanitizeConsole();
 
-  // 4. DevTools active detection via threshold metrics
-  const checkDevTools = () => {
-    const widthThreshold = window.outerWidth - window.innerWidth > 160;
-    const heightThreshold = window.outerHeight - window.innerHeight > 160;
-
-    if (widthThreshold || heightThreshold) {
-      if (!devToolsOpenDetected) {
-        devToolsOpenDetected = true;
-        try {
-          console.clear();
-        } catch {}
-        if (onViolation) {
-          onViolation('devtools_opened', 'Хөгжүүлэгчийн хэрэгсэл (DevTools) илэрлээ! Хамгаалалт идэвхэжлээ.');
-        }
-      }
-    } else {
-      devToolsOpenDetected = false;
-    }
-  };
-
-  // 5. Anti-tamper debugger trap if DevTools is forcibly opened
-  if (enableDebuggerTrap) {
-    debuggerInterval = setInterval(() => {
-      if (devToolsOpenDetected) {
-        try {
-          const startTime = performance.now();
-          // eslint-disable-next-line no-debugger
-          eval('debugger');
-          const elapsed = performance.now() - startTime;
-          if (elapsed > 100) {
-            console.clear();
-          }
-        } catch {}
-      }
-    }, 1000);
-  }
-
-  // Attach global listeners on capture phase
-  window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-  document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-  window.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
-  document.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
-
-  // Check periodically
-  devToolsCheckInterval = setInterval(checkDevTools, 1500);
+  // Attach lightweight global listeners on window
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('contextmenu', handleContextMenu);
 
   // Return teardown
   return () => {
-    window.removeEventListener('keydown', handleKeyDown, { capture: true });
-    document.removeEventListener('keydown', handleKeyDown, { capture: true });
-    window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
-    document.removeEventListener('contextmenu', handleContextMenu, { capture: true });
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('contextmenu', handleContextMenu);
 
     if (devToolsCheckInterval) clearInterval(devToolsCheckInterval);
     if (debuggerInterval) clearInterval(debuggerInterval);
