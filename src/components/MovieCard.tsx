@@ -28,6 +28,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         <img
           src={movie.poster}
           alt={movie.titleMongolian}
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.src.includes('unsplash.com/photo-1578632767115-351597cf2477')) {
+              target.src = 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80';
+            }
+          }}
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out select-none"

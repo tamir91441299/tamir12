@@ -293,6 +293,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 <img
                   src={movie.backdrop || movie.poster}
                   alt={movie.titleMongolian}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.src.includes('unsplash.com/photo-1534447677768-be436bb09401')) {
+                      target.src = 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80';
+                    }
+                  }}
                   draggable={false}
                   onContextMenu={(e) => e.preventDefault()}
                   className="w-full h-full object-cover select-none pointer-events-none"
@@ -330,6 +337,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <img
                 src={movie.poster}
                 alt={movie.titleMongolian}
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.src.includes('unsplash.com/photo-1578632767115-351597cf2477')) {
+                    target.src = 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80';
+                  }
+                }}
                 draggable={false}
                 onContextMenu={(e) => e.preventDefault()}
                 className="w-36 sm:w-48 aspect-[2/3] object-cover rounded-xl shadow-2xl border-2 border-zinc-700/80 shrink-0 mx-auto sm:mx-0 select-none"

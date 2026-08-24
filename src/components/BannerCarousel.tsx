@@ -38,6 +38,13 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
         <img
           src={currentMovie.backdrop || currentMovie.poster}
           alt={currentMovie.titleMongolian}
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.src.includes('unsplash.com/photo-1534447677768-be436bb09401')) {
+              target.src = 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80';
+            }
+          }}
           className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 ease-out"
         />
 

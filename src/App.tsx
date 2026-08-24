@@ -9,6 +9,7 @@ import { AiRecommendationModal } from './components/AiRecommendationModal';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal, UserAccount } from './components/AuthModal';
 import { UserManagementModal } from './components/UserManagementModal';
+import { SecurityShieldModal } from './components/SecurityShieldModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
@@ -80,6 +81,24 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
+  const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
+
+  // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+      ) {
+        e.preventDefault();
+        setShowSecurityModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Favorites state
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -947,6 +966,18 @@ export default function App() {
           onUpdateBalance={(newBal) => setUserBalance(newBal)}
           movies={moviesList}
           onUpdateMovieEpisodes={handleUpdateMovieEpisodes}
+        />
+      )}
+
+      {showSecurityModal && (
+        <SecurityShieldModal
+          isOpen={showSecurityModal}
+          onClose={() => setShowSecurityModal(false)}
+          currentUser={currentUser}
+          onOpenAuthModal={() => {
+            setShowSecurityModal(false);
+            setShowAuthModal(true);
+          }}
         />
       )}
 
