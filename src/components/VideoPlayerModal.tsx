@@ -49,6 +49,7 @@ interface VideoPlayerModalProps {
   isPurchased?: boolean;
   onClose: () => void;
   onRequestPurchase?: (movie: Movie) => void;
+  onUpdateWatchProgress?: (movieId: string, episodeNumber: number, currentTime: number, duration: number) => void;
   currentUser?: UserAccount | null;
   isMonthlyVip?: boolean;
   isAnimePackage?: boolean;
@@ -63,6 +64,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   isPurchased = false,
   onClose,
   onRequestPurchase,
+  onUpdateWatchProgress,
   currentUser,
   isMonthlyVip = false,
   isAnimePackage = false,
@@ -100,6 +102,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       setIsPlaying(true);
     }
   }, [initialEpisodeNumber]);
+
+  const onUpdateWatchProgressRef = useRef(onUpdateWatchProgress);
+  useEffect(() => {
+    onUpdateWatchProgressRef.current = onUpdateWatchProgress;
+  }, [onUpdateWatchProgress]);
+
+  // Notify watch progress on mount & episode change
+  useEffect(() => {
+    if (movie?.id) {
+      const epNum = movie.episodes?.[currentEpisodeIndex]?.episodeNumber || currentEpisodeIndex + 1;
+      onUpdateWatchProgressRef.current?.(movie.id, epNum, 0, 0);
+    }
+  }, [movie?.id, currentEpisodeIndex]);
 
   const episodes = movie?.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];
@@ -317,11 +332,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   };
 
   // Time & progress
+  const lastProgressSaveRef = useRef<number>(0);
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-      setDuration(videoRef.current.duration || 0);
+      const cur = videoRef.current.currentTime;
+      const dur = videoRef.current.duration || 0;
+      setCurrentTime(cur);
+      setDuration(dur);
       setIsBuffering(false);
+
+      const now = Date.now();
+      if (now - lastProgressSaveRef.current > 5000 && movie) {
+        lastProgressSaveRef.current = now;
+        const epNum = movie.episodes?.[currentEpisodeIndex]?.episodeNumber || currentEpisodeIndex + 1;
+        if (onUpdateWatchProgress) {
+          onUpdateWatchProgress(movie.id, epNum, cur, dur);
+        }
+      }
     }
   };
 

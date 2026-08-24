@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { BannerCarousel } from './components/BannerCarousel';
 import { SidebarFilter } from './components/SidebarFilter';
@@ -16,6 +16,7 @@ import { AiMoviesView } from './components/AiMoviesView';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
+import { ContinueWatching, WatchHistoryItem } from './components/ContinueWatching';
 import { SAMPLE_MOVIES } from './data/movies';
 import { Movie, TabType, MovieSubcategory } from './types';
 import { getDirectPlaybackStream } from './lib/videoUtils';
@@ -160,6 +161,84 @@ export default function App() {
       return 0;
     }
   });
+
+  // Watch History & Continue Watching state
+  const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('ioio_watch_history');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return [
+      {
+        movieId: 'm_mha_s1',
+        episodeNumber: 1,
+        progressPercent: 35,
+        currentTime: 520,
+        duration: 1440,
+        updatedAt: Date.now() - 1000 * 60 * 30,
+      },
+      {
+        movieId: 'm_91_days',
+        episodeNumber: 1,
+        progressPercent: 65,
+        currentTime: 920,
+        duration: 1440,
+        updatedAt: Date.now() - 1000 * 60 * 120,
+      }
+    ];
+  });
+
+  const handleUpdateWatchProgress = useCallback((
+    movieId: string,
+    episodeNumber: number,
+    currentTime: number = 0,
+    duration: number = 0
+  ) => {
+    setWatchHistory((prev) => {
+      const progressPercent = duration > 0 ? Math.min(100, Math.round((currentTime / duration) * 100)) : 35;
+      const filtered = prev.filter((item) => item.movieId !== movieId);
+      const updated: WatchHistoryItem[] = [
+        {
+          movieId,
+          episodeNumber: episodeNumber || 1,
+          progressPercent: Math.max(progressPercent, 10),
+          currentTime,
+          duration,
+          updatedAt: Date.now(),
+        },
+        ...filtered,
+      ].slice(0, 12);
+      try {
+        localStorage.setItem('ioio_watch_history', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleRemoveFromHistory = useCallback((movieId: string) => {
+    setWatchHistory((prev) => {
+      const updated = prev.filter((item) => item.movieId !== movieId);
+      try {
+        localStorage.setItem('ioio_watch_history', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleClearHistory = useCallback(() => {
+    setWatchHistory([]);
+    try {
+      localStorage.removeItem('ioio_watch_history');
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -409,6 +488,7 @@ export default function App() {
     console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}, videoUrl: ${movie.videoUrl}`);
     setSelectedMovieForPlayer(movie);
     setPlayerInitialEpisode(episodeNumber);
+    handleUpdateWatchProgress(movie.id, episodeNumber, 0, 0);
   };
 
   const handlePaymentSuccess = (movieId: string, deductedAmount: number = 0) => {
@@ -762,6 +842,18 @@ export default function App() {
             ) : (
               /* Default Home Sections */
               <>
+                {/* Continue Watching Section (Үргэлжлүүлж үзэх) */}
+                {watchHistory.length > 0 && activeTab === 'home' && (
+                  <ContinueWatching
+                    history={watchHistory}
+                    movies={moviesList}
+                    onPlay={(m, ep) => handlePlayMovie(m, ep)}
+                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+                    onRemove={handleRemoveFromHistory}
+                    onClearAll={handleClearHistory}
+                  />
+                )}
+
                 {/* 1. New Episodes section (ШИНЭ АНГИ) */}
                 {newEpisodesMovies.length > 0 && (
                   <MovieGrid
@@ -899,6 +991,7 @@ export default function App() {
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
+          onUpdateWatchProgress={handleUpdateWatchProgress}
           onClose={() => setSelectedMovieForPlayer(null)}
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);

@@ -1,7 +1,87 @@
-import { Movie, Comment } from '../types';
+import { Movie, Comment, Episode } from '../types';
 import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
+import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
+
+/**
+ * 🎬 ВИДЕО ХОЛБООС ХОЛБОХ ТУСЛАХ ФУНКЦҮҮД (Video Link Helpers)
+ * Та өөрийн Google Drive, YouTube эсвэл MP4 шууд линкийг энд ашиглаж хялбар холбож болно.
+ */
+
+// Google Drive линк эсвэл ID-г шууд холбоход зориулсан функц
+export function getDriveLink(driveIdOrUrl: string): string {
+  if (!driveIdOrUrl) return '';
+  const id = extractGoogleDriveId(driveIdOrUrl) || driveIdOrUrl.trim();
+  return `https://drive.google.com/file/d/${id}/view?usp=drivesdk`;
+}
+
+// YouTube трейлер / видео линк холбох функц
+export function getYouTubeLink(ytUrlOrId: string): string {
+  if (!ytUrlOrId) return '';
+  const id = extractYouTubeId(ytUrlOrId) || ytUrlOrId.trim();
+  return `https://www.youtube.com/embed/${id}`;
+}
+
+// Анги үүсгэх туслах функц (Episode generator)
+export function createEpisode(
+  episodeNumber: number,
+  title: string,
+  videoUrl: string,
+  duration: string = '24 мин'
+): Episode {
+  return {
+    episodeNumber,
+    title,
+    duration,
+    videoUrl: videoUrl.includes('drive.google.com') || extractGoogleDriveId(videoUrl)
+      ? getDriveLink(videoUrl)
+      : videoUrl
+  };
+}
+
+/**
+ * 🤖 ДЭЛХИЙН СҮЙРЭЛ (1 ангитай AI Кино)
+ * Доорх `videoUrl` болон `episodes[0].videoUrl` хэсэгт өөрийн Google Drive эсвэл шууд видеоны холбоосоо тавина.
+ */
+export const DELHIIN_SUIREL_MOVIE: Movie = {
+  id: 'm_delhiin_suirel',
+  title: 'World Collapse: Zombie Apocalypse',
+  titleMongolian: 'Дэлхийн Сүйрэл: Зомби Апокалипсис',
+  type: 'movie',
+  poster: '/images/zombie_poster_1787565616302.jpg',
+  backdrop: '/images/zombie_backdrop_1787565630511.jpg',
+  year: 2025,
+  duration: '1 анги (118 мин)',
+  rating: 9.9,
+  genres: ['Зомби', 'Дэлхийн сүйрэл', 'Horror', 'Action', 'Sci-Fi'],
+  description: 'Дэлхий даяар тархсан нууцлаг мутант вирус хүн төрөлхтнийг зомби болгон хувиргаж, хотууд нуран сүйрэх үед амьд үлдсэн цөөн хэдэн дайчид дэлхийн сүүлчийн аюулгүй бүс рүү хүрэхийн тулд зомбийн сүрэгтэй үхэл сэхлийн шийдвэрлэх тулаанд орно. Монгол дуу оруулгатай шинэ бүрэн хэмжээний блокбастер кино.',
+  director: 'Алекс Гарланд (Alex Garland)',
+  cast: ['Кристиан Бэйл', 'Эмили Блант', 'Оскар Айзек', 'Киллиан Мөрфи'],
+  country: 'АНУ',
+  price: 3000,
+  isNewEpisode: true,
+  newEpisodeLabel: 'ЗОМБИ ШИНЭ КИНО',
+  totalEpisodes: 1,
+  views: 980000,
+  featured: true,
+  featuredRank: 1,
+  trailerUrl: 'https://www.youtube.com/embed/D5fYOnwYkj4',
+  videoUrl: 'https://drive.google.com/file/d/1g3iWpH9hG7cp4JrCBem3-rhqZBtVCOOE/view?usp=drivesdk',
+  ageRating: '+18',
+  audioTracks: ['Монгол дуу оруулга', 'Англи эх хэлээр'],
+  subtitles: ['Монгол хадмал', 'Англи хадмал'],
+  episodes: [
+    {
+      episodeNumber: 1,
+      title: '1-р анги - Дэлхийн Сүйрэл: Зомби Апокалипсис (Бүрэн кино)',
+      duration: '118 мин',
+      videoUrl: 'https://drive.google.com/file/d/1g3iWpH9hG7cp4JrCBem3-rhqZBtVCOOE/view?usp=drivesdk'
+    }
+  ]
+};
 
 export const SAMPLE_MOVIES: Movie[] = [
+  DELHIIN_SUIREL_MOVIE,
+  MY_HERO_ACADEMIA_S1,
   {
     id: 'm_91_days',
     title: '91 Days',
@@ -109,19 +189,22 @@ export const SAMPLE_MOVIES: Movie[] = [
         videoUrl: 'https://drive.google.com/file/d/1ZuvAt1eMParGnQTD_WivW7D9C1ukNYmE/view?usp=drivesdk'
       }
     ]
-  },
-  MY_HERO_ACADEMIA_S1
+  }
 ];
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 26 },
-  { name: 'Action', count: 26 },
+  { name: 'Action', count: 27 },
   { name: 'Crime', count: 13 },
   { name: 'Drama', count: 13 },
-  { name: 'Thriller', count: 13 },
+  { name: 'Thriller', count: 14 },
   { name: 'Adventure', count: 13 },
   { name: 'Fantasy', count: 13 },
-  { name: 'Shounen', count: 13 }
+  { name: 'Shounen', count: 13 },
+  { name: 'Зомби', count: 1 },
+  { name: 'Дэлхийн сүйрэл', count: 1 },
+  { name: 'Horror', count: 1 },
+  { name: 'Sci-Fi', count: 1 }
 ];
 
 export const RELEASE_YEARS = [
@@ -170,5 +253,15 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 14:10',
     likes: 42
+  },
+  {
+    id: 'c5',
+    movieId: 'm_delhiin_suirel',
+    userName: 'Ганбаатар',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    text: 'Дэлхийн Сүйрэл киноны хиймэл оюун ба роботын тулаантай хэсэг үнэхээр сэтгэл хөдөлгөм болжээ. Дуу оруулга нь ч маш тод байна!',
+    rating: 10,
+    date: 'Өнөөдөр 17:45',
+    likes: 29
   }
 ];
