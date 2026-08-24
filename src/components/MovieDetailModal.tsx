@@ -32,8 +32,6 @@ import { SAMPLE_COMMENTS } from '../data/movies';
 import { getEmbedUrl } from '../lib/videoUtils';
 import { redeemCode } from '../lib/codeService';
 import { UserAccount } from './AuthModal';
-import { getMovieSeasons, getEpisodeSeason } from '../lib/seasonUtils';
-import { ONE_PIECE_EPISODE_TITLES } from '../codes/onepiece';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -100,7 +98,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   if (!movie) return null;
 
-  const isOnePiece = movie.id === 'm_one_piece' || movie.title.toLowerCase().includes('one piece') || movie.titleMongolian.includes('Ван Пис') || movie.titleMongolian.includes('One Piece');
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
 
@@ -141,10 +138,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     }
     if (!newEpUrl.trim()) return;
 
-    const defaultTitle = isOnePiece && ONE_PIECE_EPISODE_TITLES[Number(newEpNum)]
-      ? `${newEpNum}-р анги: ${ONE_PIECE_EPISODE_TITLES[Number(newEpNum)]}`
-      : `${newEpNum}-р анги`;
-    const title = newEpTitle.trim() || defaultTitle;
+    const title = newEpTitle.trim() || `${newEpNum}-р анги`;
     const newEp: Episode = {
       episodeNumber: Number(newEpNum),
       title,
@@ -164,7 +158,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     setNewEpNum(updated.length + 1);
   };
 
-  // Batch Episode Link Connector for episodes 1 to 100
+  // Batch Episode Link Connector for episodes 1 to 13
   const handleBatchLinkConnect = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
@@ -177,8 +171,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     // Parse lines or split by whitespace/commas
     const lines = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
-    const maxTarget = isOnePiece ? 100 : (movie.totalEpisodes || episodesList?.length || 13);
-    const targetCount = Math.max(1, Math.min(100, Number(batchTotalEpCount) || maxTarget));
+    const targetCount = Math.max(1, Math.min(100, Number(batchTotalEpCount) || 13));
 
     const defaultMegaloTitles: Record<number, string> = {
       1: '1-р анги - Хувь тавилан хуурамч биш (BUY OR DIE?)',
@@ -216,17 +209,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     for (let i = 1; i <= targetCount; i++) {
       // Find URL: either corresponding line, or first link
-      const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk';
+      const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
-      const title = existing?.title || (
-        isOnePiece
-          ? (ONE_PIECE_EPISODE_TITLES[i] ? `${i}-р анги: ${ONE_PIECE_EPISODE_TITLES[i]}` : `${i}-р анги - One Piece`)
-          : is91Days
-          ? default91DaysTitles[i] || `${i}-р анги`
-          : isMegaloBox
-          ? defaultMegaloTitles[i] || `${i}-р анги`
-          : `${i}-р анги`
-      );
+      const title = existing?.title || (is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
       const duration = existing?.duration || '24 мин';
 
       newEpList.push({
@@ -493,10 +478,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           setShowAddEpForm(false);
                         }}
                         className="flex items-center gap-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        title="Ангиудын бүх линкийг нэг дор бөөнөөр холбох"
+                        title="1-13 ангийн бүх линкийг нэг дор холбох"
                       >
                         <Layers className="w-3.5 h-3.5 text-amber-400" />
-                        {showBatchLinkForm ? 'Хаах' : isOnePiece ? '🏴‍☠️ 1-100 Линк Холбох' : `${episodesList.length || 13} Линк Бөөнөөр холбох`}
+                        {showBatchLinkForm ? 'Хаах' : '1-13 Линк Бөөнөөр холбох'}
                       </button>
                       <button
                         onClick={() => {
@@ -538,13 +523,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Batch Link Connector Form (1 to 100 Episodes) */}
+                {/* Batch Link Connector Form (1 to 13 Episodes) */}
                 {showBatchLinkForm && (
                   <form onSubmit={handleBatchLinkConnect} className="bg-zinc-900 border border-amber-500/50 p-4 rounded-xl space-y-3 shadow-xl">
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                       <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
                         <LinkIcon className="w-4 h-4 text-amber-400" />
-                        {isOnePiece ? '🏴‍☠️ One Piece (1-100) Ангийн Линк Холбох Загвар:' : `1-ээс ${batchTotalEpCount} хүртэлх ангиудын линк холбох:`}
+                        1-ээс 13 хүртэлх ангиудын линк холбох код:
                       </span>
                       <span className="text-[11px] text-zinc-400 font-mono">
                         {movie.titleMongolian} ({movie.title})
@@ -562,16 +547,15 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           onChange={(e) => setBatchTotalEpCount(Number(e.target.value))}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-2 rounded-lg focus:outline-none focus:border-amber-500 font-bold"
                         />
-                        <span className="text-[10px] text-zinc-500 mt-1 block">1-ээс 100 хүртэл</span>
                       </div>
                       <div className="sm:col-span-3">
                         <label className="text-[10px] text-zinc-400 block mb-1 font-bold">
-                          Ангиудын бичлэгийн линкүүд (Мөр бүрт 1 линк оруулах эсвэл 1 линк тавиад бүх ангид оноох):
+                          Ангиудын линкүүд (Мөр бүрт 1 линк оруулах эсвэл 1 линк оруулаад бүгдэд оноох):
                         </label>
                         <textarea
                           required
-                          rows={6}
-                          placeholder={`https://drive.google.com/file/d/... (1-р анги)\nhttps://drive.google.com/file/d/... (2-р анги)\nhttps://drive.google.com/file/d/... (3-р анги)\n...\n(1-ээс 100 хүртэлх ангийн Google Drive / YouTube линкүүдийг эгнүүлэн наана уу)`}
+                          rows={5}
+                          placeholder={`https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view (1-р анги)\nhttps://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view (2-р анги)\nhttps://drive.google.com/file/d/... (3-р анги)\n...\n(1-13 ангийн линкүүдийг эгнүүлэн наана уу)`}
                           value={batchLinksInput}
                           onChange={(e) => setBatchLinksInput(e.target.value)}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-cyan-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-500 font-mono leading-relaxed"
@@ -582,33 +566,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>
-                          {isOnePiece ? '1-100 ангийн Монгол нэршил, хугацаа болон видео линкүүд автоматаар шууд холбогдоно.' : 'Бүх ангиуд монгол нэршил, хугацаагаар холбогдоно.'}
-                        </span>
+                        <span>1-ээс 13 хүртэлх ангиуд Монгол нэршил, хугацаа болон видео линкээрээ шууд холбогдоно.</span>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {isOnePiece && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBatchTotalEpCount(100);
-                              setBatchLinksInput(
-                                Array.from({ length: 100 }, (_, i) =>
-                                  i === 0
-                                    ? 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk'
-                                    : 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk'
-                                ).join('\n')
-                              );
-                            }}
-                            className="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-1 rounded cursor-pointer font-bold"
-                          >
-                            🏴‍☠️ 1-100 Линк автоматаар бэлдэх
-                          </button>
-                        )}
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => {
-                            setBatchTotalEpCount(13);
                             setBatchLinksInput(
                               `https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view\n` +
                               `https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view\n` +
@@ -625,9 +588,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                               `https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view`
                             );
                           }}
-                          className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded cursor-pointer"
+                          className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-2 py-1 rounded cursor-pointer"
                         >
-                          Жишээ 13 линк бөглөх
+                          Жишээ 13 линк автоматаар бөглөх
                         </button>
                       </div>
                     </div>
@@ -645,7 +608,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs rounded-lg cursor-pointer flex items-center gap-1.5 shadow"
                       >
                         <LinkIcon className="w-3.5 h-3.5" />
-                        {batchTotalEpCount} Ангийн Линк Холбож Хадгалах
+                        1-13 Ангийн Линк Холбож Хадгалах
                       </button>
                     </div>
                   </form>
@@ -730,124 +693,89 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   </form>
                 )}
 
-                {/* S1, S2 Seasons & Episode Range Bar */}
-                {(() => {
-                  const seasons = getMovieSeasons(movie, episodesList);
-                  const activeSeasonObj = selectedRange.startsWith('season_')
-                    ? seasons.find((s) => `season_${s.seasonNumber}` === selectedRange)
-                    : null;
+                {/* Episode Range / Search Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRange('all')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        selectedRange === 'all'
+                          ? 'bg-cyan-500 text-black shadow'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      Бүгд ({episodesList.length})
+                    </button>
+                    {episodesList.length > 25 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('1-25')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '1-25'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          1-25
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('26-50')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '26-50'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          26-50
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('51-75')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '51-75'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          51-75
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('76-100')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '76-100'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          76-100
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRange('101-148')}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                            selectedRange === '101-148'
+                              ? 'bg-cyan-500 text-black shadow'
+                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                        >
+                          101-148
+                        </button>
+                      </>
+                    )}
+                  </div>
 
-                  return (
-                    <div className="space-y-2 pt-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full text-xs no-scrollbar">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedRange('all')}
-                            className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                              selectedRange === 'all'
-                                ? 'bg-cyan-500 text-black shadow font-black'
-                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                            }`}
-                          >
-                            Бүгд ({episodesList.length})
-                          </button>
-
-                          {seasons.length > 1 &&
-                            seasons.map((s) => {
-                              const sKey = `season_${s.seasonNumber}`;
-                              const isSelected = selectedRange === sKey;
-                              return (
-                                <button
-                                  key={s.seasonNumber}
-                                  type="button"
-                                  onClick={() => setSelectedRange(sKey)}
-                                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                                    isSelected
-                                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow font-black ring-1 ring-cyan-300'
-                                      : 'bg-zinc-800/90 text-cyan-300 hover:bg-zinc-700 border border-cyan-500/20'
-                                  }`}
-                                  title={s.seasonTitle}
-                                >
-                                  <span>{s.seasonLabel}</span>
-                                  <span className="text-[10px] opacity-75 font-mono">({s.episodesCount})</span>
-                                </button>
-                              );
-                            })}
-
-                          {seasons.length <= 1 && episodesList.length > 25 && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRange('1-25')}
-                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                  selectedRange === '1-25'
-                                    ? 'bg-cyan-500 text-black shadow'
-                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                }`}
-                              >
-                                1-25
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRange('26-50')}
-                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                  selectedRange === '26-50'
-                                    ? 'bg-cyan-500 text-black shadow'
-                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                }`}
-                              >
-                                26-50
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRange('51-75')}
-                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                  selectedRange === '51-75'
-                                    ? 'bg-cyan-500 text-black shadow'
-                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                }`}
-                              >
-                                51-75
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedRange('76-100')}
-                                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                  selectedRange === '76-100'
-                                    ? 'bg-cyan-500 text-black shadow'
-                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                }`}
-                              >
-                                76-100
-                              </button>
-                            </>
-                          )}
-                        </div>
-
-                        <input
-                          type="text"
-                          placeholder="Ангийн № эсвэл нэр хайх..."
-                          value={epSearch}
-                          onChange={(e) => setEpSearch(e.target.value)}
-                          className="bg-zinc-900 border border-zinc-800 text-xs text-white px-2.5 py-1 rounded-lg focus:outline-none focus:border-cyan-500 w-44"
-                        />
-                      </div>
-
-                      {activeSeasonObj && (
-                        <div className="text-[11px] text-amber-300 font-bold bg-zinc-900/60 px-3 py-1 rounded-lg border border-zinc-800 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>{activeSeasonObj.seasonTitle}</span>
-                          </span>
-                          <span className="text-zinc-400 font-mono text-[10px]">
-                            {activeSeasonObj.startEpisode} - {activeSeasonObj.endEpisode}-р ангиуд
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                  <input
+                    type="text"
+                    placeholder="Ангийн № эсвэл нэр хайх..."
+                    value={epSearch}
+                    onChange={(e) => setEpSearch(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-800 text-xs text-white px-2.5 py-1 rounded-lg focus:outline-none focus:border-cyan-500 w-44"
+                  />
+                </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
                   {episodesList
@@ -859,14 +787,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           ep.title.toLowerCase().includes(q)
                         );
                       }
-                      if (selectedRange.startsWith('season_')) {
-                        const sNum = parseInt(selectedRange.replace('season_', ''), 10);
-                        const seasons = getMovieSeasons(movie, episodesList);
-                        const targetSeason = seasons.find((s) => s.seasonNumber === sNum);
-                        if (targetSeason) {
-                          return ep.episodeNumber >= targetSeason.startEpisode && ep.episodeNumber <= targetSeason.endEpisode;
-                        }
-                      }
                       if (selectedRange === '1-25') return ep.episodeNumber >= 1 && ep.episodeNumber <= 25;
                       if (selectedRange === '26-50') return ep.episodeNumber >= 26 && ep.episodeNumber <= 50;
                       if (selectedRange === '51-75') return ep.episodeNumber >= 51 && ep.episodeNumber <= 75;
@@ -877,8 +797,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     .map((ep) => {
                       const isFreeEp = ep.episodeNumber === 1;
                       const hasEpAccess = userHasAccessToEpisode(ep.episodeNumber);
-                      const epSeason = getEpisodeSeason(movie, ep.episodeNumber, episodesList);
-                      const seasonsCount = getMovieSeasons(movie, episodesList).length;
 
                       return (
                         <div
@@ -895,13 +813,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                             className="p-2.5 w-full text-left cursor-pointer flex-1 flex flex-col justify-between"
                           >
                             <div className="flex items-center justify-between font-bold text-xs text-zinc-200">
-                              <span className={`flex items-center gap-1.5 ${hasEpAccess ? 'group-hover:text-cyan-300' : 'group-hover:text-amber-300'}`}>
-                                {seasonsCount > 1 && epSeason && (
-                                  <span className="text-[10px] bg-zinc-800 text-cyan-400 px-1 py-0.2 rounded font-mono font-semibold">
-                                    {epSeason.seasonLabel}
-                                  </span>
-                                )}
-                                <span>{ep.episodeNumber}-р анги</span>
+                              <span className={hasEpAccess ? 'group-hover:text-cyan-300' : 'group-hover:text-amber-300'}>
+                                {ep.episodeNumber}-р анги
                               </span>
                               {hasEpAccess ? (
                                 <Play className="w-3.5 h-3.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity text-cyan-400" />

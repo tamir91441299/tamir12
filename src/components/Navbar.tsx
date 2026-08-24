@@ -12,6 +12,7 @@ import {
   User, 
   UserCheck, 
   Gamepad2, 
+  Swords,
   ShieldCheck, 
   Crown,
   ChevronDown,
@@ -22,8 +23,7 @@ import {
   Skull,
   Smile,
   Cpu,
-  Layers,
-  HardDrive
+  Layers
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -48,7 +48,6 @@ interface NavbarProps {
   currentUser: UserAccount | null;
   onOpenAuthModal: () => void;
   onOpenUserManagement?: () => void;
-  onOpenGoogleDrive?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -71,7 +70,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenAuthModal,
   onOpenUserManagement,
-  onOpenGoogleDrive,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMovieDropdownOpen, setIsMovieDropdownOpen] = useState(false);
@@ -213,10 +211,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-[#121214]/95 backdrop-blur-md border-b border-zinc-800/80 text-white">
       {/* Top micro banner */}
       <div className="bg-gradient-to-r from-amber-600/20 via-cyan-600/20 to-purple-600/20 border-b border-zinc-800 text-xs py-1 px-4 text-center text-zinc-300 flex justify-between items-center">
-        <span className="text-zinc-400">
+        <span className="hidden sm:inline-block text-zinc-400">
           🎬 FlickNime — Монгол хадмал болон дуу оруулгатай анимэ & кино сан
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mx-auto sm:mx-0 text-cyan-300 font-medium">
+          <button
+            onClick={() => setActiveTab('ai')}
+            className="flex items-center gap-1 hover:text-cyan-200 cursor-pointer transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
+            <span>🤖 AI Кино зөвлөх ашиглах</span>
+          </button>
           <a
             href="https://www.facebook.com/share/r/17wruEiwvA/"
             target="_blank"
@@ -224,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold px-2.5 py-0.5 rounded text-[11px] transition-all shadow-sm hover:scale-105"
             title="Facebook дээр үзэх"
           >
-            <span>Facebook 🎬</span>
+            <span>Facebook Reels 🎬</span>
           </a>
         </div>
       </div>
@@ -373,23 +378,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* AI КИНО */}
-            <button
-              id="nav-ai-movies"
-              onClick={() => setActiveTab('ai_movies')}
-              className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'ai_movies'
-                  ? 'bg-cyan-950/80 text-cyan-300 font-bold border-b-2 border-cyan-400 shadow-md shadow-cyan-500/20'
-                  : 'text-cyan-400 hover:text-white hover:bg-zinc-800/50'
-              }`}
-            >
-              <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" />
-              <span>AI КИНО</span>
-              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-gradient-to-r from-cyan-400 to-purple-500 text-black font-mono">
-                HOT
-              </span>
-            </button>
-
             {/* ОЛОН АНГИТ */}
             <button
               id="nav-series"
@@ -416,6 +404,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sparkles className="w-4 h-4 text-rose-400" />
               АНИМЭ
+            </button>
+
+            {/* ТОГЛООМ / VIBE FIGHTER */}
+            <button
+              id="nav-games"
+              onClick={() => setActiveTab('games')}
+              className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold ${
+                activeTab === 'games'
+                  ? 'bg-gradient-to-r from-rose-600/30 to-amber-600/30 text-rose-300 font-extrabold border-b-2 border-rose-500 shadow-sm'
+                  : 'text-rose-400 hover:text-rose-300 hover:bg-zinc-800/50'
+              }`}
+              title="Vibe Fighter онлайн тулаант тоглоом болон Анимэ таавар"
+            >
+              <Swords className="w-4 h-4 text-rose-400 animate-pulse" />
+              <span>ТОГЛООМ 🎮</span>
+            </button>
+
+            {/* AI САНАЛ БОЛГОГЧ */}
+            <button
+              id="nav-ai"
+              onClick={() => setActiveTab('ai')}
+              className={`px-2.5 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                activeTab === 'ai'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold border-b-2 border-amber-400'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800/50'
+              }`}
+              title="AI Кино Санал Болгогч"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>AI ЗӨВЛӨХ</span>
             </button>
 
             {/* АВСАН */}
@@ -495,40 +513,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-mono">{userBalance.toLocaleString()} ₮</span>
           </button>
 
-          {/* Google Drive Button */}
-          {onOpenGoogleDrive && (
-            <button
-              id="google-drive-navbar-btn"
-              type="button"
-              onClick={onOpenGoogleDrive}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 transition-all cursor-pointer shadow-sm shrink-0"
-              title="Google Drive-аас видео үзэх / файл удирдах"
-            >
-              <HardDrive className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-blue-400 shrink-0" />
-              <span className="hidden sm:inline">DRIVE</span>
-            </button>
-          )}
-
           {/* User Registration / Login Button */}
           <button
             id="auth-modal-trigger-btn"
             onClick={onOpenAuthModal}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-sm shrink-0 border ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-sm shrink-0 ${
               currentUser
-                ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50'
-                : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black border-cyan-400 font-black'
+                ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50'
+                : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black'
             }`}
-            title={currentUser ? `${currentUser.name} (Бүртгэлтэй хэрэглэгч)` : 'Хэрэглэгчийн бүртгэл / Нэвтрэх'}
+            title={currentUser ? `${currentUser.name} (Бүртгэлтэй)` : 'Бүртгүүлэх / Нэвтрэх'}
           >
             {currentUser ? (
               <>
                 <UserCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-cyan-400 shrink-0" />
-                <span className="max-w-[75px] sm:max-w-[95px] md:max-w-[120px] truncate">{currentUser.name}</span>
+                <span className="hidden md:inline max-w-[80px] truncate">{currentUser.name}</span>
               </>
             ) : (
               <>
                 <User className="w-3.5 sm:w-4 h-3.5 sm:h-4 fill-current shrink-0" />
-                <span className="text-[10px] sm:text-xs font-black tracking-tight">БҮРТГҮҮЛЭХ</span>
+                <span className="hidden md:inline">БҮРТГҮҮЛЭХ</span>
               </>
             )}
           </button>
@@ -790,19 +794,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <button
-            id="mobile-nav-ai-movies"
-            onClick={() => setActiveTab('ai_movies')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'ai_movies'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'text-cyan-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span>AI Кино</span>
-          </button>
-
-          <button
             id="mobile-nav-series"
             onClick={() => setActiveTab('series')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
@@ -829,6 +820,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
+            id="mobile-nav-games"
+            onClick={() => setActiveTab('games')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'games'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                : 'text-rose-400/90 hover:text-rose-300 bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Swords className="w-3.5 h-3.5 text-rose-400" />
+            <span>Тоглоом 🎮</span>
+          </button>
+
+          <button
             id="mobile-nav-purchased"
             onClick={() => setActiveTab('purchased')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
@@ -839,6 +843,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Авсан ({purchasedCount})</span>
+          </button>
+
+          <button
+            id="mobile-nav-ai"
+            onClick={() => setActiveTab('ai')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'ai'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-amber-400/80 hover:text-amber-300 bg-zinc-900/80 border border-zinc-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Зөвлөх</span>
           </button>
         </div>
       </div>

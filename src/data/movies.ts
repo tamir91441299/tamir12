@@ -1,430 +1,6 @@
 import { Movie, Comment } from '../types';
-import { ONE_PIECE_100_EPISODES } from '../codes';
 
 export const SAMPLE_MOVIES: Movie[] = [
-  {
-    id: 'm_delhiin_suirel',
-    title: "World's End: Apocalypse",
-    titleMongolian: 'Дэлхийн Сүйрэл (World End)',
-    type: 'movie',
-    poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
-    backdrop: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80',
-    year: 2025,
-    duration: '2 цаг 18 мин',
-    rating: 9.8,
-    genres: ['AI Кино', 'Sci-Fi', 'Action', 'Thriller', 'Adventure'],
-    description: 'Хиймэл оюун ухааны (AI) удирдлагатай дэлхийн цаг уур ба цөмийн батлан хамгаалах супер систем хяналтаас гарч, дэлхий даяар асар том сүйрэл, гамшиг нүүрлэнэ. Хүн төрөлхтнийг мөхлөөс аврахаар тэмцэх шинжлэх ухааны уран зөгнөлт, тулаант 1 ангит бүрэн хэмжээний супер блокбастер кино. Монгол дуу оруулгатай.',
-    director: 'Роланд Эммерих',
-    cast: ['Жерард Батлер', 'Морган Фриман', 'Женнифер Коннелли', 'Киану Ривз'],
-    country: 'АНУ',
-    views: 780000,
-    featured: true,
-    featuredRank: 1,
-    totalEpisodes: 1,
-    isNewEpisode: true,
-    newEpisodeLabel: '1 ангит бүрэн кино',
-    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgWgQ',
-    videoUrl: 'https://drive.google.com/file/d/1g3iWpH9hG7cp4JrCBem3-rhqZBtVCOOE/view?usp=drivesdk',
-    ageRating: '+16',
-    audioTracks: ['Монгол дуу оруулга', 'Англи эх хэлээр'],
-    subtitles: ['Монгол хадмал', 'Англи хадмал'],
-    episodes: [
-      {
-        episodeNumber: 1,
-        title: '1-р анги (Бүрэн кино) - Дэлхийн Сүйрэл',
-        duration: '2 цаг 18 мин',
-        videoUrl: 'https://drive.google.com/file/d/1g3iWpH9hG7cp4JrCBem3-rhqZBtVCOOE/view?usp=drivesdk',
-        releaseDate: '2025'
-      }
-    ]
-  },
-  {
-    id: 'm_one_piece',
-    title: 'One Piece (Ван Пис)',
-    titleMongolian: 'Ван Пис: Их Эрдэнэсийн Эрэлд (One Piece)',
-    type: 'anime',
-    poster: 'https://wallpapers.com/images/hd/one-piece-pictures-sttm4i3gccsq45ca.jpg',
-    backdrop: 'https://wallpapers.com/images/hd/one-piece-pictures-sttm4i3gccsq45ca.jpg',
-    year: 2025,
-    duration: 'Олон ангит',
-    rating: 9.9,
-    genres: ['Animation', 'Анимэ', 'Action', 'Adventure', 'Fantasy', 'Comedy'],
-    description: 'Монки Д. Луффи өөрийн сүрэл малгайт багийнхантай хамт домогт One Piece эрдэнэсийг олж, Далайн дээрэмчдийн хаан болохын тулд агуу Их шугам (Grand Line) руу аялна. Вано улсын бүлэг, Эггхэд болон бүх ангиуд монгол дуу оруулгатай.',
-    director: 'Эйичиро Ода, Коносукэ Уда',
-    cast: ['Монки Д. Луффи (Gear 5)', 'Ророноа Зоро', 'Винсмок Санжи', 'Нами', 'Усопп', 'Чоппер', 'Нико Робин'],
-    country: 'Япон',
-    featured: true,
-    featuredRank: 1,
-    totalEpisodes: 100,
-    isNewEpisode: true,
-    newEpisodeLabel: '1-100 анги бүрэн',
-    views: 1250000,
-    ageRating: '+13',
-    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
-    subtitles: ['Монгол хадмал', 'Англи хадмал'],
-    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    videoUrl: 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk',
-    episodes: ONE_PIECE_100_EPISODES
-  },
-  {
-    id: 'm_spy_x_family',
-    title: 'Spy x Family (Тагнуулч гэр бүл)',
-    titleMongolian: 'Тагнуулч гэр бүл: Бүх анги (Spy x Family S1)',
-    type: 'anime',
-     
-    
-    poster: 'https://i.pinimg.com/736x/37/b7/db/37b7dbaa0f00af4b3888d9782615ee9c.jpg',
-    backdrop: 'https://i.pinimg.com/736x/37/b7/db/37b7dbaa0f00af4b3888d9782615ee9c.jpg',
-    year: 2024,
-    duration: '25 анги',
-    rating: 9.3,
-    genres: ['Animation', 'Анимэ', 'Action', 'Comedy', 'Adventure'],
-    description: 'Тагнуулч Лойд Форжер, түүний телепат чадвартай өргөмөл охин Аня болон нууц алуурчин эхнэр Ёр нарын гэр бүлийн амьдрал болон нууц ажиллагаанууд. Бүх 25 анги монгол дуу оруулгатай.',
-    director: 'Казуахиро Фурухаши',
-    cast: ['Аня Форжер', 'Лойд Форжер (Twilight)', 'Ёр Форжер (Thorn Princess)'],
-    country: 'Япон',
-    featured: true,
-    featuredRank: 1,
-    totalEpisodes: 25,
-    isNewEpisode: true,
-    newEpisodeLabel: '25 анги бүрэн',
-    views: 452000,
-    ageRating: '+13',
-    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
-    subtitles: ['Монгол хадмал', 'Англи хадмал'],
-    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-    episodes: [
-      {
-        episodeNumber: 1,
-        title: '1-р анги - Тагнуулчийн нууц гэр бүл (Operation Strix)',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 2,
-        title: '2-р анги - Эхнэрийн үүргийг олох нь',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 3,
-        title: '3-р анги - Сургуулийн ярилцлагад бэлтгэсэн нь',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 4,
-        title: '4-р анги - Элит сургуулийн шалгалт',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 5,
-        title: '5-р анги - Тэнцсэн баяр & Цайзын аврах ажиллагаа',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 6,
-        title: '6-р анги - Найз охинтой болох төлөвлөгөө',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 7,
-        title: '7-р анги - Дэмианы эсрэг нөхөрлөлийн дайралт',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 8,
-        title: '8-р анги - Нууц цагдаа дүү Юригийн айлчлал',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 9,
-        title: '9-р анги - Хайраа батлах нь',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 10,
-        title: '10-р анги - Доджболын агуу тулаан',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 11,
-        title: '11-р анги - Стелла од авах төлөвлөгөө',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 12,
-        title: '12-р анги - Оцон шувууны парк дахь даалгавар',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 13,
-        title: '13-р анги - Тэсрэх бөмбөгт халдлага & Бонд нохой',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 14,
-        title: '14-р анги - Цагийн бөмбөгийг зогсоох нь',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 15,
-        title: '15-р анги - Шинэ гишүүн: Бонд',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 16,
-        title: '16-р анги - Ёрын хоол хийх хичээл',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 17,
-        title: '17-р анги - Гриффон хийх даалгавар',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 18,
-        title: '18-р анги - Багш нарын нууц шалгалт',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 19,
-        title: '19-р анги - Дэмианы нууц төлөвлөгөө',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 20,
-        title: '20-р анги - Эмнэлгийн тагнуул & Нууц код',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 21,
-        title: '21-р анги - Шөнө дундын даалгавар',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 22,
-        title: '22-р анги - Газрын доорх теннисний тэмцээн',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 23,
-        title: '23-р анги - Шийдвэрлэх тоглолт & Ялалт',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 24,
-        title: '24-р анги - Эхнэр ба эзэгтэйн үүрэг',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 25,
-        title: '25-р анги - Эхний уулзалт: Донован Дезмонд (Төгсгөл)',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1-9Eaw4bES1Dv2wylvYHlrfBu3hxqY5Zb/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      }
-    ]
-  },
-  {
-    id: 'm_my_hero_academia',
-    title: 'My Hero Academia S1',
-    titleMongolian: 'Миний Баатрын Академи: 1-р улирал (13 анги)',
-    type: 'anime',
-    poster: 'https://th.bing.com/th/id/OSK.CIgVxfoVDpGIPwKAkwyOpwHaLH?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
-    backdrop: 'https://th.bing.com/th/id/OSK.CIgVxfoVDpGIPwKAkwyOpwHaLH?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
-    year: 2024,
-    duration: '13 анги',
-    rating: 9.1,
-    genres: ['Animation', 'Анимэ', 'Action', 'Super Hero', 'Fantasy'],
-    description: 'Дэлхийн хүн амын 80% нь тусгай чадвартай төрдөг ертөнцөд жирийн төрсөн Деку хүү Бүхний Дээд баатрын өв залгамжлагч болж Баатрын Академид суралцана. 1-р улирлын 13 анги монгол дуу оруулгатай.',
-    director: 'Кэнжи Нагасаки',
-    cast: ['Изуку Мидория (Деку)', 'Кацүки Бакуго', 'Шото Тодороки', 'Бүхний Дээд'],
-    country: 'Япон',
-    featured: true,
-    featuredRank: 2,
-    totalEpisodes: 13,
-    isNewEpisode: true,
-    newEpisodeLabel: '13 анги бүрэн',
-    views: 389000,
-    ageRating: '+13',
-    audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
-    subtitles: ['Монгол хадмал', 'Англи хадмал'],
-    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    episodes: [
-      {
-        episodeNumber: 1,
-        title: '1-р анги - Изуку Мидория: Гарал үүсэл',
-        duration: '24 мин',
-        videoUrl:  'https://drive.google.com/file/d/1iYlA5sjPde_efhLsAMOYee9P97RgsjPB/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 2,
-        title: '2-р анги - Баатар болох нөхцөл',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1iVKu4knukOvSvVGDsY5LuEPrdViviJZD/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 3,
-        title: '3-р анги - Ширүүн шалгалт',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1oHcvzo1kcbwpqV__dduxgZaSs_gnE8EV/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 4,
-        title: '4-р анги - Гарааны шугам',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1jjSBOPsIqXEZHSIF5sd5aaSN-FKi0K8h/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 5,
-        title: '5-р анги - Юүэй сургуулийн анхны өдөр',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1lkye7Ooy6qjPuGfDRA_ugsJtr7ijIkh3/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 6,
-        title: '6-р анги - Баатрын өмсгөл & Тулааны хичээл',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1Yiw53fhOze1axyJbXBFUP0eVi8xiKjqV/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 7,
-        title: '7-р анги - Деку эсрэг Бакуго',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1MLGGCBD4huaBGiAjShwVuh6m90-MSZGG/view?usp=drivesdk&usp=embed_facebook',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 8,
-        title: '8-р анги - Бакугогийн ухаарал',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1EcjzJh_Y-p7FfxD5R4RsAA4iUbFasw43/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 9,
-        title: '9-р анги - Ангийн дарга сонгогдсон нь',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/10gRVvR_dVZ_seD4spInvdmFsAo2OA8Tp/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 10,
-        title: '10-р анги - USJ Аврах төвийн халдлага',
-        duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1UBVIA2klzF1l6DMkpseGEZtxggkpHZRP/view?usp=drivesdk',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 11,
-        title: '11-р анги - Хорон санаатнуудын эсрэг тулаан',
-        duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 12,
-        title: '12-р анги - Бүхний Дээд ирлээ!',
-        duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        releaseDate: '2024'
-      },
-      {
-        episodeNumber: 13,
-        title: '13-р анги - Төгсгөлийн цохилт (1-р улирлын төгсгөл)',
-        duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-        releaseDate: '2024'
-      }
-    ]
-  },
-  {
-    id: 'm_jaadugar',
-    title: 'Jaadugar',
-    titleMongolian: 'Шидтэн (Jaadugar 2024)',
-    type: 'movie',
-    poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
-    backdrop: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
-    year: 2024,
-    duration: '2 цаг 46 мин',
-    rating: 8.9,
-    genres: ['Comedy', 'Drama', 'Sports', 'Romance', 'Fantasy'],
-    description: 'Жижиг хотын илбэчин залуу хайртай бүсгүйтэйгээ гэрлэхийн тулд орон нутгийн хөлбөмбөгийн тэмцээнд баг удирдан заавал ялах шаардлагатай болно. Инээдэм, ид шид болон хайр дурлалын түүх.',
-    director: 'Самир Саксена',
-    cast: ['Житендра Кумар', 'Жавед Жаффри', 'Аруши Шарма'],
-    country: 'Энэтхэг',
-    featured: true,
-    featuredRank: 3,
-    views: 215000,
-    ageRating: '+13',
-    audioTracks: ['Монгол дуу оруулга', 'Хинди эх хэлээр'],
-    subtitles: ['Монгол хадмал'],
-    trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
-    episodes: [
-      {
-        episodeNumber: 1,
-        title: 'Бүрэн хэмжээний кино - Jaadugar',
-        duration: '166 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
-        releaseDate: '2024'
-      }
-    ]
-  },
   {
     id: 'm1',
     title: 'A Bona Fide Killer',
@@ -707,7 +283,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     year: 2025,
     duration: '26 анги',
     rating: 9.8,
-    genres: ['Animation', 'Анимэ', 'Action', 'Fantasy'],
+    genres: ['Animation', 'Action', 'Fantasy'],
     description: 'Танжиро залуу чөтгөрт заналхийлэгдсэн дүү Незукогоо буцаан хүн болгож, чөтгөрүүдийн эсрэг сэлмээрээ тэмцэх аниме цуврал. Монгол дуу оруулгатай.',
     director: 'Харуо Сотозаки',
     cast: ['Нацүки Ханаэ', 'Акари Кито'],
@@ -741,7 +317,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     year: 2025,
     duration: '12 анги',
     rating: 9.7,
-    genres: ['Animation', 'Анимэ', 'Action', 'Fantasy'],
+    genres: ['Animation', 'Action', 'Fantasy'],
     description: 'Хамгийн сул дорой Е зэрэглэлийн агнагч Сон Жин-Вү нууцлаг системээс шагналын даалгавар авснаар дэлхийн хамгийн хүчирхэг агнагч болон өсөх гайхамшигт түүх.',
     director: 'Сүншин Накашу',
     cast: ['Тайто Бан', 'Гинта Нин'],
@@ -773,7 +349,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     year: 2024,
     duration: '1 цаг 45 мин',
     rating: 9.5,
-    genres: ['Animation', 'Анимэ', 'Action', 'Supernatural'],
+    genres: ['Animation', 'Action', 'Supernatural'],
     description: 'Бага насны найзынхаа аймшигт хараалд өртсөн Юта Оккоцү ахлах сургуульд элсэн орж хараалчдын эсрэг хүч чадлаа удирдаж сурах тухай томоохон анимэ кино.',
     director: 'Сүнхү Пак',
     cast: ['Мэгүми Огата', 'Кана Ханазава'],
@@ -796,7 +372,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     year: 2024,
     duration: '28 анги',
     rating: 9.9,
-    genres: ['Animation', 'Анимэ', 'Action', 'Drama'],
+    genres: ['Animation', 'Action', 'Drama'],
     description: 'Хэрэмнүүдийн цаана орших хүн төрөлхтөн аварга Титануудын нууцыг нээж, эрх чөлөөний төлөөх сүүлчийн шийдвэрлэх дайнд моордох домогт анимэ.',
     director: 'Юичиро Баяши',
     cast: ['Юки Кажи', 'Юи Ишикава'],
@@ -826,7 +402,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     year: 2024,
     duration: '24 анги',
     rating: 9.8,
-    genres: ['Animation', 'Анимэ', 'Action', 'Sports'],
+    genres: ['Animation', 'Action', 'Sports'],
     description: 'Японы хөлбөмбөгийн шигшээ багийг ДАШТ-д түрүүлгэхийн тулд хамгийн шилдэг 300 довтлогчийг цуглуулж, өрсөлдүүлдэг Blue Lock төслийн ширүүн тулаант аниме цуврал. Монгол дуу оруулгатай.',
     director: 'Тецуаки Ватанабэ',
     cast: ['Казуки Ура', 'Тасуку Кайто', 'Сома Сайто'],
@@ -875,8 +451,8 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: 'Megalo Box',
     titleMongolian: 'Мегалобокс (Megalo Box)',
     type: 'anime',
-    poster: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
-    backdrop: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    poster: 'https://m.media-amazon.com/images/M/MV5BMjA3NTY3Nzk5NF5BMl5BanBnXkFtZTgwNTQ0MDkyNTM@._V1_FMjpg_UX1000_.jpg',
+    backdrop: 'https://images5.alphacoders.com/911/thumb-1920-911475.png',
     year: 2021,
     duration: '13 анги',
     rating: 9.6,
@@ -983,7 +559,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: '91 Days',
     titleMongolian: '91 Өдөр (91 Days)',
     type: 'anime',
-    poster: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/sharedimages/2024/04/91-days.jpg',
+    poster: 'https://m.media-amazon.com/images/M/MV5BMGU5MTQwM2UtYTgzYS00ODhkLWE3ZDItZmZjNTlmOTYyNzU0XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
     backdrop: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/sharedimages/2024/04/91-days.jpg',
     year: 2024,
     duration: '13 анги',
@@ -1001,7 +577,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     featured: true,
     featuredRank: 2,
     trailerUrl: 'https://www.youtube.com/embed/a9rZ24kXvEE',
-    videoUrl: 'https://drive.google.com/file/d/1vJn-t0_68Z0PVFz2IaQeOV0ZmOpnxuhA/view?usp=drivesdk',
+    videoUrl: 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk',
     ageRating: '+16',
     audioTracks: ['Монгол дуу оруулга', 'Япон эх хэлээр'],
     subtitles: ['Монгол хадмал'],
@@ -1139,10 +715,10 @@ export const SAMPLE_MOVIES: Movie[] = [
     subtitles: ['Монгол хадмал'],                                                                                                                                                                                                                                                     
     episodes: [                                                                                                                                                                                                                                                                                                                                         
       // 1 - 21: Хантерийн Шалгалтын Бүлэг (Hunter Exam Arc)
-      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1jwmkVvro0C_BxcUH4ageHGurXgqbh7eN/view?usp=drivesdk' },
-      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1HdhKN1dFVEL9lP_EQMlLDT2Y67bz3Gjw/view?usp=drivesdk' },
-      { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1ecglhOuiMlxz3_cgLkC4MIKU8hLbnmbE/view?usp=drivesdk' },
-      { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/13x3I5GpPNo0l8L-rirm4Zq_g5LeN7ms4/view?usp=drivesdk' },
+      { episodeNumber: 1, title: '1-р анги - Аялал ба Найзууд', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view?usp=drivesdk' },
+      { episodeNumber: 2, title: '2-р анги - Туршилтын өмнөх шалгалт', duration: '24 мин', videoUrl: 'https://drive.google.com/file/d/1uoJkjQn8gw9Ia-7W3kLr-lb6rWnkWziK/view?usp=drivesdk' },
+      { episodeNumber: 3, title: '3-р анги - Өрсөлдөгчдийн тэмцэл', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
+      { episodeNumber: 4, title: '4-р анги - Манан дундах гүйлт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 5, title: '5-р анги - Хисокагийн жинхэнэ төрх', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 6, title: '6-р анги - Хоёр дахь шалгалт', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
       { episodeNumber: 7, title: '7-р анги - Агаарын хөлөг дээрх тоглоом', duration: '24 мин', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },

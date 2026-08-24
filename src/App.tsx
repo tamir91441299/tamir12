@@ -9,7 +9,6 @@ import { AiRecommendationModal } from './components/AiRecommendationModal';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal, UserAccount } from './components/AuthModal';
 import { UserManagementModal } from './components/UserManagementModal';
-import { GoogleDriveModal } from './components/GoogleDriveModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
@@ -24,12 +23,12 @@ import {
   subscribeNotificationsFromFirestore,
   AppNotification
 } from './lib/userService';
-import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown } from 'lucide-react';
+import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedMovieCategory, setSelectedMovieCategory] = useState<MovieSubcategory>('all');
-  const [selectedGameMode, setSelectedGameMode] = useState<'character' | 'title'>('character');
+  const [selectedGameMode, setSelectedGameMode] = useState<'vibe_fighter' | 'character' | 'title'>('vibe_fighter');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -79,7 +78,6 @@ export default function App() {
   });
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-  const [showGoogleDriveModal, setShowGoogleDriveModal] = useState<boolean>(false);
   const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
 
@@ -299,7 +297,7 @@ export default function App() {
         } else if (selectedMovieCategory === 'comedy') {
           if (!movie.genres.includes('Comedy') && !movie.genres.includes('Инээдэм') && !movie.genres.includes('Комеди')) return false;
         } else if (selectedMovieCategory === 'scifi') {
-          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.description.toLowerCase().includes('сүйрэл') || movie.titleMongolian.toLowerCase().includes('сүйрэл') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix') || movie.title.toLowerCase().includes('apocalypse');
+          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix');
           if (!isAiSciFi) return false;
         } else if (selectedMovieCategory === 'vip') {
           if (!movie.price || movie.price <= 0) return false;
@@ -340,9 +338,7 @@ export default function App() {
         const matchTitle = movie.title.toLowerCase().includes(query);
         const matchMongolian = movie.titleMongolian.toLowerCase().includes(query);
         const matchGenre = movie.genres.some((g) => g.toLowerCase().includes(query));
-        const matchDesc = movie.description.toLowerCase().includes(query);
-        const matchId = movie.id.toLowerCase().includes(query);
-        if (!matchTitle && !matchMongolian && !matchGenre && !matchDesc && !matchId) return false;
+        if (!matchTitle && !matchMongolian && !matchGenre) return false;
       }
 
       return true;
@@ -480,9 +476,6 @@ export default function App() {
         onOpenUserManagement={() => {
           setShowUserManagementModal(true);
         }}
-        onOpenGoogleDrive={() => {
-          setShowGoogleDriveModal(true);
-        }}
       />
 
       {/* Main Container */}
@@ -496,6 +489,111 @@ export default function App() {
             onToggleFavorite={toggleFavorite}
             isFavorite={isFavorite}
           />
+        )}
+
+        {/* AI Banner Callout (Shown on Home view) */}
+        {activeTab === 'home' && (
+          <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  FlickNime AI Кино & Санал Болгогч Сан
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Хиймэл оюун ухаант кино сан, AI зохиолч, тааварт тоглоом болон хувийн зөвлөгчтэй ажиллаарай.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                id="open-ai-movies-callout"
+                onClick={() => {
+                  setSelectedMovieCategory('scifi');
+                  setActiveTab('movies');
+                }}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+              >
+                <Cpu className="w-4 h-4" />
+                <span>AI & Sci-Fi Кино Үзэх</span>
+              </button>
+
+              <button
+                id="open-ai-callout"
+                onClick={() => setActiveTab('ai')}
+                className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap border border-zinc-700"
+              >
+                AI Зөвлөх
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Game Center Callout Banner (Shown on Home view) */}
+        {activeTab === 'home' && (
+          <div className="mb-6 bg-gradient-to-r from-rose-950/90 via-zinc-900 to-purple-950/90 border border-rose-500/40 rounded-3xl p-5 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-2xl shadow-rose-950/30">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3.5 bg-gradient-to-br from-rose-500 to-amber-500 text-white rounded-2xl shadow-lg shadow-rose-500/30 shrink-0">
+                <Swords className="w-6 h-6 animate-pulse text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="bg-rose-500/20 text-rose-300 font-bold text-[10px] px-2 py-0.5 rounded-full border border-rose-500/40">
+                    🥊 ОНЛАЙН ТОГЛООМУУД
+                  </span>
+                  <span className="text-amber-400 text-[10px] font-black">
+                    ⚡ Vibe Fighter & Анимэ Таавар
+                  </span>
+                </div>
+                <h3 className="font-black text-sm sm:text-base text-white flex items-center gap-2">
+                  <span>Vibe Fighter Arena болон Анимэ таавар тоглоомууд</span>
+                </h3>
+                <p className="text-xs text-zinc-300 max-w-xl">
+                  Өрсөлдөгчтэйгөө шууд тулалдах Vibe Fighter тоглоом болон 3 амьтай анимэ дүр/нэр таах сорилтыг тоглоорой!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 justify-end flex-wrap">
+              <button
+                id="open-vibe-fighter-home-btn"
+                onClick={() => {
+                  setSelectedGameMode('vibe_fighter');
+                  setActiveTab('games');
+                }}
+                className="bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+              >
+                <Swords className="w-4 h-4 text-white" />
+                <span>🥊 VIBE FIGHTER ТОГЛОХ</span>
+              </button>
+
+              <button
+                id="open-anime-character-game-btn"
+                onClick={() => {
+                  setSelectedGameMode('character');
+                  setActiveTab('games');
+                }}
+                className="bg-purple-900/60 hover:bg-purple-800 text-purple-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-purple-500/40"
+              >
+                <Gamepad2 className="w-3.5 h-3.5" />
+                <span>🎭 ДҮР ТААХ</span>
+              </button>
+
+              <button
+                id="open-anime-title-game-btn"
+                onClick={() => {
+                  setSelectedGameMode('title');
+                  setActiveTab('games');
+                }}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-zinc-700"
+              >
+                <span>🎬 НЭР ТААХ</span>
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Main Content: AI Movies / AI Assistant & Games View / Catalog */}
@@ -519,7 +617,8 @@ export default function App() {
             movies={SAMPLE_MOVIES}
             onSelectMovie={(m) => setSelectedMovieForDetails(m)}
             onPlayMovie={(m) => handlePlayMovie(m)}
-            initialSubTab="game"
+            initialSubTab={selectedGameMode === 'vibe_fighter' ? 'vibe_fighter' : 'game'}
+            initialGameMode={selectedGameMode === 'title' ? 'title' : 'character'}
           />
         ) : (
           /* Main Content + Sidebar Layout */
@@ -778,15 +877,10 @@ export default function App() {
           initialEpisodeNumber={playerInitialEpisode}
           isPurchased={isPurchased(selectedMovieForPlayer.id)}
           currentUser={currentUser}
-          userBalance={userBalance}
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
           onClose={() => setSelectedMovieForPlayer(null)}
-          onOpenAuthModal={() => setShowAuthModal(true)}
-          onOpenUserManagement={() => setShowUserManagementModal(true)}
-          onOpenWallet={() => setShowPaymentModal(true)}
-          onOpenVipModal={() => setShowPaymentModal(true)}
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);
             setPaymentMovie(m);
@@ -837,94 +931,6 @@ export default function App() {
           onOpenUserManagement={() => {
             setShowAuthModal(false);
             setShowUserManagementModal(true);
-          }}
-          onOpenGoogleDrive={() => {
-            setShowAuthModal(false);
-            setShowGoogleDriveModal(true);
-          }}
-        />
-      )}
-
-      {showGoogleDriveModal && (
-        <GoogleDriveModal
-          isOpen={showGoogleDriveModal}
-          onClose={() => setShowGoogleDriveModal(false)}
-          currentUser={currentUser}
-          onSelectVideoForPlay={(title, videoUrl, fileId) => {
-            const driveMovie: Movie = {
-              id: `drive_${fileId}`,
-              title: title,
-              titleMongolian: title,
-              description: `Google Drive-аас шууд тоглуулж буй файл (${title}).`,
-              poster:
-                'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop&q=80',
-              backdrop:
-                'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80',
-              rating: 9.0,
-              year: new Date().getFullYear(),
-              duration: 'Google Drive',
-              genres: ['Google Drive', 'Хувийн Видео'],
-              type: 'movie',
-              country: 'Google Cloud',
-              director: 'Google Drive User',
-              cast: ['User'],
-              views: 120,
-              trailerUrl: videoUrl,
-              videoUrl: videoUrl,
-              ageRating: 'ALL',
-              audioTracks: ['Original'],
-              subtitles: ['Mongolian (Авто)'],
-              episodes: [
-                {
-                  episodeNumber: 1,
-                  title: title,
-                  duration: 'Full Video',
-                  videoUrl: videoUrl,
-                  thumbnail:
-                    'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop&q=80',
-                },
-              ],
-            };
-            setSelectedMovieForPlayer(driveMovie);
-            setPlayerInitialEpisode(1);
-          }}
-          onImportToCollection={(importedMovieData) => {
-            const newId = `imported_drive_${Date.now()}`;
-            const fullMovie: Movie = {
-              id: newId,
-              title: importedMovieData.title || 'Google Drive Кино',
-              titleMongolian: importedMovieData.title || 'Google Drive Кино',
-              description: importedMovieData.description || 'Google Drive сангаас импортолсон видео контент.',
-              poster:
-                importedMovieData.posterUrl ||
-                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80',
-              backdrop:
-                importedMovieData.bannerUrl ||
-                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1600&auto=format&fit=crop&q=80',
-              rating: importedMovieData.rating || 8.5,
-              year: importedMovieData.year || new Date().getFullYear(),
-              duration: '120 мин',
-              genres: ['Google Drive', 'Импортолсон'],
-              type: importedMovieData.type || 'movie',
-              country: 'Монгол / Олон улс',
-              director: 'Импортолсон',
-              cast: ['Жүжигчид'],
-              views: 1,
-              trailerUrl: importedMovieData.videoUrl || '',
-              videoUrl: importedMovieData.videoUrl || '',
-              ageRating: 'ALL',
-              audioTracks: ['Монгол Хадмал', 'Эх хэл'],
-              subtitles: ['Монгол'],
-              episodes: [
-                {
-                  episodeNumber: 1,
-                  title: `${importedMovieData.title || 'Анги'} - 1-р анги`,
-                  duration: '45 мин',
-                  videoUrl: importedMovieData.videoUrl || '',
-                },
-              ],
-            };
-            setMoviesList((prev) => [fullMovie, ...prev]);
           }}
         />
       )}

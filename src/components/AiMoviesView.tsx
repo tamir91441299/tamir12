@@ -62,23 +62,16 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
         m.description.toLowerCase().includes('робот') ||
         m.description.toLowerCase().includes('сайбер') ||
         m.description.toLowerCase().includes('ирээдүй') ||
-        m.description.toLowerCase().includes('сүйрэл') ||
-        m.titleMongolian.toLowerCase().includes('сүйрэл') ||
         m.title.toLowerCase().includes('creator') ||
         m.title.toLowerCase().includes('matrix') ||
         m.title.toLowerCase().includes('cyberpunk') ||
         m.title.toLowerCase().includes('megalo') ||
         m.title.toLowerCase().includes('machina') ||
-        m.title.toLowerCase().includes('apocalypse') ||
-        m.title.toLowerCase().includes('suirel') ||
         m.title.toLowerCase().includes('dune');
 
       if (!isAiRelated) return false;
 
       if (selectedTag === 'all') return true;
-      if (selectedTag === 'apocalypse') {
-        return m.titleMongolian.toLowerCase().includes('сүйрэл') || m.description.toLowerCase().includes('сүйрэл') || m.title.toLowerCase().includes('apocalypse') || m.genres.includes('Action');
-      }
       if (selectedTag === 'cyberpunk') {
         return m.title.toLowerCase().includes('cyberpunk') || m.description.toLowerCase().includes('сайбер');
       }
@@ -86,7 +79,7 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
         return m.description.toLowerCase().includes('хиймэл оюун') || m.description.toLowerCase().includes('робот') || m.title.toLowerCase().includes('machina') || m.title.toLowerCase().includes('creator');
       }
       if (selectedTag === 'scifi') {
-        return m.genres.includes('Sci-Fi') || m.title.toLowerCase().includes('dune') || m.title.toLowerCase().includes('matrix') || m.titleMongolian.toLowerCase().includes('сүйрэл');
+        return m.genres.includes('Sci-Fi') || m.title.toLowerCase().includes('dune') || m.title.toLowerCase().includes('matrix');
       }
       if (selectedTag === 'anime') {
         return m.type === 'anime' || m.genres.includes('Animation');
@@ -96,12 +89,7 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
     });
   }, [movies, selectedTag]);
 
-  const spotlightMovie = useMemo(() => {
-    return movies.find((m) => m.id === 'm_delhiin_suirel' || m.titleMongolian.includes('Сүйрэл')) || movies[0];
-  }, [movies]);
-
   const presetPrompts = [
-    '🌋 "Дэлхийн Сүйрэл" болон Sci-Fi гамшигт сүйрлийн тухай 1 ангит киног санал болгооч',
     '🤖 Хиймэл оюун ухаан ба роботын тухай шилдэг кинонуудыг санал болгооч',
     '⚡ Найт Сити шиг сайберпанк, ирээдүйн ертөнцтэй анимэ',
     '🌌 Матрикс болон Дюн шиг гүн гүнзгий философитой Sci-Fi бүтээл',
@@ -266,7 +254,6 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
           <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
             {[
               { id: 'all', label: 'Бүх AI & Уран Зөгнөлт' },
-              { id: 'apocalypse', label: '🌋 Дэлхийн Сүйрэл & Гамшиг' },
               { id: 'robot', label: '🤖 Робот & Хиймэл Оюун (AI)' },
               { id: 'cyberpunk', label: '⚡ Сайберпанк & Ирээдүй' },
               { id: 'scifi', label: '🌌 Сансар & Sci-Fi' },
@@ -285,97 +272,6 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
               </button>
             ))}
           </div>
-
-          {/* Featured Spotlight AI Movie Showcase Banner */}
-          {spotlightMovie && (selectedTag === 'all' || selectedTag === 'apocalypse') && (
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-zinc-950 via-[#181824] to-zinc-950 border border-cyan-500/50 shadow-2xl p-5 sm:p-7">
-              <div
-                className="absolute inset-0 bg-cover bg-center opacity-25 filter blur-[1px]"
-                style={{ backgroundImage: `url(${spotlightMovie.backdrop})` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
-
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                <div className="relative w-36 sm:w-48 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl shrink-0 border border-cyan-500/40 group">
-                  <img
-                    src={spotlightMovie.poster}
-                    alt={spotlightMovie.titleMongolian}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-2 left-2 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow">
-                    1 АНГИ БҮРЭН
-                  </div>
-                  <div className="absolute top-2 right-2 bg-black/80 text-amber-400 text-xs font-black px-2 py-0.5 rounded border border-amber-400/40">
-                    ★ {spotlightMovie.rating}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0 text-center md:text-left space-y-3">
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <span className="bg-gradient-to-r from-cyan-500 to-blue-600 text-black text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      ОНЦЛОХ AI БҮРЭН КИНО
-                    </span>
-                    <span className="bg-zinc-900/90 text-cyan-300 text-xs font-bold px-2.5 py-1 rounded-full border border-zinc-700">
-                      {spotlightMovie.duration}
-                    </span>
-                    <span className="bg-zinc-900/90 text-zinc-300 text-xs font-bold px-2.5 py-1 rounded-full border border-zinc-700">
-                      {spotlightMovie.year}
-                    </span>
-                    <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-500/40 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Монгол дуу оруулгатай
-                    </span>
-                  </div>
-
-                  <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                    {spotlightMovie.titleMongolian}
-                  </h2>
-                  <p className="text-xs sm:text-sm text-cyan-400 font-mono">
-                    {spotlightMovie.title}
-                  </p>
-
-                  <p className="text-xs sm:text-sm text-zinc-300 line-clamp-3 max-w-2xl leading-relaxed">
-                    {spotlightMovie.description}
-                  </p>
-
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
-                    <button
-                      id="spotlight-play-btn"
-                      onClick={() => onPlayMovie(spotlightMovie)}
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-cyan-400 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-black text-sm flex items-center gap-2 shadow-xl shadow-cyan-500/30 hover:scale-105 transition-all cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>ШУУД ҮЗЭХ (1-Р АНГИ)</span>
-                    </button>
-
-                    <button
-                      id="spotlight-info-btn"
-                      onClick={() => onSelectMovie(spotlightMovie)}
-                      className="px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-sm border border-zinc-700 hover:border-zinc-500 transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      <Film className="w-4 h-4 text-cyan-400" />
-                      <span>Дэлгэрэнгүй & Код</span>
-                    </button>
-
-                    {onToggleFavorite && isFavorite && (
-                      <button
-                        onClick={() => onToggleFavorite(spotlightMovie.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                          isFavorite(spotlightMovie.id)
-                            ? 'bg-rose-500/20 text-rose-400 border-rose-500'
-                            : 'bg-zinc-900 text-zinc-400 hover:text-white border-zinc-700'
-                        }`}
-                        title="Хадгалах"
-                      >
-                        <Heart className="w-5 h-5 fill-current" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* AI Movies Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">

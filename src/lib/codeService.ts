@@ -7,7 +7,6 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { ONE_PIECE_PROMO_CODES } from '../codes';
 
 export interface PromoCode {
   id: string;
@@ -68,43 +67,6 @@ export const INITIAL_PRESET_CODES: PromoCode[] = [
     createdBy: 'Тамир Админ',
     isActive: true,
   },
-  {
-    id: 'promo_suirel',
-    code: 'SUIREL2025',
-    type: 'movie',
-    durationDays: 30,
-    description: '🌍 "Дэлхийн Сүйрэл" 1 ангит кино болон 30 хоногийн кино багц',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_delhii',
-    code: 'DELHII',
-    type: 'movie',
-    durationDays: 30,
-    description: '💥 "Дэлхийн Сүйрэл" 1 ангит кино үзэх кодын эрх',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_suirel_short',
-    code: 'SUIREL',
-    type: 'movie',
-    durationDays: 30,
-    description: '🎬 "Дэлхийн Сүйрэл" бүрэн кино үзэх шууд код',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  ...ONE_PIECE_PROMO_CODES,
 ];
 
 const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';

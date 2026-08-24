@@ -3,10 +3,10 @@
   "appId": "1:973630186255:web:33f1b9a96cfa4dc3b2547a",
   "apiKey": "AIzaSyCUJ5KLpENh_AfApauC7RfrGGZuZCLMwuQ",
   "authDomain": "corded-mariner-tmbw7.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-kinoclassic-88851b34-bc79-405b-873f-c5f583fe2a3d",
   "storageBucket": "corded-mariner-tmbw7.firebasestorage.app",
   "messagingSenderId": "973630186255",
   "measurementId": "",
   "oAuthClientId": "973630186255-gn3ictpfi2v1r1hisp0npbm10i2c2okp.apps.googleusercontent.com",
-  "firestoreDatabaseId": "ai-studio-kinoclassic-88851b34-bc79-405b-873f-c5f583fe2a3d",
   "recaptchaSiteKey": ""
 }

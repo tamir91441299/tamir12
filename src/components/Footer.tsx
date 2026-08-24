@@ -41,6 +41,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
             <ul className="space-y-1.5 text-zinc-400">
               <li><a href="#" className="hover:text-cyan-400 transition-colors">Эхлэл нүүр</a></li>
               <li><a href="#" className="hover:text-cyan-400 transition-colors">Бүх кинонууд</a></li>
+              <li><a href="https://vibe-fighter-two.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-rose-400 transition-colors flex items-center gap-1 font-semibold text-rose-300">🥊 Vibe Fighter Тоглоом</a></li>
               <li><a href="/sitemap.xml" target="_blank" className="hover:text-cyan-400 transition-colors flex items-center gap-1"><Globe className="w-3 h-3 text-emerald-400" /> Dynamic Sitemap.xml</a></li>
               <li><a href="/robots.txt" target="_blank" className="hover:text-cyan-400 transition-colors flex items-center gap-1"><Globe className="w-3 h-3 text-cyan-400" /> Robots.txt</a></li>
             </ul>

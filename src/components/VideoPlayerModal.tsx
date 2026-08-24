@@ -30,11 +30,7 @@ import {
   Terminal,
   Copy,
   RotateCw,
-  Lock,
-  User,
-  UserCheck,
-  ShieldCheck,
-  Wallet
+  Lock
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -46,7 +42,6 @@ import {
   extractYouTubeId,
   isExternalEmbedMedia
 } from '../lib/videoUtils';
-import { getMovieSeasons, getEpisodeSeason, SeasonInfo } from '../lib/seasonUtils';
 
 interface VideoPlayerModalProps {
   movie: Movie | null;
@@ -55,14 +50,9 @@ interface VideoPlayerModalProps {
   onClose: () => void;
   onRequestPurchase?: (movie: Movie) => void;
   currentUser?: UserAccount | null;
-  userBalance?: number;
   isMonthlyVip?: boolean;
   isAnimePackage?: boolean;
   isMoviePackage?: boolean;
-  onOpenAuthModal?: () => void;
-  onOpenUserManagement?: () => void;
-  onOpenWallet?: () => void;
-  onOpenVipModal?: () => void;
 }
 
 type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
@@ -74,14 +64,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   onClose,
   onRequestPurchase,
   currentUser,
-  userBalance,
   isMonthlyVip = false,
   isAnimePackage = false,
   isMoviePackage = false,
-  onOpenAuthModal,
-  onOpenUserManagement,
-  onOpenWallet,
-  onOpenVipModal,
 }) => {
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
@@ -139,7 +124,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
   const [drawerSearch, setDrawerSearch] = useState<string>('');
-  const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number | 'all'>('all');
   const failoverAttemptsRef = useRef<number>(0);
 
   const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
@@ -524,17 +508,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </h2>
             {currentEpisode ? (
               <p className="text-xs text-cyan-400 font-semibold truncate flex items-center gap-1.5">
-                <Tv className="w-3.5 h-3.5 shrink-0" />
-                {(() => {
-                  const seasonsList = getMovieSeasons(movie, episodes);
-                  const epSeason = getEpisodeSeason(movie, currentEpisode.episodeNumber, episodes);
-                  return epSeason && seasonsList.length > 1 ? (
-                    <span className="bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-200 border border-cyan-400/50 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
-                      {epSeason.seasonLabel}
-                    </span>
-                  ) : null;
-                })()}
-                <span className="truncate">{currentEpisode.title} • HD Дамжуулалт</span>
+                <Tv className="w-3 h-3" />
+                <span>{currentEpisode.title} • HD Дамжуулалт</span>
               </p>
             ) : (
               <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
@@ -627,87 +602,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </div>
 
           {/* Concurrency & Ping Status Pill */}
-          <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
+          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span>100% Онлайн</span>
+            <span>100% Онлайн • Хязгааргүй Хүчин Чадал</span>
           </div>
 
-          {/* User Registration / Login Button (Бүтэн дэлгэцэнд хэрэглэгчийн бүртгэл харагдах) */}
-          {onOpenAuthModal && (
-            <button
-              type="button"
-              id="player-auth-btn"
-              onClick={onOpenAuthModal}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md shrink-0 border ${
-                currentUser
-                  ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black border-cyan-400'
-              }`}
-              title={currentUser ? `${currentUser.name} (${currentUser.email})` : 'Бүртгүүлэх / Нэвтрэх'}
-            >
-              {currentUser ? (
-                <>
-                  <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="max-w-[90px] truncate">{currentUser.name}</span>
-                  {isMonthlyVip && (
-                    <span className="bg-amber-500 text-black text-[9px] px-1 py-0.2 rounded font-black">VIP</span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <User className="w-3.5 h-3.5 fill-current shrink-0" />
-                  <span>БҮРТГҮҮЛЭХ</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Wallet Balance (if provided) */}
-          {userBalance !== undefined && onOpenWallet && (
-            <button
-              type="button"
-              id="player-wallet-btn"
-              onClick={onOpenWallet}
-              className="hidden sm:flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-amber-400 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0"
-              title="Данс цэнэглэх"
-            >
-              <Wallet className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-mono">{userBalance.toLocaleString()} ₮</span>
-            </button>
-          )}
-
-          {/* Admin Management Button (Зөвхөн Админд харагдана) */}
-          {isAdmin && onOpenUserManagement && (
-            <button
-              type="button"
-              id="player-admin-manage-btn"
-              onClick={onOpenUserManagement}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 border border-amber-400/60 text-amber-300 font-extrabold text-xs shadow-md cursor-pointer shrink-0"
-              title="Хэрэглэгчдийн бүртгэл & Ангиудын удирдлага (Админ)"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">Удирдах</span>
-            </button>
-          )}
-
-          {/* Debug Console & Diagnostic Overlay Toggle Button (Зөвхөн Админд харагдана) */}
-          {isAdmin && (
-            <button
-              type="button"
-              id="debug-panel-toggle-btn"
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className={`flex items-center gap-1 font-bold text-xs p-2 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
-                showDebugPanel
-                  ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
-                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
-              }`}
-              title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох (Админ)"
-            >
-              <Bug className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Дебаг</span>
-            </button>
-          )}
+          {/* Debug Console & Diagnostic Overlay Toggle Button */}
+          <button
+            type="button"
+            id="debug-panel-toggle-btn"
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className={`flex items-center gap-1 font-bold text-xs p-2 sm:px-3 sm:py-2 rounded-xl cursor-pointer transition-all border ${
+              showDebugPanel
+                ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
+            }`}
+            title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
+          >
+            <Bug className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Дебаг</span>
+          </button>
 
           {/* Fullscreen Quick Button */}
           <button
@@ -783,28 +698,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <span>Багцын эрх авах / Төлбөр төлөх</span>
                   </button>
                 )}
-
-                {/* User Auth trigger inside locked screen */}
-                {onOpenAuthModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenAuthModal}
-                    className="px-5 py-3 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-600/50 hover:to-blue-600/50 border border-cyan-500/50 text-cyan-200 font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
-                  >
-                    {currentUser ? (
-                      <>
-                        <UserCheck className="w-4 h-4 text-cyan-400" />
-                        <span>Миний бүртгэл ({currentUser.name})</span>
-                      </>
-                    ) : (
-                      <>
-                        <User className="w-4 h-4 text-cyan-400" />
-                        <span>Хэрэглэгчийн Бүртгэл / Нэвтрэх</span>
-                      </>
-                    )}
-                  </button>
-                )}
-
                 <button
                   type="button"
                   onClick={() => selectEpisode(0)}
@@ -1332,187 +1225,104 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         </div>
 
         {/* Side Episode Selector Drawer */}
-        {episodes.length > 0 && showEpisodesDrawer && (() => {
-          const seasons = getMovieSeasons(movie, episodes);
-
-          const filteredList = episodes
-            .map((ep, idx) => ({ ep, idx }))
-            .filter(({ ep }) => {
-              // Season filter
-              if (selectedSeasonNumber !== 'all') {
-                const targetSeason = seasons.find((s) => s.seasonNumber === selectedSeasonNumber);
-                if (targetSeason) {
-                  if (ep.episodeNumber < targetSeason.startEpisode || ep.episodeNumber > targetSeason.endEpisode) {
-                    return false;
-                  }
-                }
-              }
-              // Search query filter
-              if (!drawerSearch.trim()) return true;
-              const q = drawerSearch.toLowerCase();
-              return (
-                ep.episodeNumber.toString().includes(q) ||
-                ep.title.toLowerCase().includes(q)
-              );
-            });
-
-          const activeSeasonObj = selectedSeasonNumber !== 'all' 
-            ? seasons.find((s) => s.seasonNumber === selectedSeasonNumber)
-            : null;
-
-          return (
-            <aside className="w-72 sm:w-88 bg-zinc-950/95 border-l border-zinc-800/80 h-full flex flex-col z-20 shadow-2xl backdrop-blur-xl">
-              <div className="p-3 border-b border-zinc-800 space-y-2.5">
-                <div className="flex items-center justify-between text-white font-bold text-sm">
-                  <span className="flex items-center gap-2">
-                    <ListVideo className="w-4 h-4 text-cyan-400" />
-                    <span>Ангиудын жагсаалт</span>
-                  </span>
-                  <span className="text-xs bg-zinc-800 text-cyan-300 px-2 py-0.5 rounded-md font-mono font-bold">
-                    {filteredList.length} / {episodes.length} анги
-                  </span>
-                </div>
-
-                {/* S1, S2 Seasons Bar */}
-                {seasons.length > 1 && (
-                  <div className="space-y-1.5 bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 font-bold flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                        Улирал (Seasons):
-                      </span>
-                      {activeSeasonObj && (
-                        <span className="text-amber-300 text-[10px] font-bold truncate max-w-[170px]">
-                          {activeSeasonObj.seasonTitle}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSeasonNumber('all')}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                          selectedSeasonNumber === 'all'
-                            ? 'bg-cyan-500 text-black shadow font-black'
-                            : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                        }`}
-                      >
-                        Бүгд ({episodes.length})
-                      </button>
-
-                      {seasons.map((s) => {
-                        const isCurrentSeasonActive = selectedSeasonNumber === s.seasonNumber;
-                        return (
-                          <button
-                            key={s.seasonNumber}
-                            type="button"
-                            onClick={() => setSelectedSeasonNumber(s.seasonNumber)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                              isCurrentSeasonActive
-                                ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow font-black ring-1 ring-cyan-300'
-                                : 'bg-zinc-800/90 text-cyan-300 hover:bg-zinc-700 hover:text-white border border-cyan-500/20'
-                            }`}
-                            title={s.seasonTitle}
-                          >
-                            <span>{s.seasonLabel}</span>
-                            <span className="text-[10px] opacity-75 font-mono">({s.episodesCount})</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <input
-                  type="text"
-                  placeholder="Анги хайх (жишээ: 1, 50, Шалгалт)..."
-                  value={drawerSearch}
-                  onChange={(e) => setDrawerSearch(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700/70 text-xs text-white px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-cyan-400 placeholder:text-zinc-500"
-                />
+        {episodes.length > 0 && showEpisodesDrawer && (
+          <aside className="w-72 sm:w-84 bg-zinc-950/95 border-l border-zinc-800/80 h-full flex flex-col z-20 shadow-2xl backdrop-blur-xl">
+            <div className="p-3.5 border-b border-zinc-800 space-y-2">
+              <div className="flex items-center justify-between text-white font-bold text-sm">
+                <span className="flex items-center gap-2">
+                  <ListVideo className="w-4 h-4 text-cyan-400" />
+                  <span>Ангиудын жагсаалт</span>
+                </span>
+                <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-md font-mono">
+                  {episodes.length} анги
+                </span>
               </div>
+              <input
+                type="text"
+                placeholder="Анги хайх (жишээ: 1, 50, Шалгалт)..."
+                value={drawerSearch}
+                onChange={(e) => setDrawerSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-700/70 text-xs text-white px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-cyan-400 placeholder:text-zinc-500"
+              />
+            </div>
 
-              <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 divide-y divide-zinc-800/40">
-                {filteredList.length === 0 ? (
-                  <div className="text-center py-10 text-zinc-500 text-xs">
-                    Анги олдсонгүй
-                  </div>
-                ) : (
-                  filteredList.map(({ ep, idx }) => {
-                    const isActive = idx === currentEpisodeIndex;
-                    const isFreeEp = idx === 0;
-                    const hasEpAccess = checkEpisodeAccess(idx);
-                    const epSeason = getEpisodeSeason(movie, ep.episodeNumber, episodes);
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 divide-y divide-zinc-800/40">
+              {episodes
+                .map((ep, idx) => ({ ep, idx }))
+                .filter(({ ep }) => {
+                  if (!drawerSearch.trim()) return true;
+                  const q = drawerSearch.toLowerCase();
+                  return (
+                    ep.episodeNumber.toString().includes(q) ||
+                    ep.title.toLowerCase().includes(q)
+                  );
+                })
+                .map(({ ep, idx }) => {
+                  const isActive = idx === currentEpisodeIndex;
+                  const isFreeEp = idx === 0;
+                  const hasEpAccess = checkEpisodeAccess(idx);
 
-                    return (
-                      <button
-                        key={ep.episodeNumber}
-                        id={`ep-select-${ep.episodeNumber}`}
-                        type="button"
-                        onClick={() => selectEpisode(idx)}
-                        className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
-                          isActive
-                            ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/60 font-bold shadow-lg shadow-cyan-500/10'
-                            : 'hover:bg-zinc-900 text-zinc-300 hover:text-white border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                              isActive
-                                ? 'bg-gradient-to-tr from-cyan-400 to-blue-500 text-black shadow-md'
-                                : hasEpAccess
-                                ? 'bg-zinc-800 text-zinc-300'
-                                : 'bg-zinc-900 text-amber-400 border border-amber-500/30'
-                            }`}
-                          >
-                            {ep.episodeNumber}
+                  return (
+                    <button
+                      key={ep.episodeNumber}
+                      id={`ep-select-${ep.episodeNumber}`}
+                      type="button"
+                      onClick={() => selectEpisode(idx)}
+                      className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                        isActive
+                          ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/60 font-bold shadow-lg shadow-cyan-500/10'
+                          : 'hover:bg-zinc-900 text-zinc-300 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isActive
+                              ? 'bg-gradient-to-tr from-cyan-400 to-blue-500 text-black shadow-md'
+                              : hasEpAccess
+                              ? 'bg-zinc-800 text-zinc-300'
+                              : 'bg-zinc-900 text-amber-400 border border-amber-500/30'
+                          }`}
+                        >
+                          {ep.episodeNumber}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs truncate font-bold flex items-center gap-1">
+                            {ep.title}
                           </div>
-                          <div className="min-w-0">
-                            <div className="text-xs truncate font-bold flex items-center gap-1.5">
-                              {seasons.length > 1 && epSeason && (
-                                <span className="text-[10px] bg-zinc-800 text-cyan-400 px-1 py-0.2 rounded font-mono font-semibold">
-                                  {epSeason.seasonLabel}
-                                </span>
-                              )}
-                              <span className="truncate">{ep.title}</span>
-                            </div>
-                            <div className="text-[11px] text-zinc-400 font-mono">
-                              {ep.duration}
-                            </div>
+                          <div className="text-[11px] text-zinc-400 font-mono">
+                            {ep.duration}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isActive && (
-                            <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-2 py-0.5 rounded-md shadow">
-                              ҮЗЭЖ БАЙНА
-                            </span>
-                          )}
-                          {!isActive && isFreeEp && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
-                              ҮНЭГҮЙ
-                            </span>
-                          )}
-                          {!isActive && !isFreeEp && !hasEpAccess && (
-                            <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
-                              <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </aside>
-          );
-        })()}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isActive && (
+                          <span className="text-[10px] bg-cyan-400 text-black font-extrabold px-2 py-0.5 rounded-md shadow">
+                            ҮЗЭЖ БАЙНА
+                          </span>
+                        )}
+                        {!isActive && isFreeEp && (
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                            ҮНЭГҮЙ
+                          </span>
+                        )}
+                        {!isActive && !isFreeEp && !hasEpAccess && (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </aside>
+        )}
       </div>
 
-      {/* Interactive Debug Diagnostic Modal (Зөвхөн Админ) */}
-      {showDebugPanel && isAdmin && (
+      {/* Interactive Debug Diagnostic Modal */}
+      {showDebugPanel && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-zinc-950 border border-zinc-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
