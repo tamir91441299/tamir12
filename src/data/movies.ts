@@ -345,7 +345,7 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 7,
         title: '7-р анги - Деку эсрэг Бакуго',
         duration: '24 мин',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+        videoUrl: 'https://drive.google.com/file/d/1MLGGCBD4huaBGiAjShwVuh6m90-MSZGG/view?usp=drivesdk&usp=embed_facebook',
         releaseDate: '2024'
       },
       {

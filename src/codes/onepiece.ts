@@ -5,11 +5,11 @@ import { Episode } from '../types';
  * One Piece 1-р ангиас 100-р анги хүртэлх албан ёсны ангийн мэдээлэл болон холбоос
  * (East Blue Saga & Arabasta Saga 1-100)
  */
-const BASE_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4';
-const EPISODE_1_DRIVE_URL = 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk';
+export const BASE_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4';
+export const EPISODE_1_DRIVE_URL = 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk';
 
-// 1-100 ангийн нэрсийг үүсгэгч
-const EPISODE_TITLES: { [key: number]: string } = {
+// 1-100 ангийн албан ёсны нэрсийн бүрэн жагсаалт
+export const ONE_PIECE_EPISODE_TITLES: { [key: number]: string } = {
   1: 'Би бол Луффи! Далайн дээрэмчдийн хаан болох хүн!',
   2: 'Их сэлэмчин гарч ирэв! Дээрэмчдийн ангууч Ророноа Зоро',
   3: 'Морган ба Луффи! Нууцлаг үзэсгэлэнт охин хэн бэ?',
@@ -113,39 +113,227 @@ const EPISODE_TITLES: { [key: number]: string } = {
 };
 
 /**
- * 1-100 хүртэлх ангиудын бүрэн жагсаалт
+ * 🏴‍☠️ 1-100-р АНГИ БҮРИЙН ШУУД ВИДЕО / GOOGLE DRIVE ЛИНК ХОЛБОХ ХЭСЭГ
+ * 
+ * Та доорх жагсаалтын хүссэн ангийнхаа ард Google Drive, шууд MP4, эсвэл видео линкээ оруулж холбоно уу.
+ * Жишээ: 1: 'https://drive.google.com/file/d/.../view?usp=drivesdk'
+ */
+export const ONE_PIECE_EPISODE_LINKS: { [key: number]: string } = {
+  // === EAST BLUE SAGA: Romance Dawn & Orange Town (1-8) ===
+  1: EPISODE_1_DRIVE_URL,
+  2: BASE_SAMPLE_VIDEO,
+  3: BASE_SAMPLE_VIDEO,
+  4: BASE_SAMPLE_VIDEO,
+  5: BASE_SAMPLE_VIDEO,
+  6: BASE_SAMPLE_VIDEO,
+  7: BASE_SAMPLE_VIDEO,
+  8: BASE_SAMPLE_VIDEO,
+
+  // === Syrup Village Arc: Captain Kuro (9-18) ===
+  9: BASE_SAMPLE_VIDEO,
+  10: BASE_SAMPLE_VIDEO,
+  11: BASE_SAMPLE_VIDEO,
+  12: BASE_SAMPLE_VIDEO,
+  13: BASE_SAMPLE_VIDEO,
+  14: BASE_SAMPLE_VIDEO,
+  15: BASE_SAMPLE_VIDEO,
+  16: BASE_SAMPLE_VIDEO,
+  17: BASE_SAMPLE_VIDEO,
+  18: BASE_SAMPLE_VIDEO,
+
+  // === Baratie Arc: Sanji & Don Krieg (19-30) ===
+  19: BASE_SAMPLE_VIDEO,
+  20: BASE_SAMPLE_VIDEO,
+  21: BASE_SAMPLE_VIDEO,
+  22: BASE_SAMPLE_VIDEO,
+  23: BASE_SAMPLE_VIDEO,
+  24: BASE_SAMPLE_VIDEO,
+  25: BASE_SAMPLE_VIDEO,
+  26: BASE_SAMPLE_VIDEO,
+  27: BASE_SAMPLE_VIDEO,
+  28: BASE_SAMPLE_VIDEO,
+  29: BASE_SAMPLE_VIDEO,
+  30: BASE_SAMPLE_VIDEO,
+
+  // === Arlong Park Arc: Nami's Past (31-44) ===
+  31: BASE_SAMPLE_VIDEO,
+  32: BASE_SAMPLE_VIDEO,
+  33: BASE_SAMPLE_VIDEO,
+  34: BASE_SAMPLE_VIDEO,
+  35: BASE_SAMPLE_VIDEO,
+  36: BASE_SAMPLE_VIDEO,
+  37: BASE_SAMPLE_VIDEO,
+  38: BASE_SAMPLE_VIDEO,
+  39: BASE_SAMPLE_VIDEO,
+  40: BASE_SAMPLE_VIDEO,
+  41: BASE_SAMPLE_VIDEO,
+  42: BASE_SAMPLE_VIDEO,
+  43: BASE_SAMPLE_VIDEO,
+  44: BASE_SAMPLE_VIDEO,
+
+  // === Loguetown & Warship Island Arc (45-61) ===
+  45: BASE_SAMPLE_VIDEO,
+  46: BASE_SAMPLE_VIDEO,
+  47: BASE_SAMPLE_VIDEO,
+  48: BASE_SAMPLE_VIDEO,
+  49: BASE_SAMPLE_VIDEO,
+  50: BASE_SAMPLE_VIDEO,
+  51: BASE_SAMPLE_VIDEO,
+  52: BASE_SAMPLE_VIDEO,
+  53: BASE_SAMPLE_VIDEO,
+  54: BASE_SAMPLE_VIDEO,
+  55: BASE_SAMPLE_VIDEO,
+  56: BASE_SAMPLE_VIDEO,
+  57: BASE_SAMPLE_VIDEO,
+  58: BASE_SAMPLE_VIDEO,
+  59: BASE_SAMPLE_VIDEO,
+  60: BASE_SAMPLE_VIDEO,
+  61: BASE_SAMPLE_VIDEO,
+
+  // === ARABASTA SAGA: Reverse Mountain & Whisky Peak (62-67) ===
+  62: BASE_SAMPLE_VIDEO,
+  63: BASE_SAMPLE_VIDEO,
+  64: BASE_SAMPLE_VIDEO,
+  65: BASE_SAMPLE_VIDEO,
+  66: BASE_SAMPLE_VIDEO,
+  67: BASE_SAMPLE_VIDEO,
+
+  // === Little Garden Arc: Giants Dorry & Brogy (68-77) ===
+  68: BASE_SAMPLE_VIDEO,
+  69: BASE_SAMPLE_VIDEO,
+  70: BASE_SAMPLE_VIDEO,
+  71: BASE_SAMPLE_VIDEO,
+  72: BASE_SAMPLE_VIDEO,
+  73: BASE_SAMPLE_VIDEO,
+  74: BASE_SAMPLE_VIDEO,
+  75: BASE_SAMPLE_VIDEO,
+  76: BASE_SAMPLE_VIDEO,
+  77: BASE_SAMPLE_VIDEO,
+
+  // === Drum Island Arc: Chopper & Dr. Hiriluk (78-91) ===
+  78: BASE_SAMPLE_VIDEO,
+  79: BASE_SAMPLE_VIDEO,
+  80: BASE_SAMPLE_VIDEO,
+  81: BASE_SAMPLE_VIDEO,
+  82: BASE_SAMPLE_VIDEO,
+  83: BASE_SAMPLE_VIDEO,
+  84: BASE_SAMPLE_VIDEO,
+  85: BASE_SAMPLE_VIDEO,
+  86: BASE_SAMPLE_VIDEO,
+  87: BASE_SAMPLE_VIDEO,
+  88: BASE_SAMPLE_VIDEO,
+  89: BASE_SAMPLE_VIDEO,
+  90: BASE_SAMPLE_VIDEO,
+  91: BASE_SAMPLE_VIDEO,
+
+  // === Arabasta Kingdom Arc: Desert & Port City (92-100) ===
+  92: BASE_SAMPLE_VIDEO,
+  93: BASE_SAMPLE_VIDEO,
+  94: BASE_SAMPLE_VIDEO,
+  95: BASE_SAMPLE_VIDEO,
+  96: BASE_SAMPLE_VIDEO,
+  97: BASE_SAMPLE_VIDEO,
+  98: BASE_SAMPLE_VIDEO,
+  99: BASE_SAMPLE_VIDEO,
+  100: BASE_SAMPLE_VIDEO,
+};
+
+/**
+ * 1-100 хүртэлх ангиудын бүрэн жагсаалт үүсгэх
  */
 export const ONE_PIECE_100_EPISODES: Episode[] = Array.from({ length: 100 }, (_, index) => {
   const epNum = index + 1;
-  const title = EPISODE_TITLES[epNum] || `${epNum}-р анги - One Piece Их аялал`;
-  const isFirst = epNum === 1;
+  const title = ONE_PIECE_EPISODE_TITLES[epNum] || `${epNum}-р анги - One Piece Их аялал`;
+  const videoUrl = ONE_PIECE_EPISODE_LINKS[epNum] || (epNum === 1 ? EPISODE_1_DRIVE_URL : BASE_SAMPLE_VIDEO);
 
   return {
     episodeNumber: epNum,
     title: `${epNum}-р анги: ${title}`,
     duration: '24 мин',
-    videoUrl: isFirst ? EPISODE_1_DRIVE_URL : BASE_SAMPLE_VIDEO,
+    videoUrl: videoUrl,
     releaseDate: '2025',
     thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
   };
 });
 
 /**
- * One Piece тусгай эрхийн код
+ * Тухайн ангийн шууд холбоосыг авах туслах функц
+ */
+export function getOnePieceEpisodeLink(episodeNumber: number): string {
+  return ONE_PIECE_EPISODE_LINKS[episodeNumber] || BASE_SAMPLE_VIDEO;
+}
+
+/**
+ * Тухайн ангийн бүрэн мэдээллийг авах туслах функц
+ */
+export function getOnePieceEpisode(episodeNumber: number): Episode | undefined {
+  return ONE_PIECE_100_EPISODES.find((ep) => ep.episodeNumber === episodeNumber);
+}
+
+/**
+ * One Piece тусгай эрхийн кодууд (1-100 анги)
  */
 export const ONE_PIECE_PROMO_CODES: PromoCode[] = [
   {
-    id: 'promo_onepiece',
-    code: 'ONEPIECE',
+    id: 'promo_onepiece_100',
+    code: 'ONEPIECE100',
     type: 'anime',
     durationDays: 30,
-    description: '🏴‍☠️ "One Piece" 1-100 анги үзэх код',
+    description: '🏴‍☠️ One Piece (Ван Пис) 1-100 анги үзэх 30 хоногийн эрхийн код',
     maxUses: 10000,
     usedCount: 0,
     createdAt: '2025.01.01',
     createdBy: 'Тамир Админ',
     isActive: true,
   },
+  {
+    id: 'promo_onepiece',
+    code: 'ONEPIECE',
+    type: 'anime',
+    durationDays: 30,
+    description: '🏴‍☠️ One Piece (Ван Пис) 1-100 анги үзэх 30 хоногийн код',
+    maxUses: 10000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_op100',
+    code: 'OP100',
+    type: 'anime',
+    durationDays: 30,
+    description: '🏴‍☠️ OP 1-100 бүрэн анги үзэх шуурхай эрхийн код',
+    maxUses: 10000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_movie100',
+    code: 'MOVIE100',
+    type: 'movie',
+    durationDays: 30,
+    description: '🎬 One Piece болон 100 ангит цуврал, кино үзэх 30 хоногийн эрх',
+    maxUses: 10000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_onepiece_movie',
+    code: 'ONEPIECE-MOVIE',
+    type: 'movie',
+    durationDays: 30,
+    description: '🎬 One Piece 1-100 анги болон кино багц үзэх код',
+    maxUses: 10000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  }
 ];
 
 /**
@@ -154,7 +342,7 @@ export const ONE_PIECE_PROMO_CODES: PromoCode[] = [
 export function isOnePieceCode(code: string): boolean {
   if (!code) return false;
   const clean = code.trim().toUpperCase().replace(/[\s_-]/g, '');
-  return clean === 'ONEPIECE';
+  return clean === 'ONEPIECE' || clean === 'ONEPIECE100' || clean === 'OP100' || clean === 'MOVIE100' || clean === 'ONEPIECEMOVIE';
 }
 
 export function getOnePieceCodeDetails(code: string): PromoCode | undefined {

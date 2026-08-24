@@ -22,7 +22,8 @@ import {
   Skull,
   Smile,
   Cpu,
-  Layers
+  Layers,
+  HardDrive
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -47,6 +48,7 @@ interface NavbarProps {
   currentUser: UserAccount | null;
   onOpenAuthModal: () => void;
   onOpenUserManagement?: () => void;
+  onOpenGoogleDrive?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -69,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenAuthModal,
   onOpenUserManagement,
+  onOpenGoogleDrive,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMovieDropdownOpen, setIsMovieDropdownOpen] = useState(false);
@@ -492,26 +495,40 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-mono">{userBalance.toLocaleString()} ₮</span>
           </button>
 
+          {/* Google Drive Button */}
+          {onOpenGoogleDrive && (
+            <button
+              id="google-drive-navbar-btn"
+              type="button"
+              onClick={onOpenGoogleDrive}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 transition-all cursor-pointer shadow-sm shrink-0"
+              title="Google Drive-аас видео үзэх / файл удирдах"
+            >
+              <HardDrive className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-blue-400 shrink-0" />
+              <span className="hidden sm:inline">DRIVE</span>
+            </button>
+          )}
+
           {/* User Registration / Login Button */}
           <button
             id="auth-modal-trigger-btn"
             onClick={onOpenAuthModal}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-sm shrink-0 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer shadow-sm shrink-0 border ${
               currentUser
-                ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50'
-                : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black'
+                ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50'
+                : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black border-cyan-400 font-black'
             }`}
-            title={currentUser ? `${currentUser.name} (Бүртгэлтэй)` : 'Бүртгүүлэх / Нэвтрэх'}
+            title={currentUser ? `${currentUser.name} (Бүртгэлтэй хэрэглэгч)` : 'Хэрэглэгчийн бүртгэл / Нэвтрэх'}
           >
             {currentUser ? (
               <>
                 <UserCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-cyan-400 shrink-0" />
-                <span className="hidden md:inline max-w-[80px] truncate">{currentUser.name}</span>
+                <span className="max-w-[75px] sm:max-w-[95px] md:max-w-[120px] truncate">{currentUser.name}</span>
               </>
             ) : (
               <>
                 <User className="w-3.5 sm:w-4 h-3.5 sm:h-4 fill-current shrink-0" />
-                <span className="hidden md:inline">БҮРТГҮҮЛЭХ</span>
+                <span className="text-[10px] sm:text-xs font-black tracking-tight">БҮРТГҮҮЛЭХ</span>
               </>
             )}
           </button>

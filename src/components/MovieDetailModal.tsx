@@ -33,6 +33,7 @@ import { getEmbedUrl } from '../lib/videoUtils';
 import { redeemCode } from '../lib/codeService';
 import { UserAccount } from './AuthModal';
 import { getMovieSeasons, getEpisodeSeason } from '../lib/seasonUtils';
+import { ONE_PIECE_EPISODE_TITLES } from '../codes/onepiece';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -99,6 +100,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   if (!movie) return null;
 
+  const isOnePiece = movie.id === 'm_one_piece' || movie.title.toLowerCase().includes('one piece') || movie.titleMongolian.includes('Ван Пис') || movie.titleMongolian.includes('One Piece');
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
 
@@ -139,7 +141,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     }
     if (!newEpUrl.trim()) return;
 
-    const title = newEpTitle.trim() || `${newEpNum}-р анги`;
+    const defaultTitle = isOnePiece && ONE_PIECE_EPISODE_TITLES[Number(newEpNum)]
+      ? `${newEpNum}-р анги: ${ONE_PIECE_EPISODE_TITLES[Number(newEpNum)]}`
+      : `${newEpNum}-р анги`;
+    const title = newEpTitle.trim() || defaultTitle;
     const newEp: Episode = {
       episodeNumber: Number(newEpNum),
       title,
@@ -159,7 +164,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     setNewEpNum(updated.length + 1);
   };
 
-  // Batch Episode Link Connector for episodes 1 to 13
+  // Batch Episode Link Connector for episodes 1 to 100
   const handleBatchLinkConnect = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
@@ -172,7 +177,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     // Parse lines or split by whitespace/commas
     const lines = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
-    const targetCount = Math.max(1, Math.min(100, Number(batchTotalEpCount) || 13));
+    const maxTarget = isOnePiece ? 100 : (movie.totalEpisodes || episodesList?.length || 13);
+    const targetCount = Math.max(1, Math.min(100, Number(batchTotalEpCount) || maxTarget));
 
     const defaultMegaloTitles: Record<number, string> = {
       1: '1-р анги - Хувь тавилан хуурамч биш (BUY OR DIE?)',
@@ -210,9 +216,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     for (let i = 1; i <= targetCount; i++) {
       // Find URL: either corresponding line, or first link
-      const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
+      const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
-      const title = existing?.title || (is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
+      const title = existing?.title || (
+        isOnePiece
+          ? (ONE_PIECE_EPISODE_TITLES[i] ? `${i}-р анги: ${ONE_PIECE_EPISODE_TITLES[i]}` : `${i}-р анги - One Piece`)
+          : is91Days
+          ? default91DaysTitles[i] || `${i}-р анги`
+          : isMegaloBox
+          ? defaultMegaloTitles[i] || `${i}-р анги`
+          : `${i}-р анги`
+      );
       const duration = existing?.duration || '24 мин';
 
       newEpList.push({
@@ -479,10 +493,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           setShowAddEpForm(false);
                         }}
                         className="flex items-center gap-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        title="1-13 ангийн бүх линкийг нэг дор холбох"
+                        title="Ангиудын бүх линкийг нэг дор бөөнөөр холбох"
                       >
                         <Layers className="w-3.5 h-3.5 text-amber-400" />
-                        {showBatchLinkForm ? 'Хаах' : '1-13 Линк Бөөнөөр холбох'}
+                        {showBatchLinkForm ? 'Хаах' : isOnePiece ? '🏴‍☠️ 1-100 Линк Холбох' : `${episodesList.length || 13} Линк Бөөнөөр холбох`}
                       </button>
                       <button
                         onClick={() => {
@@ -524,13 +538,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Batch Link Connector Form (1 to 13 Episodes) */}
+                {/* Batch Link Connector Form (1 to 100 Episodes) */}
                 {showBatchLinkForm && (
                   <form onSubmit={handleBatchLinkConnect} className="bg-zinc-900 border border-amber-500/50 p-4 rounded-xl space-y-3 shadow-xl">
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                       <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
                         <LinkIcon className="w-4 h-4 text-amber-400" />
-                        1-ээс 13 хүртэлх ангиудын линк холбох код:
+                        {isOnePiece ? '🏴‍☠️ One Piece (1-100) Ангийн Линк Холбох Загвар:' : `1-ээс ${batchTotalEpCount} хүртэлх ангиудын линк холбох:`}
                       </span>
                       <span className="text-[11px] text-zinc-400 font-mono">
                         {movie.titleMongolian} ({movie.title})
@@ -548,15 +562,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           onChange={(e) => setBatchTotalEpCount(Number(e.target.value))}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-2 rounded-lg focus:outline-none focus:border-amber-500 font-bold"
                         />
+                        <span className="text-[10px] text-zinc-500 mt-1 block">1-ээс 100 хүртэл</span>
                       </div>
                       <div className="sm:col-span-3">
                         <label className="text-[10px] text-zinc-400 block mb-1 font-bold">
-                          Ангиудын линкүүд (Мөр бүрт 1 линк оруулах эсвэл 1 линк оруулаад бүгдэд оноох):
+                          Ангиудын бичлэгийн линкүүд (Мөр бүрт 1 линк оруулах эсвэл 1 линк тавиад бүх ангид оноох):
                         </label>
                         <textarea
                           required
-                          rows={5}
-                          placeholder={`https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view (1-р анги)\nhttps://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view (2-р анги)\nhttps://drive.google.com/file/d/... (3-р анги)\n...\n(1-13 ангийн линкүүдийг эгнүүлэн наана уу)`}
+                          rows={6}
+                          placeholder={`https://drive.google.com/file/d/... (1-р анги)\nhttps://drive.google.com/file/d/... (2-р анги)\nhttps://drive.google.com/file/d/... (3-р анги)\n...\n(1-ээс 100 хүртэлх ангийн Google Drive / YouTube линкүүдийг эгнүүлэн наана уу)`}
                           value={batchLinksInput}
                           onChange={(e) => setBatchLinksInput(e.target.value)}
                           className="w-full bg-zinc-950 border border-zinc-800 text-xs text-cyan-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-500 font-mono leading-relaxed"
@@ -567,12 +582,33 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/80">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>1-ээс 13 хүртэлх ангиуд Монгол нэршил, хугацаа болон видео линкээрээ шууд холбогдоно.</span>
+                        <span>
+                          {isOnePiece ? '1-100 ангийн Монгол нэршил, хугацаа болон видео линкүүд автоматаар шууд холбогдоно.' : 'Бүх ангиуд монгол нэршил, хугацаагаар холбогдоно.'}
+                        </span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {isOnePiece && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBatchTotalEpCount(100);
+                              setBatchLinksInput(
+                                Array.from({ length: 100 }, (_, i) =>
+                                  i === 0
+                                    ? 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk'
+                                    : 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk'
+                                ).join('\n')
+                              );
+                            }}
+                            className="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-1 rounded cursor-pointer font-bold"
+                          >
+                            🏴‍☠️ 1-100 Линк автоматаар бэлдэх
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
+                            setBatchTotalEpCount(13);
                             setBatchLinksInput(
                               `https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view\n` +
                               `https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view\n` +
@@ -589,9 +625,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                               `https://drive.google.com/file/d/1tMnAv3CjTTxjhxEPioE3T2bQjD0pGfkw/view`
                             );
                           }}
-                          className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-2 py-1 rounded cursor-pointer"
+                          className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded cursor-pointer"
                         >
-                          Жишээ 13 линк автоматаар бөглөх
+                          Жишээ 13 линк бөглөх
                         </button>
                       </div>
                     </div>
@@ -609,7 +645,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs rounded-lg cursor-pointer flex items-center gap-1.5 shadow"
                       >
                         <LinkIcon className="w-3.5 h-3.5" />
-                        1-13 Ангийн Линк Холбож Хадгалах
+                        {batchTotalEpCount} Ангийн Линк Холбож Хадгалах
                       </button>
                     </div>
                   </form>

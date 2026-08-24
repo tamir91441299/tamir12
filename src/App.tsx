@@ -9,6 +9,7 @@ import { AiRecommendationModal } from './components/AiRecommendationModal';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal, UserAccount } from './components/AuthModal';
 import { UserManagementModal } from './components/UserManagementModal';
+import { GoogleDriveModal } from './components/GoogleDriveModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
@@ -78,6 +79,7 @@ export default function App() {
   });
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [showGoogleDriveModal, setShowGoogleDriveModal] = useState<boolean>(false);
   const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
 
@@ -478,6 +480,9 @@ export default function App() {
         onOpenUserManagement={() => {
           setShowUserManagementModal(true);
         }}
+        onOpenGoogleDrive={() => {
+          setShowGoogleDriveModal(true);
+        }}
       />
 
       {/* Main Container */}
@@ -773,10 +778,15 @@ export default function App() {
           initialEpisodeNumber={playerInitialEpisode}
           isPurchased={isPurchased(selectedMovieForPlayer.id)}
           currentUser={currentUser}
+          userBalance={userBalance}
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
           onClose={() => setSelectedMovieForPlayer(null)}
+          onOpenAuthModal={() => setShowAuthModal(true)}
+          onOpenUserManagement={() => setShowUserManagementModal(true)}
+          onOpenWallet={() => setShowPaymentModal(true)}
+          onOpenVipModal={() => setShowPaymentModal(true)}
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);
             setPaymentMovie(m);
@@ -827,6 +837,94 @@ export default function App() {
           onOpenUserManagement={() => {
             setShowAuthModal(false);
             setShowUserManagementModal(true);
+          }}
+          onOpenGoogleDrive={() => {
+            setShowAuthModal(false);
+            setShowGoogleDriveModal(true);
+          }}
+        />
+      )}
+
+      {showGoogleDriveModal && (
+        <GoogleDriveModal
+          isOpen={showGoogleDriveModal}
+          onClose={() => setShowGoogleDriveModal(false)}
+          currentUser={currentUser}
+          onSelectVideoForPlay={(title, videoUrl, fileId) => {
+            const driveMovie: Movie = {
+              id: `drive_${fileId}`,
+              title: title,
+              titleMongolian: title,
+              description: `Google Drive-аас шууд тоглуулж буй файл (${title}).`,
+              poster:
+                'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop&q=80',
+              backdrop:
+                'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80',
+              rating: 9.0,
+              year: new Date().getFullYear(),
+              duration: 'Google Drive',
+              genres: ['Google Drive', 'Хувийн Видео'],
+              type: 'movie',
+              country: 'Google Cloud',
+              director: 'Google Drive User',
+              cast: ['User'],
+              views: 120,
+              trailerUrl: videoUrl,
+              videoUrl: videoUrl,
+              ageRating: 'ALL',
+              audioTracks: ['Original'],
+              subtitles: ['Mongolian (Авто)'],
+              episodes: [
+                {
+                  episodeNumber: 1,
+                  title: title,
+                  duration: 'Full Video',
+                  videoUrl: videoUrl,
+                  thumbnail:
+                    'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop&q=80',
+                },
+              ],
+            };
+            setSelectedMovieForPlayer(driveMovie);
+            setPlayerInitialEpisode(1);
+          }}
+          onImportToCollection={(importedMovieData) => {
+            const newId = `imported_drive_${Date.now()}`;
+            const fullMovie: Movie = {
+              id: newId,
+              title: importedMovieData.title || 'Google Drive Кино',
+              titleMongolian: importedMovieData.title || 'Google Drive Кино',
+              description: importedMovieData.description || 'Google Drive сангаас импортолсон видео контент.',
+              poster:
+                importedMovieData.posterUrl ||
+                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80',
+              backdrop:
+                importedMovieData.bannerUrl ||
+                'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1600&auto=format&fit=crop&q=80',
+              rating: importedMovieData.rating || 8.5,
+              year: importedMovieData.year || new Date().getFullYear(),
+              duration: '120 мин',
+              genres: ['Google Drive', 'Импортолсон'],
+              type: importedMovieData.type || 'movie',
+              country: 'Монгол / Олон улс',
+              director: 'Импортолсон',
+              cast: ['Жүжигчид'],
+              views: 1,
+              trailerUrl: importedMovieData.videoUrl || '',
+              videoUrl: importedMovieData.videoUrl || '',
+              ageRating: 'ALL',
+              audioTracks: ['Монгол Хадмал', 'Эх хэл'],
+              subtitles: ['Монгол'],
+              episodes: [
+                {
+                  episodeNumber: 1,
+                  title: `${importedMovieData.title || 'Анги'} - 1-р анги`,
+                  duration: '45 мин',
+                  videoUrl: importedMovieData.videoUrl || '',
+                },
+              ],
+            };
+            setMoviesList((prev) => [fullMovie, ...prev]);
           }}
         />
       )}

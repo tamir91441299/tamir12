@@ -57,6 +57,7 @@ import {
   deletePromoCode,
   subscribePromoCodesFromFirestore
 } from '../lib/codeService';
+import { ONE_PIECE_EPISODE_TITLES, ONE_PIECE_100_EPISODES } from '../codes/onepiece';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -235,11 +236,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     maxUses: 100,
   });
 
-  const [selectedMovieId, setSelectedMovieId] = useState<string>('m15'); // Blue Lock S1 default
+  const [selectedMovieId, setSelectedMovieId] = useState<string>('m_one_piece'); // One Piece default for quick access
   const [epNumInput, setEpNumInput] = useState<number>(1);
   const [epTitleInput, setEpTitleInput] = useState<string>('');
-  const [epUrlInput, setEpUrlInput] = useState<string>('https://youtu.be/VZPAg8iR8sk');
+  const [epUrlInput, setEpUrlInput] = useState<string>('https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk');
   const [epDurationInput, setEpDurationInput] = useState<string>('24 мин');
+  const [adminEpSearch, setAdminEpSearch] = useState<string>('');
+  const [adminEpRange, setAdminEpRange] = useState<string>('all');
+  const [showAdminBatchLink, setShowAdminBatchLink] = useState<boolean>(false);
+  const [adminBatchLinksInput, setAdminBatchLinksInput] = useState<string>('');
+  const [adminBatchEpCount, setAdminBatchEpCount] = useState<number>(100);
 
   const allMoviesList = movies || SAMPLE_MOVIES;
   const currentSelectedMovie = allMoviesList.find((m) => m.id === selectedMovieId) || allMoviesList[0];
@@ -249,7 +255,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     e.preventDefault();
     if (!epUrlInput.trim() || !currentSelectedMovie) return;
 
-    const title = epTitleInput.trim() || `${epNumInput}-р анги`;
+    const defaultTitle = (currentSelectedMovie.id === 'm_one_piece' || currentSelectedMovie.title.toLowerCase().includes('one piece')) && ONE_PIECE_EPISODE_TITLES[Number(epNumInput)]
+      ? `${epNumInput}-р анги: ${ONE_PIECE_EPISODE_TITLES[Number(epNumInput)]}`
+      : `${epNumInput}-р анги`;
+    const title = epTitleInput.trim() || defaultTitle;
     const newEp = {
       episodeNumber: Number(epNumInput),
       title,
@@ -266,6 +275,48 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     setEpNumInput(updated.length + 1);
   };
 
+  const handleAdminBatchConnect = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentSelectedMovie) return;
+
+    const raw = adminBatchLinksInput.trim();
+    if (!raw) return;
+
+    const lines = raw.split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const count = Math.max(1, Math.min(100, Number(adminBatchEpCount) || 100));
+    const isOnePiece = currentSelectedMovie.id === 'm_one_piece' || currentSelectedMovie.title.toLowerCase().includes('one piece');
+
+    const newEpList = [];
+    for (let i = 1; i <= count; i++) {
+      const lineUrl = lines[i - 1] || lines[0] || currentSelectedMovie.videoUrl || 'https://drive.google.com/file/d/17DVAzznd7y3pBb-lr9yF0pTGfJGUDu0r/view?usp=drivesdk';
+      const existing = currentMovieEpisodes.find((ep) => ep.episodeNumber === i);
+      const title = existing?.title || (
+        isOnePiece && ONE_PIECE_EPISODE_TITLES[i]
+          ? `${i}-р анги: ${ONE_PIECE_EPISODE_TITLES[i]}`
+          : `${i}-р анги`
+      );
+      newEpList.push({
+        episodeNumber: i,
+        title,
+        duration: existing?.duration || '24 мин',
+        videoUrl: lineUrl
+      });
+    }
+
+    if (onUpdateMovieEpisodes) {
+      onUpdateMovieEpisodes(currentSelectedMovie.id, newEpList);
+    }
+    setShowAdminBatchLink(false);
+    setAdminBatchLinksInput('');
+    alert(`🎉 Амжилттай: ${currentSelectedMovie.titleMongolian} 1-ээс ${count} хүртэлх бүх ангийн линк амжилттай холбогдлоо!`);
+  };
+
+  const handleApplyOnePiece100Preset = () => {
+    if (!onUpdateMovieEpisodes) return;
+    onUpdateMovieEpisodes('m_one_piece', ONE_PIECE_100_EPISODES);
+    alert('🎉 Амжилттай: One Piece (Ван Пис) 1-100 ангийн үзэх линк, албан ёсны монгол нэрсээр бүрэн холбогдлоо!');
+  };
+
   const handleDeleteEpisode = (epNumToDelete: number) => {
     if (!currentSelectedMovie) return;
     const updated = currentMovieEpisodes.filter((ep) => ep.episodeNumber !== epNumToDelete);
@@ -276,6 +327,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleResetMovieEpisodes = () => {
     if (!currentSelectedMovie) return;
+    if (currentSelectedMovie.id === 'm_one_piece') {
+      if (onUpdateMovieEpisodes) {
+        onUpdateMovieEpisodes('m_one_piece', ONE_PIECE_100_EPISODES);
+      }
+      return;
+    }
     const defaultMovie = SAMPLE_MOVIES.find((m) => m.id === currentSelectedMovie.id);
     if (defaultMovie && onUpdateMovieEpisodes) {
       onUpdateMovieEpisodes(currentSelectedMovie.id, defaultMovie.episodes || []);
@@ -643,7 +700,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   if (!isAdmin) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
         <div className="relative w-full max-w-md bg-[#16161a] rounded-2xl border border-amber-500/40 p-6 text-center space-y-4 shadow-2xl text-zinc-100">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
@@ -669,7 +726,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       <div className="bg-[#141417] border border-cyan-500/30 rounded-2xl max-w-5xl w-full text-zinc-100 shadow-2xl relative my-auto flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-cyan-950/40 to-zinc-900 border-b border-zinc-800 flex items-center justify-between shrink-0">
@@ -1051,31 +1108,136 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </p>
               </div>
 
-              <select
-                value={selectedMovieId}
-                onChange={(e) => {
-                  setSelectedMovieId(e.target.value);
-                  const m = allMoviesList.find((item) => item.id === e.target.value);
-                  if (m && m.episodes) {
-                    setEpNumInput(m.episodes.length + 1);
-                  }
-                }}
-                className="bg-zinc-950 border border-cyan-500/50 text-white font-bold text-sm py-2.5 px-4 rounded-xl focus:outline-none focus:border-cyan-400 cursor-pointer w-full sm:w-80"
-              >
-                {allMoviesList.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.titleMongolian} ({m.title}) {m.episodes ? `[${m.episodes.length} анги]` : '[Кино]'}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={selectedMovieId}
+                  onChange={(e) => {
+                    setSelectedMovieId(e.target.value);
+                    const m = allMoviesList.find((item) => item.id === e.target.value);
+                    if (m && m.episodes) {
+                      setEpNumInput(m.episodes.length + 1);
+                      if (m.id === 'm_one_piece' && ONE_PIECE_EPISODE_TITLES[m.episodes.length + 1]) {
+                        setEpTitleInput(`${m.episodes.length + 1}-р анги: ${ONE_PIECE_EPISODE_TITLES[m.episodes.length + 1]}`);
+                      }
+                    }
+                  }}
+                  className="bg-zinc-950 border border-cyan-500/50 text-white font-bold text-sm py-2.5 px-4 rounded-xl focus:outline-none focus:border-cyan-400 cursor-pointer w-full sm:w-80"
+                >
+                  {allMoviesList.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.titleMongolian} ({m.title}) {m.episodes ? `[${m.episodes.length} анги]` : '[Кино]'}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAdminBatchLink(!showAdminBatchLink)}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs px-3.5 py-2.5 rounded-xl transition-all cursor-pointer shadow"
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  <span>{showAdminBatchLink ? 'Хаах' : '1-100 Линк Холбох (Бөөнөөр)'}</span>
+                </button>
+              </div>
             </div>
+
+            {/* Batch Link Modal / Form for Admin */}
+            {showAdminBatchLink && (
+              <form onSubmit={handleAdminBatchConnect} className="bg-zinc-900 border border-amber-500/50 p-4 rounded-2xl space-y-3 shadow-xl">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                    <LinkIcon className="w-4 h-4 text-amber-400" />
+                    "{currentSelectedMovie?.titleMongolian}" 1-ээс {adminBatchEpCount} хүртэлх ангиудыг бөөнөөр холбох
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    ID: {currentSelectedMovie?.id}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-400 block mb-1 font-bold">Нийт ангийн тоо:</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={adminBatchEpCount}
+                      onChange={(e) => setAdminBatchEpCount(Number(e.target.value))}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-2.5 rounded-xl focus:outline-none focus:border-amber-500 font-bold"
+                    />
+                    <span className="text-[10px] text-zinc-500 mt-1 block">1-ээс 100 хүртэл</span>
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="text-[10px] text-zinc-400 block mb-1 font-bold">
+                      Ангиудын бичлэгийн линкүүд (Мөр бүрт 1 линк тавина уу. 1 линк оруулбал бүх ангид хуваарилна):
+                    </label>
+                    <textarea
+                      required
+                      rows={5}
+                      placeholder={`https://drive.google.com/file/d/... (1-р анги)\nhttps://drive.google.com/file/d/... (2-р анги)\n...\n(1-100 хүртэлх бүх ангийн Google Drive эсвэл видео линкүүдийг эгнүүлэн наана уу)`}
+                      value={adminBatchLinksInput}
+                      onChange={(e) => setAdminBatchLinksInput(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-xs text-cyan-300 p-2.5 rounded-xl focus:outline-none focus:border-amber-500 font-mono leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Анги бүр Монгол нэршил, хугацаа болон видео линкээрээ бүрэн холбогдоно.</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {currentSelectedMovie?.id === 'm_one_piece' && (
+                      <button
+                        type="button"
+                        onClick={handleApplyOnePiece100Preset}
+                        className="text-[10px] bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold px-2.5 py-1 rounded-lg cursor-pointer shadow"
+                      >
+                        🏴‍☠️ One Piece 1-100 Ангийн Линк ШУУД холбох
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminBatchEpCount(13);
+                        setAdminBatchLinksInput(
+                          Array.from({ length: 13 }, () => 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view').join('\n')
+                        );
+                      }}
+                      className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded-lg cursor-pointer"
+                    >
+                      Жишээ 13 линк бөглөх
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminBatchLink(false)}
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl cursor-pointer"
+                  >
+                    Болих
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs rounded-xl cursor-pointer flex items-center gap-1.5 shadow"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    <span>{adminBatchEpCount} Ангийн Линк Холбож Хадгалах</span>
+                  </button>
+                </div>
+              </form>
+            )}
 
             {/* Episode Add / Edit Form */}
             <form onSubmit={handleAddOrUpdateEpisode} className="bg-gradient-to-r from-zinc-900 via-cyan-950/20 to-zinc-900 border border-cyan-500/40 p-4 sm:p-5 rounded-2xl space-y-4 shadow-xl">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <h3 className="text-sm font-black text-white flex items-center gap-2">
                   <Plus className="w-4 h-4 text-cyan-400" />
-                  "{currentSelectedMovie?.titleMongolian}"-д Шинэ анги / Бичлэг оруулах
+                  "{currentSelectedMovie?.titleMongolian}"-д Анги засах / Оруулах
                 </h3>
                 <span className="text-xs font-mono bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30">
                   ID: {currentSelectedMovie?.id}
@@ -1090,7 +1252,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <input
                     type="number"
                     value={epNumInput}
-                    onChange={(e) => setEpNumInput(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setEpNumInput(val);
+                      if (currentSelectedMovie?.id === 'm_one_piece' && ONE_PIECE_EPISODE_TITLES[val]) {
+                        setEpTitleInput(`${val}-р анги: ${ONE_PIECE_EPISODE_TITLES[val]}`);
+                      }
+                    }}
                     className="w-full bg-zinc-950 border border-zinc-800 text-sm font-bold text-white p-2.5 rounded-xl focus:outline-none focus:border-cyan-500"
                   />
                 </div>
@@ -1147,32 +1315,94 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <p>
                     💡 <strong>Google Drive холбоос оруулахдаа:</strong> Бичлэгийг хэрэглэгчид үзэх үед Gmail эрх нэхэхгүй, шууд тоглуулдаг байлгахын тулд Google Drive дээр тухайн бичлэг эсвэл хавтас дээрээ <strong>Share ➡️ General access</strong> хэсгийг <strong>"Anyone with the link" (Холбоос бүхий хүн бүр)</strong> болгож <strong>Viewer</strong> эрхтэйгээр тохируулан линкийг хуулж тавина уу.
                   </p>
-                  <p className="text-zinc-500">
-                    📺 <strong>YouTube / Facebook / MP4:</strong> YouTube, Facebook болон шууд mp4/m3u8 бичлэгийн линкийг ч систем автоматаар таньж тоглуулагч дээр шууд тоглуулна.
-                  </p>
                 </div>
               </div>
             </form>
 
-            {/* Existing Episodes List */}
+            {/* Existing Episodes List with Search & Range Filter */}
             <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                  <Video className="w-4 h-4 text-cyan-400" />
-                  Нийт оруулсан ангиуд ({currentMovieEpisodes.length})
-                </h4>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-500 hidden sm:inline">
-                    1-р анги нь бүх хэрэглэгчдэд ҮНЭГҮЙ үзэх боломжтой
-                  </span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-cyan-400" />
+                    Нийт ангиуд ({currentMovieEpisodes.length})
+                  </h4>
+                  {currentSelectedMovie?.id === 'm_one_piece' && (
+                    <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                      1-100 анги бүрэн
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* Search inside episodes */}
+                  <div className="relative flex-1 sm:w-48">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Анги хайх..."
+                      value={adminEpSearch}
+                      onChange={(e) => setAdminEpSearch(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  {/* Range filters for 1-100 episodes */}
+                  {currentMovieEpisodes.length > 20 && (
+                    <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800 text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('all')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === 'all' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        Бүгд
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('1-20')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === '1-20' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        1-20
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('21-40')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === '21-40' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        21-40
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('41-60')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === '41-60' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        41-60
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('61-80')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === '61-80' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        61-80
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminEpRange('81-100')}
+                        className={`px-2 py-0.5 rounded cursor-pointer ${adminEpRange === '81-100' ? 'bg-cyan-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                      >
+                        81-100
+                      </button>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleResetMovieEpisodes}
-                    className="flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                     title="Эх анхны ангиудын тохиргоог сэргээх"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Анхны утгаар сэргээх</span>
+                    <span>Сэргээх</span>
                   </button>
                 </div>
               </div>
@@ -1183,7 +1413,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {currentMovieEpisodes.map((ep) => (
+                  {currentMovieEpisodes
+                    .filter((ep) => {
+                      if (adminEpSearch) {
+                        const q = adminEpSearch.toLowerCase();
+                        return (
+                          ep.title.toLowerCase().includes(q) ||
+                          ep.episodeNumber.toString().includes(q) ||
+                          ep.videoUrl.toLowerCase().includes(q)
+                        );
+                      }
+                      if (adminEpRange === '1-20') return ep.episodeNumber >= 1 && ep.episodeNumber <= 20;
+                      if (adminEpRange === '21-40') return ep.episodeNumber >= 21 && ep.episodeNumber <= 40;
+                      if (adminEpRange === '41-60') return ep.episodeNumber >= 41 && ep.episodeNumber <= 60;
+                      if (adminEpRange === '61-80') return ep.episodeNumber >= 61 && ep.episodeNumber <= 80;
+                      if (adminEpRange === '81-100') return ep.episodeNumber >= 81 && ep.episodeNumber <= 100;
+                      return true;
+                    })
+                    .map((ep) => (
                     <div
                       key={ep.episodeNumber}
                       className="bg-zinc-900 border border-zinc-800 hover:border-cyan-500/50 p-3 rounded-xl flex items-center justify-between gap-2 group transition-all"
@@ -1335,25 +1582,57 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     type="button"
                     onClick={() => {
                       setNewCodeForm({
-                        code: 'MEGALOBOX',
+                        code: 'ONEPIECE100',
                         type: 'anime',
                         value: 0,
                         durationDays: 30,
-                        description: '🥊 Мегалобокс (Megalo Box) болон бүх анимэ үзэх 30 хоногийн эрх',
-                        maxUses: 100,
+                        description: '🏴‍☠️ One Piece (Ван Пис) 1-100 бүрэн анги үзэх 30 хоногийн эрхийн код',
+                        maxUses: 1000,
                       });
                     }}
-                    className="text-[11px] text-rose-300 hover:text-white font-bold bg-rose-950/60 hover:bg-rose-900/60 px-2.5 py-1 rounded-lg border border-rose-800/80 transition-all cursor-pointer"
+                    className="text-[11px] text-amber-300 hover:text-white font-bold bg-amber-950/60 hover:bg-amber-900/60 px-2.5 py-1 rounded-lg border border-amber-800/80 transition-all cursor-pointer flex items-center gap-1"
                   >
-                    🥊 Megalo Box Код
+                    <span>🏴‍☠️ ONEPIECE100</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCodeForm({
+                        code: 'MOVIE100',
+                        type: 'movie',
+                        value: 0,
+                        durationDays: 30,
+                        description: '🎬 One Piece болон 100 ангит цуврал, бүх кино үзэх 30 хоногийн эрх',
+                        maxUses: 1000,
+                      });
+                    }}
+                    className="text-[11px] text-cyan-300 hover:text-white font-bold bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🎬 MOVIE100</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCodeForm({
+                        code: 'VIP2025',
+                        type: 'full_vip',
+                        value: 0,
+                        durationDays: 30,
+                        description: '👑 VIP Бүтэн Багц (Бүх кино + анимэ 100 анги) 30 хоног',
+                        maxUses: 500,
+                      });
+                    }}
+                    className="text-[11px] text-emerald-300 hover:text-white font-bold bg-emerald-950/60 hover:bg-emerald-900/60 px-2.5 py-1 rounded-lg border border-emerald-800/80 transition-all cursor-pointer"
+                  >
+                    👑 VIP2025
                   </button>
                   <button
                     type="button"
                     onClick={handleGenerateRandomCode}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer"
+                    className="text-[11px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 bg-purple-950/60 hover:bg-purple-900/60 px-2.5 py-1 rounded-lg border border-purple-800/80 transition-all cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>🎲 Санамсаргүй Код</span>
+                    <span>🎲 Санамсаргүй</span>
                   </button>
                 </div>
               </div>

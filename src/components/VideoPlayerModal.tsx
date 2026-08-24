@@ -30,7 +30,11 @@ import {
   Terminal,
   Copy,
   RotateCw,
-  Lock
+  Lock,
+  User,
+  UserCheck,
+  ShieldCheck,
+  Wallet
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -51,9 +55,14 @@ interface VideoPlayerModalProps {
   onClose: () => void;
   onRequestPurchase?: (movie: Movie) => void;
   currentUser?: UserAccount | null;
+  userBalance?: number;
   isMonthlyVip?: boolean;
   isAnimePackage?: boolean;
   isMoviePackage?: boolean;
+  onOpenAuthModal?: () => void;
+  onOpenUserManagement?: () => void;
+  onOpenWallet?: () => void;
+  onOpenVipModal?: () => void;
 }
 
 type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
@@ -65,9 +74,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   onClose,
   onRequestPurchase,
   currentUser,
+  userBalance,
   isMonthlyVip = false,
   isAnimePackage = false,
   isMoviePackage = false,
+  onOpenAuthModal,
+  onOpenUserManagement,
+  onOpenWallet,
+  onOpenVipModal,
 }) => {
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
@@ -613,11 +627,69 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </div>
 
           {/* Concurrency & Ping Status Pill */}
-          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
+          <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span>100% Онлайн • Хязгааргүй Хүчин Чадал</span>
+            <span>100% Онлайн</span>
           </div>
+
+          {/* User Registration / Login Button (Бүтэн дэлгэцэнд хэрэглэгчийн бүртгэл харагдах) */}
+          {onOpenAuthModal && (
+            <button
+              type="button"
+              id="player-auth-btn"
+              onClick={onOpenAuthModal}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md shrink-0 border ${
+                currentUser
+                  ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black border-cyan-400'
+              }`}
+              title={currentUser ? `${currentUser.name} (${currentUser.email})` : 'Бүртгүүлэх / Нэвтрэх'}
+            >
+              {currentUser ? (
+                <>
+                  <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="max-w-[90px] truncate">{currentUser.name}</span>
+                  {isMonthlyVip && (
+                    <span className="bg-amber-500 text-black text-[9px] px-1 py-0.2 rounded font-black">VIP</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <User className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>БҮРТГҮҮЛЭХ</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Wallet Balance (if provided) */}
+          {userBalance !== undefined && onOpenWallet && (
+            <button
+              type="button"
+              id="player-wallet-btn"
+              onClick={onOpenWallet}
+              className="hidden sm:flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-amber-400 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0"
+              title="Данс цэнэглэх"
+            >
+              <Wallet className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="font-mono">{userBalance.toLocaleString()} ₮</span>
+            </button>
+          )}
+
+          {/* Admin Management Button (Зөвхөн Админд харагдана) */}
+          {isAdmin && onOpenUserManagement && (
+            <button
+              type="button"
+              id="player-admin-manage-btn"
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 border border-amber-400/60 text-amber-300 font-extrabold text-xs shadow-md cursor-pointer shrink-0"
+              title="Хэрэглэгчдийн бүртгэл & Ангиудын удирдлага (Админ)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">Удирдах</span>
+            </button>
+          )}
 
           {/* Debug Console & Diagnostic Overlay Toggle Button (Зөвхөн Админд харагдана) */}
           {isAdmin && (
@@ -625,14 +697,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               type="button"
               id="debug-panel-toggle-btn"
               onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className={`flex items-center gap-1 font-bold text-xs p-2 sm:px-3 sm:py-2 rounded-xl cursor-pointer transition-all border ${
+              className={`flex items-center gap-1 font-bold text-xs p-2 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
                 showDebugPanel
                   ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
                   : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
               }`}
               title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох (Админ)"
             >
-              <Bug className="w-4 h-4 text-amber-400" />
+              <Bug className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Дебаг</span>
             </button>
           )}
@@ -711,6 +783,28 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <span>Багцын эрх авах / Төлбөр төлөх</span>
                   </button>
                 )}
+
+                {/* User Auth trigger inside locked screen */}
+                {onOpenAuthModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenAuthModal}
+                    className="px-5 py-3 bg-gradient-to-r from-cyan-600/30 to-blue-600/30 hover:from-cyan-600/50 hover:to-blue-600/50 border border-cyan-500/50 text-cyan-200 font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
+                  >
+                    {currentUser ? (
+                      <>
+                        <UserCheck className="w-4 h-4 text-cyan-400" />
+                        <span>Миний бүртгэл ({currentUser.name})</span>
+                      </>
+                    ) : (
+                      <>
+                        <User className="w-4 h-4 text-cyan-400" />
+                        <span>Хэрэглэгчийн Бүртгэл / Нэвтрэх</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => selectEpisode(0)}

@@ -155,7 +155,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-[#17171a] border border-cyan-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col my-auto">
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-zinc-900 via-[#121214] to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
@@ -417,7 +417,46 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 )}
               </div>
 
-              <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-400">
+              {/* Quick Code suggestions */}
+              <div className="pt-2 border-t border-zinc-800 space-y-1.5">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                  Түгээмэл эрхийн кодууд:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputActivationCode('ONEPIECE100');
+                      handleRedeemActivationCode('ONEPIECE100');
+                    }}
+                    className="text-[10px] font-mono font-bold bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                  >
+                    <span>🏴‍☠️ ONEPIECE100</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputActivationCode('MOVIE100');
+                      handleRedeemActivationCode('MOVIE100');
+                    }}
+                    className="text-[10px] font-mono font-bold bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                  >
+                    <span>🎬 MOVIE100</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputActivationCode('VIP2025');
+                      handleRedeemActivationCode('VIP2025');
+                    }}
+                    className="text-[10px] font-mono font-bold bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                  >
+                    <span>👑 VIP2025</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-1 text-[11px] text-zinc-400">
                 <span>ℹ️ Эрхийн код аваагүй бол MonPay / Дансаар төлбөрөө шилжүүлэн админаас авна уу.</span>
               </div>
             </div>

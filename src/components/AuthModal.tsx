@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Lock, Phone, UserPlus, LogIn, CheckCircle2, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { X, User, Mail, Lock, Phone, UserPlus, LogIn, CheckCircle2, ShieldCheck, Sparkles, Users, HardDrive } from 'lucide-react';
 import { saveUserToFirestore } from '../lib/userService';
+import { googleSignInWithDrive } from '../lib/googleDriveService';
 
 export interface UserAccount {
   id: string;
@@ -16,6 +17,7 @@ interface AuthModalProps {
   onLoginSuccess: (user: UserAccount) => void;
   onLogout: () => void;
   onOpenUserManagement?: () => void;
+  onOpenGoogleDrive?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -24,6 +26,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onLoginSuccess,
   onLogout,
   onOpenUserManagement,
+  onOpenGoogleDrive,
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>(currentUser ? 'login' : 'register');
   const [formData, setFormData] = useState({
@@ -35,6 +38,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setError(null);
+    try {
+      const result = await googleSignInWithDrive();
+      if (result && result.user) {
+        const email = result.user.email || 'user@gmail.com';
+        const name = result.user.displayName || email.split('@')[0] || 'Google Хэрэглэгч';
+        const phone = result.user.phoneNumber || '99110000';
+
+        const gUser: UserAccount = {
+          id: result.user.uid || 'user_' + Date.now(),
+          name,
+          email,
+          phone,
+          registeredAt: new Date().toLocaleDateString('mn-MN'),
+        };
+
+        saveUserToFirestore(gUser, {
+          role: email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+          status: 'active',
+          packageType: 'free',
+          walletBalance: 0,
+        });
+
+        setSuccessMessage('🎉 Google Drive болон аккаунтаар амжилттай нэвтэрлээ!');
+        setTimeout(() => {
+          onLoginSuccess(gUser);
+          onClose();
+        }, 800);
+      }
+    } catch (err: any) {
+      console.error('Google Sign In error:', err);
+      setError(err.message || 'Google хаягаар нэвтрэхэд алдаа гарлаа.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -159,7 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md bg-[#16161a] rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden text-zinc-100">
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
@@ -221,6 +264,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <span className="font-bold text-emerald-400">Идэвхтэй ✓</span>
                 </div>
               </div>
+
+              {onOpenGoogleDrive && (
+                <button
+                  type="button"
+                  id="open-google-drive-from-profile"
+                  onClick={() => {
+                    onClose();
+                    onOpenGoogleDrive();
+                  }}
+                  className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <HardDrive className="w-4 h-4 text-blue-400" />
+                  <span>Google Drive Сан & Видео Үзэх</span>
+                </button>
+              )}
 
               {onOpenUserManagement && isAdmin && (
                 <button
@@ -293,6 +351,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>{successMessage}</span>
               </div>
             )}
+
+            {/* Google Drive / Google Sign in Quick Button */}
+            <div className="pt-1">
+              <button
+                type="button"
+                id="google-drive-quick-auth-btn"
+                onClick={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-zinc-100 text-zinc-800 font-bold text-xs rounded-xl shadow transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 48 48">
+                  <path
+                    fill="#EA4335"
+                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                  />
+                </svg>
+                <span>{isGoogleLoading ? 'Google-ээр нэвтэрч байна...' : 'Google & Google Drive-аар нэвтрэх'}</span>
+              </button>
+
+              <div className="flex items-center gap-2 my-3">
+                <div className="flex-1 h-px bg-zinc-800" />
+                <span className="text-[10px] uppercase font-bold text-zinc-500">эсвэл</span>
+                <div className="flex-1 h-px bg-zinc-800" />
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {mode === 'register' && (
