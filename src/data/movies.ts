@@ -47,7 +47,7 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
   title: 'World Collapse: Zombie Apocalypse',
   titleMongolian: 'Дэлхийн Сүйрэл: Зомби Апокалипсис',
   type: 'movie',
-  poster: '/images/zombie_poster_1787565616302.jpg',
+  poster: 'https://gridinsoft.com/blogs/wp-content/uploads/2023/04/ChaosGPT-was-asked-to-destroy-humanity.jpg',
   backdrop: '/images/zombie_backdrop_1787565630511.jpg',
   year: 2025,
   duration: '1 анги (118 мин)',
