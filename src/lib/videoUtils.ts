@@ -248,12 +248,12 @@ export function getDirectPlaybackStream(
   videoUrl?: string,
   episodeNumber: number = 1,
   serverType: 'server1' | 'server2' | 'server3' | 'server4' = 'server1',
-  quality: VideoQualityKey = 'auto'
+  quality: VideoQualityKey = '1080p'
 ): string {
   const epNum = episodeNumber > 0 ? episodeNumber : 1;
 
   // If specific quality is selected and not auto, check quality cluster for fallback
-  const qualityCluster = QUALITY_CDN_MAP[quality] || QUALITY_CDN_MAP['auto'];
+  const qualityCluster = QUALITY_CDN_MAP[quality] || QUALITY_CDN_MAP['1080p'];
   const streamFromQualityCluster = qualityCluster[(epNum - 1) % qualityCluster.length];
 
   const cluster = HIGH_SPEED_CDN_CLUSTER[serverType] || HIGH_SPEED_CDN_CLUSTER.server1;
@@ -265,29 +265,26 @@ export function getDirectPlaybackStream(
 
   const clean = videoUrl.trim();
 
-  // If server is server1 (Primary Direct Stream)
-  if (serverType === 'server1') {
-    // 1. If Google Drive, use our backend streaming proxy that streams without asking for Gmail
-    const googleDriveId = extractGoogleDriveId(clean);
-    if (googleDriveId) {
-      const qParam = quality !== 'auto' ? `?quality=${quality}` : '';
-      return `/api/stream/drive/${googleDriveId}${qParam}`;
-    }
+  // 1. If Google Drive URL, use our direct streaming proxy with quality resolution
+  const googleDriveId = extractGoogleDriveId(clean);
+  if (googleDriveId) {
+    const q = quality || '1080p';
+    return `/api/stream/drive/${googleDriveId}?quality=${q}&server=${serverType}&ep=${epNum}`;
+  }
 
-    // 2. If direct media file
-    if (isDirectPlayableMedia(clean)) {
+  // 2. If direct media file (mp4, webm, m3u8, etc.)
+  if (isDirectPlayableMedia(clean)) {
+    return clean;
+  }
+
+  // 3. If external web URL that is not YouTube
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    if (!clean.includes('youtube.com') && !clean.includes('youtu.be')) {
       return clean;
-    }
-
-    // 3. If external web URL that is not YouTube
-    if (clean.startsWith('http://') || clean.startsWith('https://')) {
-      if (!clean.includes('youtube.com') && !clean.includes('youtu.be')) {
-        return clean;
-      }
     }
   }
 
-  // Multi-CDN Fallback nodes
+  // Multi-CDN Fallback nodes matching requested quality
   return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
 }
 

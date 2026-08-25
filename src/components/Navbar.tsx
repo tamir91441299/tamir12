@@ -210,42 +210,42 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#121214]/95 backdrop-blur-md border-b border-zinc-800/80 text-white">
       {/* Top micro banner */}
-      <div className="bg-gradient-to-r from-amber-600/20 via-cyan-600/20 to-purple-600/20 border-b border-zinc-800 text-xs py-1 px-4 text-center text-zinc-300 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-amber-600/20 via-cyan-600/20 to-purple-600/20 border-b border-zinc-800 text-[11px] sm:text-xs py-1 px-2 sm:px-4 text-center text-zinc-300 flex justify-between items-center">
         <span className="hidden sm:inline-block text-zinc-400">
           🎬 FlickNime — Монгол хадмал болон дуу оруулгатай анимэ & кино сан
         </span>
-        <div className="flex items-center gap-3 mx-auto sm:mx-0 text-cyan-300 font-medium">
+        <div className="flex items-center gap-2 sm:gap-3 mx-auto sm:mx-0 text-cyan-300 font-medium">
           <button
             onClick={() => setActiveTab('ai')}
             className="flex items-center gap-1 hover:text-cyan-200 cursor-pointer transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
-            <span>🤖 AI Кино зөвлөх ашиглах</span>
+            <span className="text-[11px] sm:text-xs">🤖 AI Кино зөвлөх</span>
           </button>
           <a
             href="https://www.facebook.com/share/r/17wruEiwvA/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold px-2.5 py-0.5 rounded text-[11px] transition-all shadow-sm hover:scale-105"
+            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white font-bold px-2 py-0.5 rounded text-[10px] sm:text-[11px] transition-all shadow-sm hover:scale-105"
             title="Facebook дээр үзэх"
           >
-            <span>Facebook Reels 🎬</span>
+            <span>FB Reels 🎬</span>
           </a>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Brand Logo */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6 shrink-0">
           <button
             id="logo-button"
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-2 group cursor-pointer focus:outline-none"
+            className="flex items-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none"
           >
-            <div className="rainbow-glow-box text-white font-black text-2xl tracking-wider px-3.5 py-1 rounded-lg group-hover:scale-105 transition-transform">
+            <div className="rainbow-glow-box text-white font-black text-xl sm:text-2xl tracking-wider px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-lg group-hover:scale-105 transition-transform">
               Flick
             </div>
-            <span className="font-extrabold text-2xl rainbow-glow-text tracking-tight hidden lg:inline-block">
+            <span className="font-extrabold text-xl sm:text-2xl rainbow-glow-text tracking-tight hidden sm:inline-block">
               Nime
             </span>
           </button>
@@ -708,14 +708,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
       </div>
 
-      {/* Mobile navigation bar - Smooth scrollable pill tabs */}
-      <div className="md:hidden bg-[#101013] border-t border-zinc-800/90 py-2 px-2 overflow-x-auto no-scrollbar scroll-smooth">
-        <div className="flex items-center gap-1.5 min-w-max">
+      {/* Mobile navigation bar - Compact, responsive with touch scroll indicator */}
+      <div className="md:hidden bg-[#0d0d10] border-t border-zinc-800/90 py-2 px-2.5 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center gap-1.5 w-max">
           {onOpenUserManagement && isAdmin && (
             <button
               id="mobile-nav-users"
               onClick={onOpenUserManagement}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow cursor-pointer whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/50 text-xs font-black shadow-md cursor-pointer whitespace-nowrap active:scale-95 transition-transform shrink-0"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
               <span>Удирдах</span>
@@ -725,10 +725,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-home"
             onClick={() => setActiveTab('home')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'home'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-cyan-500 text-black font-extrabold shadow-md shadow-cyan-500/20'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
             <Clapperboard className="w-3.5 h-3.5" />
@@ -736,7 +736,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Mobile Кино Button with Submenu Trigger */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               id="mobile-nav-movies"
               onClick={() => {
@@ -747,43 +747,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setIsMobileMovieMenuOpen(true);
                 }
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
                 activeTab === 'movies'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+                  ? 'bg-cyan-500 text-black font-extrabold shadow-md shadow-cyan-500/20'
+                  : 'text-zinc-300 hover:text-white bg-zinc-900/90 border border-zinc-800/80'
               }`}
             >
-              <Film className="w-3.5 h-3.5 text-cyan-400" />
+              <Film className="w-3.5 h-3.5" />
               <span>Кино</span>
-              <ChevronDown className="w-3 h-3 text-zinc-400" />
+              <ChevronDown className="w-3 h-3 ml-0.5" />
             </button>
 
             {/* Mobile Submenu Bottom Sheet / Popup */}
             {isMobileMovieMenuOpen && (
-              <div className="fixed inset-x-2 top-28 bg-[#16161a] border border-zinc-700 rounded-2xl p-3 shadow-2xl z-50 max-h-[70vh] overflow-y-auto">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
-                  <span className="text-xs font-black text-cyan-400">🎬 КИНОНЫ АНГИЛАЛУУД</span>
+              <div className="fixed inset-x-3 top-24 bg-[#16161a] border border-cyan-500/40 rounded-2xl p-3 shadow-2xl z-50 max-h-[75vh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2.5">
+                  <span className="text-xs font-black text-cyan-400 flex items-center gap-1.5">
+                    <Film className="w-4 h-4" /> КИНОНЫ АНГИЛАЛУУД
+                  </span>
                   <button
                     onClick={() => setIsMobileMovieMenuOpen(false)}
-                    className="p-1 text-zinc-400 hover:text-white"
+                    className="p-1 text-zinc-400 hover:text-white rounded-lg bg-zinc-800"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   {movieCategories.map((cat) => {
                     const Icon = cat.icon;
                     return (
                       <button
                         key={cat.id}
                         onClick={() => handleSelectCategory(cat.id)}
-                        className={`text-left p-2 rounded-xl text-xs font-bold flex items-center gap-2 border ${
+                        className={`text-left p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
                           selectedMovieCategory === cat.id
                             ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
-                            : 'bg-zinc-900 border-zinc-800 text-zinc-300'
+                            : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 active:bg-zinc-800'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 ${cat.accentColor}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${cat.accentColor}`} />
                         <span className="truncate">{cat.label}</span>
                       </button>
                     );
@@ -796,10 +798,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-series"
             onClick={() => setActiveTab('series')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'series'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-purple-600 text-white font-extrabold shadow-md shadow-purple-600/30'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
             <Tv className="w-3.5 h-3.5 text-purple-400" />
@@ -809,10 +811,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-anime"
             onClick={() => setActiveTab('anime')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'anime'
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-rose-600 text-white font-extrabold shadow-md shadow-rose-600/30'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-rose-400" />
@@ -822,23 +824,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-games"
             onClick={() => setActiveTab('games')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'games'
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                : 'text-rose-400/90 hover:text-rose-300 bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/30'
+                : 'text-amber-300 hover:text-amber-200 bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
-            <Swords className="w-3.5 h-3.5 text-rose-400" />
+            <Swords className="w-3.5 h-3.5 text-amber-400" />
             <span>Тоглоом 🎮</span>
           </button>
 
           <button
             id="mobile-nav-purchased"
             onClick={() => setActiveTab('purchased')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'purchased'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-emerald-500 text-black font-extrabold shadow-md shadow-emerald-500/30'
+                : 'text-zinc-300 hover:text-white bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -848,14 +850,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="mobile-nav-ai"
             onClick={() => setActiveTab('ai')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
               activeTab === 'ai'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'text-amber-400/80 hover:text-amber-300 bg-zinc-900/80 border border-zinc-800'
+                ? 'bg-cyan-400 text-black font-black shadow-md shadow-cyan-400/30'
+                : 'text-cyan-300 hover:text-cyan-200 bg-zinc-900/90 border border-zinc-800/80'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Зөвлөх</span>
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>AI Зөвлөх</span>
           </button>
         </div>
       </div>

@@ -571,26 +571,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
           {/* Multi-Node High-Concurrency Server Selector */}
           <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 text-xs shadow-lg backdrop-blur-md">
-            {isExternalEmbed && (
-              <button
-                type="button"
-                id="server-embed-btn"
-                onClick={() => handleServerChange('embed')}
-                className={`px-3 py-1 rounded-lg transition-all font-black cursor-pointer flex items-center gap-1.5 ${
-                  serverMode === 'embed'
-                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
-                    : 'text-amber-300 hover:text-white'
-                }`}
-                title={isGoogleDrive ? 'Google Drive Тоглуулагч (HD)' : isYouTube ? 'YouTube Бичлэг' : 'Үндсэн тоглуулагч'}
-              >
-                <Zap className="w-3.5 h-3.5 fill-current" />
-                <span>{isGoogleDrive ? 'Drive HD' : isYouTube ? 'YouTube' : 'Үндсэн'}</span>
-              </button>
-            )}
-
+            {/* Primary Direct HD Server (Drive HD / Direct) */}
             <button
               type="button"
               id="server1-btn"
@@ -600,11 +584,29 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
                   : 'text-cyan-300 hover:text-white'
               }`}
-              title="Шууд Тоглуулагч 1: CDN Шууд дамжуулагч"
+              title="Шууд Тоглуулагч 1: 1080p/720p чанарын удирдлагатай шууд дамжуулалт"
             >
               <Activity className="w-3.5 h-3.5" />
-              <span>Шууд 1</span>
+              <span>{isGoogleDrive ? 'Drive HD (Шууд)' : 'Шууд 1'}</span>
             </button>
+
+            {/* Fallback Embed / Iframe Server */}
+            {isExternalEmbed && (
+              <button
+                type="button"
+                id="server-embed-btn"
+                onClick={() => handleServerChange('embed')}
+                className={`px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1.5 ${
+                  serverMode === 'embed'
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
+                    : 'text-amber-300 hover:text-white'
+                }`}
+                title={isGoogleDrive ? 'Google Drive Iframe Вэб Тоглуулагч' : isYouTube ? 'YouTube Бичлэг' : 'Вэб Embed'}
+              >
+                <Zap className="w-3 h-3 fill-current" />
+                <span>{isGoogleDrive ? 'Drive Iframe (Нөөц)' : isYouTube ? 'YouTube' : 'Iframe'}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -652,11 +654,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </button>
           </div>
 
+          {/* Header Quick Quality Selector Pills */}
+          <div className="flex items-center bg-zinc-900/90 border border-zinc-700/80 rounded-xl p-0.5 shadow-lg backdrop-blur-md">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q.key}
+                id={`header-quality-btn-${q.key}`}
+                type="button"
+                onClick={() => handleQualitySelect(q.key)}
+                className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                  selectedQualityKey === q.key
+                    ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black scale-105'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title={`${q.label} (${q.resolution})`}
+              >
+                {q.tag}
+              </button>
+            ))}
+          </div>
+
           {/* Concurrency & Ping Status Pill */}
-          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
+          <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-3 py-1 rounded-xl select-none font-bold shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span>100% Онлайн • Хязгааргүй Хүчин Чадал</span>
+            <span>100% Онлайн</span>
           </div>
 
           {/* Debug Console & Diagnostic Overlay Toggle Button */}
@@ -792,51 +814,46 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 />
               </div>
               
-              {/* Google Drive / Embed Helper Bar */}
+              {/* Google Drive / Embed Helper Bar with Full Multi-Quality Switcher */}
               <div className="w-full mt-2 space-y-2">
-                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-cyan-500/40 py-2.5 px-4 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xl">
+                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-cyan-500/40 py-2.5 px-4 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xl">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="font-bold text-white">
                       {isGoogleDrive ? '📁 Google Drive Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
                     </span>
                     <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/50 text-cyan-300 font-bold">
-                      💡 1080p / 720p горим бэлэн
+                      💡 Чанарын сонголт:
                     </span>
-                    {isGoogleDrive && (
-                      <span className="text-[10px] text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded">
-                        ℹ️ Drive Preview нь 360p-ээр эхэлдэг тул 1080p-ээр үзэхийн тулд "Шууд 1080p" дарна уу
-                      </span>
-                    )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      id="embed-to-direct-hd-btn"
-                      onClick={() => {
-                        handleQualitySelect('1080p');
-                      }}
-                      className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
-                    >
-                      <Sparkles className="w-4 h-4 fill-current text-black" />
-                      <span>1080p Full HD Шууд үзэх</span>
-                    </button>
-                    <button
-                      type="button"
-                      id="embed-to-direct-720-btn"
-                      onClick={() => {
-                        handleQualitySelect('720p');
-                      }}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-cyan-500/40 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                    >
-                      <span>720p HD</span>
-                    </button>
+                  {/* All Quality Options for Instant Switch */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {QUALITY_OPTIONS.map((q) => (
+                      <button
+                        key={q.key}
+                        id={`embed-quality-btn-${q.key}`}
+                        type="button"
+                        onClick={() => handleQualitySelect(q.key)}
+                        className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1 shadow-sm ${
+                          q.key === '1080p'
+                            ? 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black hover:scale-105 active:scale-95 shadow-cyan-500/20'
+                            : q.key === '720p'
+                            ? 'bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-cyan-500/40'
+                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                        }`}
+                        title={`${q.label} (${q.resolution}) - ${q.description}`}
+                      >
+                        {q.key === '1080p' && <Sparkles className="w-3.5 h-3.5 fill-current text-black" />}
+                        <span>{q.tag}</span>
+                      </button>
+                    ))}
+
                     {isGoogleDrive && (
                       <button
                         type="button"
                         onClick={() => setShowDriveGuide(!showDriveGuide)}
-                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-3 py-2 rounded-xl border border-zinc-700 font-semibold flex items-center gap-1 cursor-pointer"
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-3 py-1.5 rounded-xl border border-zinc-700 font-semibold flex items-center gap-1 cursor-pointer ml-1"
                       >
                         <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
                         <span>Тусламж</span>
@@ -847,11 +864,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         href={rawVideoSrc}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 border border-zinc-700"
+                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-1.5 border border-zinc-700"
                         title="Зөвхөн Админд харагдана"
                       >
                         <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Админ: Линк шалгах</span>
+                        <span>Линк</span>
                       </a>
                     )}
                   </div>
