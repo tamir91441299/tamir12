@@ -205,12 +205,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showUnmuteBanner, setShowUnmuteBanner] = useState(false);
   const [selectedAudio, setSelectedAudio] = useState(movie?.audioTracks?.[0] || 'Монгол дуу оруулга');
   const [selectedSub, setSelectedSub] = useState(movie?.subtitles?.[0] || 'Монгол хадмал');
-  const [selectedQuality, setSelectedQuality] = useState('1080p HD');
+  const [selectedQuality, setSelectedQuality] = useState('1080p Full HD');
+  const [qualityNotice, setQualityNotice] = useState<string | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+
+  const handleQualitySelect = useCallback((quality: string) => {
+    setSelectedQuality(quality);
+    setQualityNotice(`${quality} чанар идэвхжлээ`);
+    setTimeout(() => {
+      setQualityNotice(null);
+    }, 2000);
+  }, []);
 
   // Play video safely with audio / autoplay / error handling without cascading loops
   const playVideoSafe = useCallback(async () => {
@@ -536,12 +545,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             {currentEpisode ? (
               <p className="text-xs text-cyan-400 font-semibold truncate flex items-center gap-1.5">
                 <Tv className="w-3 h-3" />
-                <span>{currentEpisode.title} • HD Дамжуулалт</span>
+                <span>{currentEpisode.title} • {selectedQuality}</span>
               </p>
             ) : (
               <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
-                <span>Шууд тоглуулагч • Хязгааргүй Хурд</span>
+                <span>Шууд тоглуулагч • {selectedQuality}</span>
               </p>
             )}
           </div>
@@ -769,37 +778,46 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               </div>
               
               {/* Google Drive / Embed Helper Bar */}
-              <div className="w-full mt-2 space-y-1.5">
-                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-zinc-800 py-2.5 px-4 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xl">
-                  <div className="flex items-center gap-2">
+              <div className="w-full mt-2 space-y-2">
+                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-cyan-500/40 py-2.5 px-4 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xl">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="font-bold text-white">
                       {isGoogleDrive ? '📁 Google Drive Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 font-medium">
-                      🔒 Татах боломжгүй хамгаалалттай
+                    <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/50 text-cyan-300 font-bold">
+                      💡 1080p / 720p горим бэлэн
                     </span>
                     {isGoogleDrive && (
-                      <button
-                        type="button"
-                        onClick={() => setShowDriveGuide(!showDriveGuide)}
-                        className="text-[11px] text-amber-400 hover:text-amber-300 underline flex items-center gap-1 cursor-pointer ml-1 font-semibold"
-                      >
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        <span>Gmail эрх нэхэж байвал яах вэ?</span>
-                      </button>
+                      <span className="text-[10px] text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded">
+                        ℹ️ Drive Preview нь 360p-ээр эхэлдэг тул 1080p-ээр үзэхийн тулд "Шууд 1080p" дарна уу
+                      </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleServerChange('server1')}
-                      className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
+                      id="embed-to-direct-hd-btn"
+                      onClick={() => {
+                        handleServerChange('server1');
+                        handleQualitySelect('1080p Full HD');
+                      }}
+                      className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
                     >
-                      <Zap className="w-4 h-4 fill-current" />
-                      <span>Шууд Тоглуулагч руу шилжих</span>
+                      <Sparkles className="w-4 h-4 fill-current text-black" />
+                      <span>1080p Full HD Шууд үзэх</span>
                     </button>
+                    {isGoogleDrive && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDriveGuide(!showDriveGuide)}
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-3 py-2 rounded-xl border border-zinc-700 font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Тусламж</span>
+                      </button>
+                    )}
                     {isAdmin && (
                       <a
                         href={rawVideoSrc}
@@ -997,6 +1015,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Floating Quality Change Toast Notification */}
+              {qualityNotice && (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                  <Layers className="w-4 h-4 text-cyan-400" />
+                  <span>{qualityNotice}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1132,10 +1158,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     </span>
                   )}
 
-                  {/* Quality Badge */}
-                  <span className="text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 px-2.5 py-1 rounded-lg">
-                    {selectedQuality}
-                  </span>
+                  {/* Quick 1080p / 720p Quality Toggle Buttons */}
+                  <div className="flex items-center bg-zinc-900 border border-zinc-700/80 rounded-lg p-0.5 shadow-sm">
+                    <button
+                      id="quality-btn-1080p"
+                      type="button"
+                      onClick={() => handleQualitySelect('1080p Full HD')}
+                      className={`px-2 py-1 rounded-md text-[11px] font-black transition-all cursor-pointer ${
+                        selectedQuality.includes('1080p')
+                          ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="1080p Full HD чанараар үзэх"
+                    >
+                      1080p
+                    </button>
+                    <button
+                      id="quality-btn-720p"
+                      type="button"
+                      onClick={() => handleQualitySelect('720p HD')}
+                      className={`px-2 py-1 rounded-md text-[11px] font-black transition-all cursor-pointer ${
+                        selectedQuality.includes('720p')
+                          ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="720p HD чанараар үзэх"
+                    >
+                      720p
+                    </button>
+                  </div>
 
                   {/* Settings Menu Toggle */}
                   <div className="relative">
@@ -1211,19 +1262,37 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         </div>
 
                         <div className="border-t border-zinc-800 pt-2.5">
-                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
-                            <Layers className="w-4 h-4" />
-                            <span>Чанар (Quality)</span>
+                          <div className="font-bold text-cyan-400 mb-1.5 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Layers className="w-4 h-4" />
+                              <span>Чанар (Quality)</span>
+                            </span>
+                            <span className="text-[10px] text-cyan-300 font-bold">1080p / 720p</span>
                           </div>
-                          {['4K Ultra HD', '1080p HD', '720p', '480p'].map((q) => (
+                          {[
+                            { name: '1080p Full HD', tag: '1080p', desc: 'Өндөр нягтрал (Full HD)' },
+                            { name: '720p HD', tag: '720p', desc: 'Стандарт өндөр чанар (HD)' }
+                          ].map((q) => (
                             <button
-                              key={q}
+                              key={q.name}
                               type="button"
-                              onClick={() => setSelectedQuality(q)}
-                              className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
+                              onClick={() => handleQualitySelect(q.name)}
+                              className={`w-full text-left py-2 px-2.5 rounded-lg flex items-center justify-between cursor-pointer transition-all ${
+                                selectedQuality === q.name
+                                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 font-bold'
+                                  : 'hover:bg-zinc-800 text-zinc-300'
+                              }`}
                             >
-                              <span>{q}</span>
-                              {selectedQuality === q && <Check className="w-4 h-4 text-cyan-400" />}
+                              <div className="flex flex-col">
+                                <span className="font-bold flex items-center gap-1.5">
+                                  <span>{q.name}</span>
+                                  <span className="text-[9px] bg-zinc-800 border border-zinc-700 px-1 py-0.2 rounded text-zinc-400">
+                                    {q.tag}
+                                  </span>
+                                </span>
+                                <span className="text-[10px] text-zinc-400 font-normal">{q.desc}</span>
+                              </div>
+                              {selectedQuality === q.name && <Check className="w-4 h-4 text-cyan-400" />}
                             </button>
                           ))}
                         </div>
