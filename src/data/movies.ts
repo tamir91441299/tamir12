@@ -1,5 +1,6 @@
 import { Movie, Comment, Episode } from '../types';
 import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
+import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -82,6 +83,7 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
 export const SAMPLE_MOVIES: Movie[] = [
   DELHIIN_SUIREL_MOVIE,
   MY_HERO_ACADEMIA_S1,
+  MEGALO_BOX_S1,
   {
     id: 'm_91_days',
     title: '91 Days',
@@ -263,5 +265,15 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 17:45',
     likes: 29
+  },
+  {
+    id: 'c6',
+    movieId: 'm_megalo_box_s1',
+    userName: 'Билгүүн',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&q=80',
+    text: 'Мегало Бокс аниме бол жинхэнэ эр зориг, хөлс хүч, боксын гал цогтой бүтээл! 13 анги бүгд дуу оруулгатай орсонд баярлалаа.',
+    rating: 10,
+    date: 'Өнөөдөр 19:20',
+    likes: 31
   }
 ];
