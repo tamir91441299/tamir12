@@ -5,13 +5,45 @@ import { URL } from "url";
 
 const router = Router();
 
-// Fallback high speed sample video cluster
-const FALLBACK_VIDEOS = [
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-];
+// High speed multi-quality video cluster
+const QUALITY_FALLBACK_VIDEOS: Record<string, string[]> = {
+  "1080p": [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  ],
+  "720p": [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+  ],
+  "480p": [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+  ],
+  "360p": [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackSeeTheWorld.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+  ],
+  "auto": [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  ],
+};
+
+const FALLBACK_VIDEOS = QUALITY_FALLBACK_VIDEOS["1080p"];
+
+function getFallbackForQuality(qualityKey: string = "1080p", seed: string = ""): string {
+  const list = QUALITY_FALLBACK_VIDEOS[qualityKey] || QUALITY_FALLBACK_VIDEOS["1080p"];
+  if (!seed) return list[0];
+  const idx = Math.abs(seed.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % list.length;
+  return list[idx];
+}
 
 // Cache of Google Drive direct download cookies/tokens and resolved direct streaming URLs
 interface CachedStream {
@@ -129,10 +161,11 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
  */
 router.get("/api/stream/drive/:fileId", async (req: Request, res: Response) => {
   const { fileId } = req.params;
-  console.log(`📡 [Stream Proxy] Request for Drive File ID: "${fileId}"`);
+  const quality = (req.query.quality as string) || "1080p";
+  console.log(`📡 [Stream Proxy] Request for Drive File ID: "${fileId}" (${quality})`);
   if (!fileId || typeof fileId !== "string" || fileId.length < 10) {
     console.warn(`⚠️ [Stream Proxy] Invalid File ID "${fileId}", falling back.`);
-    res.redirect(302, FALLBACK_VIDEOS[0]);
+    res.redirect(302, getFallbackForQuality(quality, fileId || "default"));
     return;
   }
 
@@ -143,15 +176,16 @@ router.get("/api/stream/drive/:fileId", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("❌ [Stream Proxy] Error resolving stream drive:", err);
     if (!res.headersSent) {
-      res.redirect(302, FALLBACK_VIDEOS[0]);
+      res.redirect(302, getFallbackForQuality(quality, fileId));
     }
   }
 });
 
 router.get("/api/stream/proxy", (req: Request, res: Response) => {
   const videoUrl = req.query.url as string;
+  const quality = (req.query.quality as string) || "1080p";
   if (!videoUrl) {
-    res.redirect(302, FALLBACK_VIDEOS[0]);
+    res.redirect(302, getFallbackForQuality(quality, "default"));
     return;
   }
 
@@ -235,11 +269,10 @@ function pipeStreamWithRange(
 
     // If Google Drive returns HTML error page (e.g., restricted access or Google quota exceeded)
     if (statusCode >= 400 || contentType.includes("text/html")) {
-      console.warn(`Drive stream returned (${statusCode}, ${contentType}), streaming high-speed fallback node`);
+      const q = (clientReq.query?.quality as string) || "1080p";
+      console.warn(`Drive stream returned (${statusCode}, ${contentType}), streaming high-speed ${q} fallback node`);
       if (!clientRes.headersSent) {
-        // Choose fallback node according to fileId hash
-        const idx = fallbackDriveId ? Math.abs(fallbackDriveId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % FALLBACK_VIDEOS.length : 0;
-        clientRes.redirect(302, FALLBACK_VIDEOS[idx]);
+        clientRes.redirect(302, getFallbackForQuality(q, fallbackDriveId || ""));
       }
       return;
     }
@@ -274,7 +307,8 @@ function pipeStreamWithRange(
   proxyReq.on("error", (err) => {
     console.error("Proxy request error:", err);
     if (!clientRes.headersSent) {
-      clientRes.redirect(302, FALLBACK_VIDEOS[0]);
+      const q = (clientReq.query?.quality as string) || "1080p";
+      clientRes.redirect(302, getFallbackForQuality(q, fallbackDriveId || ""));
     }
   });
 
