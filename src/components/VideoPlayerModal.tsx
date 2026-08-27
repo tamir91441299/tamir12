@@ -204,6 +204,43 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [doubleTapFeedback, setDoubleTapFeedback] = useState<'left' | 'right' | null>(null);
+
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTapTimeRef = useRef<number>(0);
+  const lastTapPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Reset & restart auto-hide controls timer
+  const resetControlsTimer = useCallback(() => {
+    setControlsVisible(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setControlsVisible(false);
+        setShowSettingsMenu(false);
+      }
+    }, 3500);
+  }, [isPlaying]);
+
+  // Hide controls automatically when playing
+  useEffect(() => {
+    if (isPlaying) {
+      resetControlsTimer();
+    } else {
+      setControlsVisible(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    }
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [isPlaying, resetControlsTimer]);
 
   const serverModeRef = useRef<ServerMode>(serverMode);
   serverModeRef.current = serverMode;
@@ -1036,6 +1073,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 }}
                 onPause={() => {
                   setIsPlaying(false);
+                  setControlsVisible(true);
                   appendDebugLog('⏸️ Видео түр зогслоо (Pause event)');
                 }}
                 onTimeUpdate={handleTimeUpdate}
@@ -1044,11 +1082,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     selectEpisode(currentEpisodeIndex + 1);
                   } else {
                     setIsPlaying(false);
+                    setControlsVisible(true);
                   }
                 }}
-                onClick={togglePlay}
-                onDoubleClick={toggleFullscreen}
-                className={`w-full h-full cursor-pointer transition-all ${
+                className={`w-full h-full transition-all ${
                   videoFitMode === 'cover'
                     ? 'object-cover'
                     : videoFitMode === 'fill'
@@ -1056,6 +1093,74 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     : 'object-contain'
                 }`}
               />
+
+              {/* Smart Non-Dimming Tap & Gesture Surface */}
+              <div
+                className="absolute inset-0 z-10 cursor-pointer"
+                onClick={(e) => {
+                  const now = Date.now();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const width = rect.width;
+                  const ratio = x / width;
+
+                  // Check for double tap (within 300ms)
+                  if (now - lastTapTimeRef.current < 300) {
+                    if (ratio < 0.35) {
+                      // Double tap left: seek backward 10s
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                      }
+                      setDoubleTapFeedback('left');
+                      setTimeout(() => setDoubleTapFeedback(null), 600);
+                    } else if (ratio > 0.65) {
+                      // Double tap right: seek forward 10s
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.min(videoRef.current.duration || 0, videoRef.current.currentTime + 10);
+                      }
+                      setDoubleTapFeedback('right');
+                      setTimeout(() => setDoubleTapFeedback(null), 600);
+                    } else {
+                      // Double tap center: toggle fullscreen
+                      toggleFullscreen();
+                    }
+                    lastTapTimeRef.current = 0;
+                    resetControlsTimer();
+                    return;
+                  }
+
+                  lastTapTimeRef.current = now;
+                  lastTapPositionRef.current = { x: e.clientX, y: e.clientY };
+
+                  // Single tap: toggle controls visibility without pausing video or darkening screen
+                  setControlsVisible((prev) => {
+                    const nextState = !prev;
+                    if (nextState) {
+                      resetControlsTimer();
+                    }
+                    return nextState;
+                  });
+                }}
+                onMouseMove={resetControlsTimer}
+              />
+
+              {/* Double Tap Seek Visual Indicators */}
+              {doubleTapFeedback === 'left' && (
+                <div className="absolute left-8 top-1/2 -translate-y-1/2 z-30 bg-black/60 border border-cyan-500/40 text-cyan-300 px-4 py-3 rounded-2xl flex flex-col items-center gap-1 animate-in zoom-in-90 duration-200 pointer-events-none">
+                  <div className="flex items-center gap-1 font-black text-sm">
+                    <span>⏪</span> -10 сек
+                  </div>
+                  <span className="text-[10px] text-zinc-400">Ухраасан</span>
+                </div>
+              )}
+              {doubleTapFeedback === 'right' && (
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 z-30 bg-black/60 border border-cyan-500/40 text-cyan-300 px-4 py-3 rounded-2xl flex flex-col items-center gap-1 animate-in zoom-in-90 duration-200 pointer-events-none">
+                  <div className="flex items-center gap-1 font-black text-sm">
+                    +10 сек <span>⏩</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-400">Гүйлгэсэн</span>
+                </div>
+              )}
 
               {/* Unmute Alert if browser auto-muted */}
               {showUnmuteBanner && (
@@ -1074,7 +1179,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
               {/* Loading / Buffering Spinner */}
               {isBuffering && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20 pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20 pointer-events-none">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
                     <span className="text-xs font-bold text-cyan-300 bg-black/80 px-3 py-1 rounded-full">
@@ -1084,11 +1189,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 </div>
               )}
 
-              {/* Central Play Button Overlay */}
-              {!isPlaying && (
+              {/* Non-intrusive Minimalist Play Button (No dimming screen) */}
+              {!isPlaying && controlsVisible && (
                 <div
-                  onClick={togglePlay}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20 cursor-pointer backdrop-blur-[2px] transition-all"
+                  className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none"
                 >
                   <button
                     type="button"
@@ -1096,26 +1200,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       togglePlay();
+                      resetControlsTimer();
                     }}
-                    className="p-6 sm:p-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 text-black hover:scale-110 transition-transform shadow-2xl shadow-cyan-500/60 cursor-pointer flex items-center justify-center group"
+                    className="p-5 sm:p-7 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 text-black hover:scale-110 active:scale-95 transition-transform shadow-2xl shadow-cyan-500/50 cursor-pointer pointer-events-auto flex items-center justify-center group"
                     title="Эхлүүлэх (Play)"
                   >
-                    <Play className="w-12 h-12 sm:w-14 sm:h-14 fill-black translate-x-1" />
+                    <Play className="w-10 h-10 sm:w-12 sm:h-12 fill-black translate-x-0.5" />
                   </button>
-                  <div className="mt-4 flex flex-col items-center gap-1">
-                    <p className="text-sm font-black text-cyan-300 drop-shadow uppercase tracking-wider bg-black/80 px-6 py-2 rounded-full border border-cyan-500/40">
-                      ▶ ТОГЛУУЛАХ / PLAY ({serverMode.toUpperCase()})
+                  <div className="mt-3 flex flex-col items-center pointer-events-auto">
+                    <p className="text-xs font-black text-white drop-shadow bg-black/70 px-4 py-1 rounded-full border border-zinc-700/80">
+                      ▶ ТОГЛУУЛАХ ({activeQualityOption.tag})
                     </p>
-                    <span className="text-[11px] text-zinc-400">
-                      Space товч дарж эхлүүлж болно
-                    </span>
                   </div>
                 </div>
               )}
 
               {/* Floating Quality Change Toast Notification */}
               {qualityNotice && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
                   <Layers className="w-4 h-4 text-cyan-400" />
                   <span>{qualityNotice}</span>
                 </div>
@@ -1123,11 +1225,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </div>
           )}
 
-          {/* Custom Overlay Controls */}
+          {/* Custom Transparent Overlay Controls (Auto-hides smoothly without darkening video) */}
           {!isEmbed && (
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent p-4 sm:p-6 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 space-y-3">
+            <div
+              className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent p-3 sm:p-5 transition-all duration-300 z-30 space-y-2.5 ${
+                controlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'
+              }`}
+              onMouseMove={resetControlsTimer}
+            >
               {/* Timeline Progress Bar */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 sm:gap-3">
                 <span className="text-xs font-mono font-bold text-cyan-300 shrink-0">
                   {formatTime(currentTime)}
                 </span>
@@ -1136,29 +1243,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   min={0}
                   max={duration || 100}
                   value={currentTime}
-                  onChange={handleSeek}
-                  className="flex-1 h-2 bg-zinc-800 accent-cyan-400 rounded-lg cursor-pointer transition-all hover:h-2.5"
+                  onChange={(e) => {
+                    handleSeek(e);
+                    resetControlsTimer();
+                  }}
+                  className="flex-1 h-2 bg-zinc-750 accent-cyan-400 rounded-lg cursor-pointer transition-all hover:h-2.5"
                 />
                 <span className="text-xs font-mono text-zinc-400 shrink-0">
                   {formatTime(duration)}
                 </span>
               </div>
 
-              {/* Bottom Controls Row */}
+              {/* Bottom Controls & Quick Quality Row */}
               <div className="flex items-center justify-between text-white flex-wrap gap-2">
-                <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
                   {/* Play/Pause */}
                   <button
                     id="player-play-toggle"
                     type="button"
-                    onClick={togglePlay}
-                    className="p-2 hover:bg-zinc-800/80 rounded-full transition-all cursor-pointer text-cyan-400 hover:scale-110"
+                    onClick={() => {
+                      togglePlay();
+                      resetControlsTimer();
+                    }}
+                    className="p-1.5 sm:p-2 hover:bg-zinc-800/80 rounded-full transition-all cursor-pointer text-cyan-400 hover:scale-110 active:scale-95"
                     title={isPlaying ? "Түр зогсоох (Space)" : "Тоглуулах (Space)"}
                   >
                     {isPlaying ? (
-                      <Pause className="w-6 h-6 fill-current" />
+                      <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
                     ) : (
-                      <Play className="w-6 h-6 fill-current" />
+                      <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
                     )}
                   </button>
 
@@ -1169,9 +1282,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       if (videoRef.current) {
                         videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
                       }
+                      resetControlsTimer();
                     }}
-                    className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-xs font-bold"
-                    title="10 секунд ухраах (Зүүн сум)"
+                    className="p-1 sm:p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-[11px] sm:text-xs font-bold bg-zinc-900/60 border border-zinc-700/60"
+                    title="10 секунд ухраах"
                   >
                     -10s
                   </button>
@@ -1186,9 +1300,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                           videoRef.current.currentTime + 10
                         );
                       }
+                      resetControlsTimer();
                     }}
-                    className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-xs font-bold"
-                    title="10 секунд гүйлгэх (Баруун сум)"
+                    className="p-1 sm:p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-[11px] sm:text-xs font-bold bg-zinc-900/60 border border-zinc-700/60"
+                    title="10 секунд гүйлгэх"
                   >
                     +10s
                   </button>
@@ -1198,29 +1313,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <button
                       id="player-next-ep"
                       type="button"
-                      onClick={() => selectEpisode(currentEpisodeIndex + 1)}
-                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
+                      onClick={() => {
+                        selectEpisode(currentEpisodeIndex + 1);
+                        resetControlsTimer();
+                      }}
+                      className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
                       title="Дараагийн анги"
                     >
-                      <SkipForward className="w-5 h-5" />
+                      <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
 
-                  {/* Volume Slider & Booster */}
-                  <div className="flex items-center gap-2">
+                  {/* Volume Control */}
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <button
                       id="player-mute-toggle"
                       type="button"
-                      onClick={toggleMute}
-                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
+                      onClick={() => {
+                        toggleMute();
+                        resetControlsTimer();
+                      }}
+                      className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
                       title="Дуу хаах/нээх (M)"
                     >
                       {isMuted || volume === 0 ? (
-                        <VolumeX className="w-5 h-5 text-rose-400" />
+                        <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
                       ) : volume < 0.5 ? (
-                        <Volume1 className="w-5 h-5 text-cyan-400" />
+                        <Volume1 className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                       ) : (
-                        <Volume2 className="w-5 h-5 text-cyan-400" />
+                        <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                       )}
                     </button>
                     <input
@@ -1229,44 +1350,33 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       max={1}
                       step={0.05}
                       value={isMuted ? 0 : volume}
-                      onChange={handleVolumeChange}
-                      className="w-16 sm:w-24 h-1.5 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
+                      onChange={(e) => {
+                        handleVolumeChange(e);
+                        resetControlsTimer();
+                      }}
+                      className="w-12 sm:w-20 h-1.5 bg-zinc-700 accent-cyan-400 rounded cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* Right Player Settings & Modifiers */}
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {/* Current Active Server pill */}
-                  <span className="text-[11px] font-black bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/50 px-2.5 py-1 rounded-lg uppercase shadow-sm">
-                    {serverMode === 'server4'
-                      ? 'СЕРВЕР 4 (HD)'
-                      : serverMode === 'server3'
-                      ? 'СЕРВЕР 3 (EDGE)'
-                      : serverMode === 'server2'
-                      ? 'СЕРВЕР 2 (TURBO)'
-                      : 'СЕРВЕР 1 (ULTRA)'}
-                  </span>
-
-                  {/* Playback speed indicator */}
-                  {playbackSpeed !== 1 && (
-                    <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded">
-                      {playbackSpeed}x
-                    </span>
-                  )}
-
-                  {/* Quick Quality Toggle Buttons (1080p, 720p, 480p, 360p, Auto) */}
-                  <div className="flex items-center bg-zinc-900/90 border border-zinc-700/80 rounded-lg p-0.5 shadow-sm">
+                {/* Right Quick Quality Switcher & Controls */}
+                <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
+                  {/* Instant Quality Switcher Bar (1080p, 720p, 480p, Auto) */}
+                  <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 shadow-lg backdrop-blur-sm">
+                    <span className="text-[10px] text-zinc-400 px-1.5 font-bold hidden md:inline">Чанар:</span>
                     {QUALITY_OPTIONS.map((q) => (
                       <button
                         key={q.key}
-                        id={`quality-btn-${q.key}`}
+                        id={`bottom-quality-btn-${q.key}`}
                         type="button"
-                        onClick={() => handleQualitySelect(q.key)}
-                        className={`px-2 py-1 rounded-md text-[11px] font-black transition-all cursor-pointer ${
+                        onClick={() => {
+                          handleQualitySelect(q.key);
+                          resetControlsTimer();
+                        }}
+                        className={`px-2 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
                           selectedQualityKey === q.key
-                            ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black scale-105'
-                            : 'text-zinc-400 hover:text-white'
+                            ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md scale-105'
+                            : 'text-zinc-300 hover:text-white hover:bg-zinc-800'
                         }`}
                         title={`${q.label} (${q.resolution}) - ${q.description}`}
                       >
@@ -1275,20 +1385,38 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     ))}
                   </div>
 
+                  {/* Playback speed indicator / quick cycle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const speeds = [1, 1.25, 1.5, 2, 0.75];
+                      const nextIdx = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
+                      handlePlaybackSpeed(speeds[nextIdx]);
+                      resetControlsTimer();
+                    }}
+                    className="text-[11px] font-bold bg-zinc-900/80 hover:bg-zinc-800 text-amber-300 border border-zinc-700/80 px-2 py-1 rounded-lg cursor-pointer"
+                    title="Тоглуулах хурд солих"
+                  >
+                    {playbackSpeed}x
+                  </button>
+
                   {/* Settings Menu Toggle */}
                   <div className="relative">
                     <button
                       id="player-settings-toggle"
                       type="button"
-                      onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                      className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 cursor-pointer"
-                      title="Тохиргоо"
+                      onClick={() => {
+                        setShowSettingsMenu(!showSettingsMenu);
+                        resetControlsTimer();
+                      }}
+                      className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg text-zinc-300 cursor-pointer bg-zinc-900/80 border border-zinc-700/80"
+                      title="Тохиргоо (Хадмал, Дуу, Чанар)"
                     >
-                      <Settings className="w-5 h-5" />
+                      <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
 
                     {showSettingsMenu && (
-                      <div className="absolute right-0 bottom-12 w-72 bg-zinc-900 border border-zinc-700/80 rounded-2xl p-4 shadow-2xl space-y-3 z-50 text-xs text-zinc-200 backdrop-blur-xl">
+                      <div className="absolute right-0 bottom-12 w-72 bg-zinc-900/98 border border-zinc-700 rounded-2xl p-4 shadow-2xl space-y-3 z-50 text-xs text-zinc-200 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
                         <div>
                           <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
                             <Languages className="w-4 h-4" />
@@ -1298,7 +1426,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                             <button
                               key={track}
                               type="button"
-                              onClick={() => setSelectedAudio(track)}
+                              onClick={() => {
+                                setSelectedAudio(track);
+                                resetControlsTimer();
+                              }}
                               className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
                             >
                               <span>{track}</span>
@@ -1316,7 +1447,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                             <button
                               key={sub}
                               type="button"
-                              onClick={() => setSelectedSub(sub)}
+                              onClick={() => {
+                                setSelectedSub(sub);
+                                resetControlsTimer();
+                              }}
                               className="w-full text-left py-1.5 px-2.5 rounded-lg hover:bg-zinc-800 flex justify-between cursor-pointer"
                             >
                               <span>{sub}</span>
@@ -1335,7 +1469,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               <button
                                 key={spd}
                                 type="button"
-                                onClick={() => handlePlaybackSpeed(spd)}
+                                onClick={() => {
+                                  handlePlaybackSpeed(spd);
+                                  resetControlsTimer();
+                                }}
                                 className={`py-1 rounded-md text-center cursor-pointer font-bold ${
                                   playbackSpeed === spd
                                     ? 'bg-cyan-500 text-black shadow'
@@ -1361,7 +1498,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               <button
                                 key={q.key}
                                 type="button"
-                                onClick={() => handleQualitySelect(q.key)}
+                                onClick={() => {
+                                  handleQualitySelect(q.key);
+                                  resetControlsTimer();
+                                }}
                                 className={`w-full text-left py-2 px-2.5 rounded-lg flex items-center justify-between cursor-pointer transition-all ${
                                   selectedQualityKey === q.key
                                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold'
@@ -1390,14 +1530,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   <button
                     id="player-fullscreen-toggle"
                     type="button"
-                    onClick={toggleFullscreen}
-                    className="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    onClick={() => {
+                      toggleFullscreen();
+                      resetControlsTimer();
+                    }}
+                    className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors cursor-pointer bg-zinc-900/80 border border-zinc-700/80"
                     title={isFullscreen ? "Бүтэн дэлгэцээс гарах (F)" : "Бүтэн дэлгэцээр үзэх (F)"}
                   >
                     {isFullscreen ? (
-                      <Minimize className="w-5 h-5 text-cyan-400" />
+                      <Minimize className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                     ) : (
-                      <Maximize className="w-5 h-5" />
+                      <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                 </div>
