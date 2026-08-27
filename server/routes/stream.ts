@@ -75,85 +75,100 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
     return { url: cached.url, cookies: cached.cookies };
   }
 
-  const initialUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
-  
-  return new Promise((resolve) => {
-    const parsed = new URL(initialUrl);
-    const req = https.request(
-      {
-        hostname: parsed.hostname,
-        path: parsed.pathname + parsed.search,
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-          "Accept": "*/*",
-        },
-      },
-      (res) => {
-        const cookies = res.headers["set-cookie"] || [];
+  // Multi-strategy Google Drive direct resolution endpoints
+  const endpoints = [
+    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`,
+    `https://docs.google.com/uc?export=download&id=${fileId}&confirm=t`,
+    `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
+  ];
 
-        // If redirect, grab redirect location
-        if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-          let directUrl = res.headers.location;
-          if (directUrl.startsWith("/")) {
-            directUrl = `https://${parsed.hostname}${directUrl}`;
-          }
-          const result = { url: directUrl, cookies };
-          directUrlCache.set(fileId, { ...result, expires: Date.now() + 1000 * 60 * 45 });
-          resolve(result);
-          return;
-        }
+  for (const targetEndpoint of endpoints) {
+    try {
+      const result = await new Promise<{ url: string; cookies?: string[] } | null>((resolve) => {
+        const parsed = new URL(targetEndpoint);
+        const req = https.request(
+          {
+            hostname: parsed.hostname,
+            path: parsed.pathname + parsed.search,
+            method: "GET",
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+              "Accept": "*/*",
+              "Accept-Encoding": "identity",
+            },
+          },
+          (res) => {
+            const cookies = res.headers["set-cookie"] || [];
 
-        // If directly returned video stream
-        const contentType = (res.headers["content-type"] || "").toLowerCase();
-        if (contentType.includes("video") || contentType.includes("octet-stream")) {
-          const result = { url: initialUrl, cookies };
-          directUrlCache.set(fileId, { ...result, expires: Date.now() + 1000 * 60 * 45 });
-          resolve(result);
-          return;
-        }
-
-        // Read response body if confirmation HTML is returned for files > 100MB
-        let body = "";
-        res.on("data", (chunk) => {
-          body += chunk.toString();
-          if (body.length > 50000) res.destroy();
-        });
-
-        res.on("end", () => {
-          // Look for confirm token in HTML
-          const confirmMatch = body.match(/confirm=([0-9A-Za-z_-]+)/);
-          const uuidMatch = body.match(/uuid=([0-9A-Za-z_-]+)/);
-
-          if (confirmMatch && confirmMatch[1]) {
-            let confirmedUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=${confirmMatch[1]}`;
-            if (uuidMatch && uuidMatch[1]) {
-              confirmedUrl += `&uuid=${uuidMatch[1]}`;
+            // If redirect, grab redirect location
+            if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+              let directUrl = res.headers.location;
+              if (directUrl.startsWith("/")) {
+                directUrl = `https://${parsed.hostname}${directUrl}`;
+              }
+              const streamRes = { url: directUrl, cookies };
+              directUrlCache.set(fileId, { ...streamRes, expires: Date.now() + 1000 * 60 * 45 });
+              resolve(streamRes);
+              return;
             }
-            const result = { url: confirmedUrl, cookies };
-            directUrlCache.set(fileId, { ...result, expires: Date.now() + 1000 * 60 * 45 });
-            resolve(result);
-            return;
+
+            // If directly returned video stream
+            const contentType = (res.headers["content-type"] || "").toLowerCase();
+            if (contentType.includes("video") || contentType.includes("octet-stream")) {
+              const streamRes = { url: targetEndpoint, cookies };
+              directUrlCache.set(fileId, { ...streamRes, expires: Date.now() + 1000 * 60 * 45 });
+              resolve(streamRes);
+              return;
+            }
+
+            // Read response body if confirmation HTML is returned for files > 100MB
+            let body = "";
+            res.on("data", (chunk) => {
+              body += chunk.toString();
+              if (body.length > 50000) res.destroy();
+            });
+
+            res.on("end", () => {
+              // Look for confirm token in HTML
+              const confirmMatch = body.match(/confirm=([0-9A-Za-z_-]+)/);
+              const uuidMatch = body.match(/uuid=([0-9A-Za-z_-]+)/);
+
+              if (confirmMatch && confirmMatch[1]) {
+                let confirmedUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=${confirmMatch[1]}`;
+                if (uuidMatch && uuidMatch[1]) {
+                  confirmedUrl += `&uuid=${uuidMatch[1]}`;
+                }
+                const streamRes = { url: confirmedUrl, cookies };
+                directUrlCache.set(fileId, { ...streamRes, expires: Date.now() + 1000 * 60 * 45 });
+                resolve(streamRes);
+                return;
+              }
+
+              // Direct link fallback
+              resolve(null);
+            });
           }
+        );
 
-          // Fallback direct url
-          const fallbackDirect = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
-          resolve({ url: fallbackDirect, cookies });
+        req.on("error", () => resolve(null));
+        req.setTimeout(6000, () => {
+          req.destroy();
+          resolve(null);
         });
+        req.end();
+      });
+
+      if (result) {
+        return result;
       }
-    );
+    } catch {
+      // Continue to next endpoint
+    }
+  }
 
-    req.on("error", () => {
-      resolve({ url: initialUrl });
-    });
-
-    req.setTimeout(8000, () => {
-      req.destroy();
-      resolve({ url: initialUrl });
-    });
-
-    req.end();
-  });
+  // Final fallback direct url
+  const fallbackDirect = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
+  return { url: fallbackDirect };
 }
 
 /**
