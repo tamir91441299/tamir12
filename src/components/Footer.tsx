@@ -1,11 +1,13 @@
 import React from 'react';
-import { ShieldAlert, Film, Heart, Search, Globe } from 'lucide-react';
+import { ShieldAlert, Film, Heart, Search, Globe, Smartphone, Download } from 'lucide-react';
 
 interface FooterProps {
   onOpenSeoModal?: () => void;
+  onOpenInstallModal?: () => void;
+  isAdmin?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallModal, isAdmin }) => {
   return (
     <footer className="bg-[#0f0f11] border-t border-zinc-800/80 text-zinc-400 py-10 px-4 mt-16 text-xs">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -22,15 +24,27 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal }) => {
               FlickNime нь Монгол хадмал болон дуу оруулгатай анимэ, кино, олон ангит цувралуудыг өндөр чанартайгаар толилуулах онлайн платформ юм.
             </p>
 
-            {onOpenSeoModal && (
-              <button
-                onClick={onOpenSeoModal}
-                className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs transition-all cursor-pointer mt-2"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span>Google SEO & Search Console Тохиргоо</span>
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {onOpenInstallModal && isAdmin && (
+                <button
+                  onClick={onOpenInstallModal}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-md cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>📲 Утсандаа Апп татах / Суулгах</span>
+                </button>
+              )}
+
+              {onOpenSeoModal && (
+                <button
+                  onClick={onOpenSeoModal}
+                  className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs transition-all cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Google SEO Тохиргоо</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Quick links */}

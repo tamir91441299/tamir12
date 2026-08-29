@@ -52,7 +52,7 @@ ${movieCatalogText}
 3. Анимэ болон Кино багц тус бүр 4,000₮, VIP бүтэн багц 7,000₮ байдгийг тодорхой зөвлөж болно.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.7-flash',
       contents: prompt,
       config: {
         systemInstruction,

@@ -23,7 +23,9 @@ import {
   Skull,
   Smile,
   Cpu,
-  Layers
+  Layers,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -48,6 +50,7 @@ interface NavbarProps {
   currentUser: UserAccount | null;
   onOpenAuthModal: () => void;
   onOpenUserManagement?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -70,6 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenAuthModal,
   onOpenUserManagement,
+  onOpenInstallModal,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMovieDropdownOpen, setIsMovieDropdownOpen] = useState(false);
@@ -215,6 +219,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           🎬 FlickNime — Монгол хадмал болон дуу оруулгатай анимэ & кино сан
         </span>
         <div className="flex items-center gap-2 sm:gap-3 mx-auto sm:mx-0 text-cyan-300 font-medium">
+          {onOpenInstallModal && isAdmin && (
+            <button
+              onClick={onOpenInstallModal}
+              className="flex items-center gap-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold px-2 py-0.5 rounded text-[10px] sm:text-[11px] transition-all shadow-sm hover:scale-105 cursor-pointer"
+              title="Апп татах & Утсандаа суулгах холбоос"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>📲 Апп татах</span>
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('ai')}
             className="flex items-center gap-1 hover:text-cyan-200 cursor-pointer transition-colors"

@@ -58,7 +58,7 @@ interface VideoPlayerModalProps {
   isMoviePackage?: boolean;
 }
 
-type ServerMode = 'server1' | 'server2' | 'server3' | 'server4' | 'embed';
+type ServerMode = 'embed' | 'direct';
 
 export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   movie,
@@ -133,14 +133,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Default mode: Default to high-speed Direct HD player (Server 1) for 1080p/720p crystal-clear playback without 360p limits
-  const [serverMode, setServerMode] = useState<ServerMode>('server1');
+  // Default mode: Default to Google Drive backup / Embed mode
+  const [serverMode, setServerMode] = useState<ServerMode>(isExternalEmbed || isGoogleDrive || !isDirectMedia ? 'embed' : 'direct');
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
 
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
   const [drawerSearch, setDrawerSearch] = useState<string>('');
-  const failoverAttemptsRef = useRef<number>(0);
 
   const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -164,7 +163,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const videoSrcToPlay =
     serverMode === 'embed'
       ? ''
-      : getDirectPlaybackStream(rawVideoSrc, epNum, serverMode, selectedQualityKey);
+      : getDirectPlaybackStream(rawVideoSrc, epNum, 'server1', selectedQualityKey);
 
   const activeQualityOption =
     QUALITY_OPTIONS.find((q) => q.key === selectedQualityKey) || QUALITY_OPTIONS[0];
@@ -176,7 +175,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     appendDebugLog(`Эх холбоос (Raw URL): ${rawVideoSrc}`);
     appendDebugLog(`Google Drive ID: ${googleDriveId || 'Байхгүй'}`);
     appendDebugLog(`YouTube ID: ${extractYouTubeId(rawVideoSrc) || 'Байхгүй'}`);
-    appendDebugLog(`Тоглуулах горим (Server Mode): ${serverMode}`);
+    appendDebugLog(`Тоглуулах горим (Mode): Драйв нөөц (Embed)`);
     appendDebugLog(`Сонгосон чанар (Quality): ${activeQualityOption.label} (${activeQualityOption.resolution})`);
     if (serverMode === 'embed') {
       appendDebugLog(`Iframe Embed URL: ${iframeUrl}`);
@@ -289,15 +288,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const handleQualitySelect = useCallback((qualityKey: VideoQualityKey) => {
     const opt = QUALITY_OPTIONS.find((q) => q.key === qualityKey) || QUALITY_OPTIONS[0];
     const savedTime = videoRef.current?.currentTime || currentTime || 0;
-    const currentMode = serverModeRef.current;
 
     setSelectedQualityKey(qualityKey);
-
-    // If currently in embed (Iframe) mode, switch to direct high-speed player (server1)
-    if (currentMode === 'embed') {
-      serverModeRef.current = 'server1';
-      setServerMode('server1');
-    }
 
     setQualityNotice(`✨ ${opt.label} (${opt.resolution}) горимд шилжлээ`);
     setTimeout(() => {
@@ -329,7 +321,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Server switch handler
   const handleServerChange = (mode: ServerMode) => {
-    failoverAttemptsRef.current = 0;
     serverModeRef.current = mode;
     setServerMode(mode);
     setIsPlaying(true);
@@ -654,86 +645,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Multi-Node High-Concurrency Server Selector */}
-          <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 text-xs shadow-lg backdrop-blur-md overflow-x-auto no-scrollbar max-w-full">
-            {/* Primary Direct HD Server (Drive HD / Direct) */}
-            <button
-              type="button"
-              id="server1-btn"
-              onClick={() => handleServerChange('server1')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all font-black cursor-pointer flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs whitespace-nowrap ${
-                serverMode === 'server1'
-                  ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black'
-                  : 'text-cyan-300 hover:text-white'
-              }`}
-              title="Шууд Тоглуулагч 1: 1080p/720p чанарын удирдлагатай шууд дамжуулалт"
-            >
-              <Activity className="w-3.5 h-3.5 shrink-0" />
-              <span>{isGoogleDrive ? 'Drive HD (Шууд)' : 'Шууд 1'}</span>
-            </button>
-
-            {/* Fallback Embed / Iframe Server */}
-            {isExternalEmbed && (
-              <button
-                type="button"
-                id="server-embed-btn"
-                onClick={() => handleServerChange('embed')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-[11px] sm:text-xs whitespace-nowrap ${
-                  serverMode === 'embed'
-                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-md font-black'
-                    : 'text-amber-300 hover:text-white'
-                }`}
-                title={isGoogleDrive ? 'Google Drive Iframe Вэб Тоглуулагч' : isYouTube ? 'YouTube Бичлэг' : 'Вэб Embed'}
-              >
-                <Zap className="w-3 h-3 fill-current shrink-0" />
-                <span>{isGoogleDrive ? 'Drive Iframe (Нөөц)' : isYouTube ? 'YouTube' : 'Iframe'}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              id="server2-btn"
-              onClick={() => handleServerChange('server2')}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-[11px] sm:text-xs whitespace-nowrap ${
-                serverMode === 'server2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Сервер 2: Turbo CDN (Seoul Node)"
-            >
-              <Sparkles className="w-3 h-3 shrink-0" />
-              <span>Сервер 2</span>
-            </button>
-
-            <button
-              type="button"
-              id="server3-btn"
-              onClick={() => handleServerChange('server3')}
-              className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer text-xs whitespace-nowrap ${
-                serverMode === 'server3'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Сервер 3: Global Edge Node (Олон улс & Монгол)"
-            >
-              <Radio className="w-3 h-3 shrink-0" />
-              <span>Сервер 3</span>
-            </button>
-
-            <button
-              type="button"
-              id="server4-btn"
-              onClick={() => handleServerChange('server4')}
-              className={`hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all font-bold cursor-pointer text-xs whitespace-nowrap ${
-                serverMode === 'server4'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-md font-black'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Сервер 4: Direct HD (Anycast Cloud CDN)"
-            >
-              <Activity className="w-3 h-3 shrink-0" />
-              <span>Сервер 4</span>
-            </button>
+          {/* Drive Backup Indicator */}
+          <div className="flex items-center bg-zinc-900/90 border border-emerald-500/50 rounded-xl px-3 py-1 text-xs shadow-lg backdrop-blur-md">
+            <div className="flex items-center gap-1.5 font-black text-emerald-400 text-xs whitespace-nowrap">
+              <Zap className="w-3.5 h-3.5 fill-current text-emerald-400 shrink-0" />
+              <span>Драйв нөөц</span>
+            </div>
           </div>
 
           {/* Header Quick Quality Selector Pills */}
@@ -1010,7 +927,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   setIsBuffering(true);
                 }}
                 onPlaying={() => {
-                  failoverAttemptsRef.current = 0;
                   setIsBuffering(false);
                   setIsPlaying(true);
                   appendDebugLog('▶️ Видео хэвийн тоглож байна (Playing)');
@@ -1024,7 +940,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   }
                 }}
                 onLoadedMetadata={() => {
-                  failoverAttemptsRef.current = 0;
                   if (videoRef.current) {
                     const dur = videoRef.current.duration || 0;
                     setDuration(dur);
@@ -1053,18 +968,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     ...prev,
                     error: `Error Code: ${errCode} (${errMsg || 'Media playback error'})`,
                   }));
-
-                  if (failoverAttemptsRef.current < 4) {
-                    failoverAttemptsRef.current += 1;
-                    const nextMode: ServerMode =
-                      serverMode === 'server1' ? 'server2' :
-                      serverMode === 'server2' ? 'server3' :
-                      serverMode === 'server3' ? 'server4' : 'server1';
-                    appendDebugLog(`🔄 Автомат нөөц сервер рүү шилжиж байна: ${nextMode}`);
-                    setServerMode(nextMode);
-                  } else {
-                    setIsBuffering(false);
-                    appendDebugLog(`⚠️ Бүх шууд серверүүд алдаа заалаа. Та "Drive HD" / "Embed" сервер сонгох эсвэл "Drive дээр нээх" линкээр орно уу.`);
+                  setIsBuffering(false);
+                  if (serverMode !== 'embed') {
+                    setServerMode('embed');
+                    appendDebugLog('🔄 Драйв нөөц (Embed) горим руу автомат шилжлээ.');
                   }
                 }}
                 onPlay={() => {
@@ -1818,7 +1725,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               {/* Quick Actions & Server Switcher */}
               <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-2">
                 <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Шуурхай Оношилгоо & Сервер Солих
+                  Шуурхай Оношилгоо & Тоглуулагч
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1826,47 +1733,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     onClick={() => handleServerChange('embed')}
                     className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
                       serverMode === 'embed'
-                        ? 'bg-amber-400 text-black shadow-md'
+                        ? 'bg-emerald-500 text-black shadow-md'
                         : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                     }`}
                   >
-                    ⚡ Drive / YouTube Embed горим
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleServerChange('server1')}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
-                      serverMode === 'server1'
-                        ? 'bg-cyan-400 text-black shadow-md'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    📡 Шууд 1 (Proxy Stream)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleServerChange('server2')}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
-                      serverMode === 'server2'
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    🌐 Сервер 2 (Seoul Turbo)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleServerChange('server3')}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition-all ${
-                      serverMode === 'server3'
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    🌍 Сервер 3 (Global Edge)
+                    ⚡ Драйв нөөц (Drive / Embed)
                   </button>
 
                   <button

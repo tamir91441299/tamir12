@@ -13,6 +13,7 @@ import { SecurityShieldModal } from './components/SecurityShieldModal';
 import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
+import { InstallAppModal } from './components/InstallAppModal';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
@@ -83,6 +84,9 @@ export default function App() {
   const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
+  const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {
@@ -574,6 +578,9 @@ export default function App() {
         }}
         onOpenUserManagement={() => {
           setShowUserManagementModal(true);
+        }}
+        onOpenInstallModal={() => {
+          setShowInstallModal(true);
         }}
       />
 
@@ -1110,8 +1117,19 @@ export default function App() {
         </div>
       )}
 
+      {showInstallModal && (
+        <InstallAppModal
+          isOpen={showInstallModal}
+          onClose={() => setShowInstallModal(false)}
+        />
+      )}
+
       {/* Footer */}
-      <Footer onOpenSeoModal={() => setShowSeoModal(true)} />
+      <Footer 
+        onOpenSeoModal={() => setShowSeoModal(true)} 
+        onOpenInstallModal={() => setShowInstallModal(true)}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }
