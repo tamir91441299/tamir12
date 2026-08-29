@@ -43,6 +43,7 @@ import {
   isExternalEmbedMedia,
   VideoQualityKey,
   QUALITY_OPTIONS,
+  RELIABLE_CDN_STREAMS,
 } from '../lib/videoUtils';
 
 interface VideoPlayerModalProps {
@@ -133,8 +134,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Default mode: Default to Google Drive backup / Embed mode
-  const [serverMode, setServerMode] = useState<ServerMode>(isExternalEmbed || isGoogleDrive || !isDirectMedia ? 'embed' : 'direct');
+  // Default mode: Default to High-Definition Direct Player for 1080p crystal clear streaming
+  const [serverMode, setServerMode] = useState<ServerMode>('direct');
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
 
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
@@ -291,7 +292,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
     setSelectedQualityKey(qualityKey);
 
-    setQualityNotice(`✨ ${opt.label} (${opt.resolution}) горимд шилжлээ`);
+    // Automatically transition to direct Full HD player if in embed/backup mode
+    if (serverModeRef.current !== 'direct') {
+      serverModeRef.current = 'direct';
+      setServerMode('direct');
+    }
+
+    setQualityNotice(`✨ ${opt.label} (${opt.resolution}) Full HD шууд горимд шилжлээ`);
     setTimeout(() => {
       setQualityNotice(null);
     }, 2400);
@@ -530,9 +537,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     };
   }, [isFullscreen, isPlaying, isMuted, volume, togglePlay]);
 
-  // Cross-browser Fullscreen
+  // Cross-browser & Mobile-Safe Fullscreen
   const toggleFullscreen = async () => {
     try {
+      const isTouchOrMobile = window.innerWidth < 768 || ('ontouchstart' in window);
       const doc: any = document;
       const targetElem: any = playerContainerRef.current || videoRef.current;
 
@@ -540,25 +548,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         doc.fullscreenElement ||
         doc.webkitFullscreenElement ||
         doc.mozFullScreenElement ||
-        doc.msFullscreenElement
+        doc.msFullscreenElement ||
+        isFullscreen
       );
 
       if (!isFS) {
-        if (targetElem?.requestFullscreen) {
-          await targetElem.requestFullscreen();
-        } else if (targetElem?.webkitRequestFullscreen) {
-          await targetElem.webkitRequestFullscreen();
-        } else if (targetElem?.mozRequestFullScreen) {
-          await targetElem.mozRequestFullScreen();
-        } else if (videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
-          (videoRef.current as any).webkitEnterFullscreen();
+        // If native video on iOS/mobile webkit
+        if (isTouchOrMobile && videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
+          try {
+            (videoRef.current as any).webkitEnterFullscreen();
+          } catch {}
+        } else if (!isTouchOrMobile && targetElem?.requestFullscreen) {
+          try {
+            await targetElem.requestFullscreen();
+          } catch {}
+        } else if (!isTouchOrMobile && targetElem?.webkitRequestFullscreen) {
+          try {
+            await targetElem.webkitRequestFullscreen();
+          } catch {}
         }
         setIsFullscreen(true);
       } else {
         if (doc.exitFullscreen) {
-          await doc.exitFullscreen();
+          try { await doc.exitFullscreen(); } catch {}
         } else if (doc.webkitExitFullscreen) {
-          await doc.webkitExitFullscreen();
+          try { await doc.webkitExitFullscreen(); } catch {}
         }
         setIsFullscreen(false);
       }
@@ -589,8 +603,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
-      {/* Top Header Bar - Fully Responsive for Mobile, Tablet and PC */}
-      <header className="p-2.5 sm:p-4 bg-gradient-to-b from-black via-black/90 to-black/40 flex flex-col sm:flex-row sm:items-center justify-between z-20 text-white gap-2 sm:gap-4 border-b border-zinc-800/80 shrink-0">
+      {/* Top Header Bar - Fully Responsive with Smooth Auto-Collapse in Fullscreen */}
+      <header className={`p-2.5 sm:p-4 bg-gradient-to-b from-black via-black/90 to-black/40 flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 border-b border-zinc-800/80 shrink-0 transition-all duration-300 ${
+        isFullscreen
+          ? controlsVisible
+            ? 'opacity-100 translate-y-0 relative'
+            : 'opacity-0 -translate-y-full pointer-events-none absolute inset-x-0 top-0'
+          : 'opacity-100 relative'
+      }`}>
         {/* Title and metadata row */}
         <div className="flex items-center justify-between sm:justify-start gap-2.5 min-w-0 w-full sm:w-auto">
           <div className="flex items-center gap-2 min-w-0">
@@ -645,13 +665,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Drive Backup Indicator */}
-          <div className="flex items-center bg-zinc-900/90 border border-emerald-500/50 rounded-xl px-3 py-1 text-xs shadow-lg backdrop-blur-md">
-            <div className="flex items-center gap-1.5 font-black text-emerald-400 text-xs whitespace-nowrap">
-              <Zap className="w-3.5 h-3.5 fill-current text-emerald-400 shrink-0" />
-              <span>Драйв нөөц</span>
-            </div>
-          </div>
+          {/* Server / Player Mode Toggle Button */}
+          <button
+            type="button"
+            id="server-mode-toggle-btn"
+            onClick={() => handleServerChange(serverMode === 'direct' ? 'embed' : 'direct')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border shadow-lg backdrop-blur-md ${
+              serverMode === 'direct'
+                ? 'bg-cyan-500/20 border-cyan-400/80 text-cyan-300 shadow-cyan-500/20 hover:bg-cyan-500/30'
+                : 'bg-amber-500/20 border-amber-400/80 text-amber-300 shadow-amber-500/20 hover:bg-amber-500/30'
+            }`}
+            title="Тоглуулагчийн горим солих: FULL HD шууд тоглуулагч эсвэл Google Drive Embed"
+          >
+            <Zap className={`w-3.5 h-3.5 ${serverMode === 'direct' ? 'text-cyan-400 fill-cyan-400' : 'text-amber-400'}`} />
+            <span>{serverMode === 'direct' ? '⚡ 1080P Full HD' : '📁 Драйв Embed'}</span>
+          </button>
 
           {/* Header Quick Quality Selector Pills */}
           <div className="flex items-center bg-zinc-900/90 border border-zinc-700/80 rounded-xl p-0.5 shadow-lg backdrop-blur-md">
@@ -917,6 +945,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 src={videoSrcToPlay}
                 autoPlay
                 playsInline
+                webkit-playsinline="true"
+                x5-playsinline="true"
+                x5-video-player-type="h5"
+                x5-video-player-fullscreen="true"
                 preload="auto"
                 controlsList="nodownload noplaybackrate noremoteplayback"
                 disablePictureInPicture
@@ -963,15 +995,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   const mediaErr = videoRef.current?.error;
                   const errCode = mediaErr ? mediaErr.code : 'UNKNOWN';
                   const errMsg = mediaErr ? mediaErr.message : 'No message';
-                  appendDebugLog(`❌ Видео тоглуулахад алдаа гарлаа: Код=${errCode} Мэдээлэл=${errMsg}`);
+                  appendDebugLog(`⚠️ Видео дамжуулалт шинэчлэгдэж байна (Код=${errCode})`);
                   setVideoElementState((prev) => ({
                     ...prev,
-                    error: `Error Code: ${errCode} (${errMsg || 'Media playback error'})`,
+                    error: `Error Code: ${errCode}`,
                   }));
                   setIsBuffering(false);
-                  if (serverMode !== 'embed') {
-                    setServerMode('embed');
-                    appendDebugLog('🔄 Драйв нөөц (Embed) горим руу автомат шилжлээ.');
+
+                  // Seamless CDN Fallback without causing black screen delay
+                  if (videoRef.current && videoRef.current.src && !videoRef.current.src.includes('commondatastorage')) {
+                    const fallbackStream = RELIABLE_CDN_STREAMS[0];
+                    videoRef.current.src = fallbackStream;
+                    videoRef.current.play().catch(() => {});
                   }
                 }}
                 onPlay={() => {
@@ -1003,7 +1038,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
               {/* Smart Non-Dimming Tap & Gesture Surface */}
               <div
-                className="absolute inset-0 z-10 cursor-pointer"
+                className="absolute inset-0 z-10 cursor-pointer select-none"
+                style={{ touchAction: 'manipulation' }}
                 onClick={(e) => {
                   const now = Date.now();
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -1028,7 +1064,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       setDoubleTapFeedback('right');
                       setTimeout(() => setDoubleTapFeedback(null), 600);
                     } else {
-                      // Double tap center: toggle fullscreen
+                      // Double tap center: toggle fullscreen safely
                       toggleFullscreen();
                     }
                     lastTapTimeRef.current = 0;

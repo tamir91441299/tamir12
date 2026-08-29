@@ -67,7 +67,7 @@ router.use("/api/stream", (req, res, next) => {
 });
 
 /**
- * Resolves Google Drive file ID into a direct streaming URL, handling large-file virus confirmation tokens
+ * Resolves Google Drive file ID into a direct streaming URL with fast parallel resolution
  */
 async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: string; cookies?: string[] }> {
   const cached = directUrlCache.get(fileId);
@@ -75,16 +75,14 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
     return { url: cached.url, cookies: cached.cookies };
   }
 
-  // Multi-strategy Google Drive direct resolution endpoints
   const endpoints = [
     `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`,
     `https://docs.google.com/uc?export=download&id=${fileId}&confirm=t`,
-    `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`,
   ];
 
-  for (const targetEndpoint of endpoints) {
-    try {
-      const result = await new Promise<{ url: string; cookies?: string[] } | null>((resolve) => {
+  const tryEndpoint = (targetEndpoint: string) => {
+    return new Promise<{ url: string; cookies?: string[] } | null>((resolve) => {
+      try {
         const parsed = new URL(targetEndpoint);
         const req = https.request(
           {
@@ -100,7 +98,6 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
           (res) => {
             const cookies = res.headers["set-cookie"] || [];
 
-            // If redirect, grab redirect location
             if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
               let directUrl = res.headers.location;
               if (directUrl.startsWith("/")) {
@@ -112,7 +109,6 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
               return;
             }
 
-            // If directly returned video stream
             const contentType = (res.headers["content-type"] || "").toLowerCase();
             if (contentType.includes("video") || contentType.includes("octet-stream")) {
               const streamRes = { url: targetEndpoint, cookies };
@@ -121,15 +117,13 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
               return;
             }
 
-            // Read response body if confirmation HTML is returned for files > 100MB
             let body = "";
             res.on("data", (chunk) => {
               body += chunk.toString();
-              if (body.length > 50000) res.destroy();
+              if (body.length > 20000) res.destroy();
             });
 
             res.on("end", () => {
-              // Look for confirm token in HTML
               const confirmMatch = body.match(/confirm=([0-9A-Za-z_-]+)/);
               const uuidMatch = body.match(/uuid=([0-9A-Za-z_-]+)/);
 
@@ -143,30 +137,33 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
                 resolve(streamRes);
                 return;
               }
-
-              // Direct link fallback
               resolve(null);
             });
           }
         );
 
         req.on("error", () => resolve(null));
-        req.setTimeout(6000, () => {
+        req.setTimeout(1800, () => {
           req.destroy();
           resolve(null);
         });
         req.end();
-      });
-
-      if (result) {
-        return result;
+      } catch {
+        resolve(null);
       }
-    } catch {
-      // Continue to next endpoint
-    }
+    });
+  };
+
+  const results = await Promise.race([
+    Promise.all(endpoints.map(tryEndpoint)).then((resArr) => resArr.find(Boolean) || null),
+    new Promise<{ url: string } | null>((res) => setTimeout(() => res(null), 2000)),
+  ]);
+
+  if (results) {
+    return results;
   }
 
-  // Final fallback direct url
+  // Instant direct fallback
   const fallbackDirect = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
   return { url: fallbackDirect };
 }

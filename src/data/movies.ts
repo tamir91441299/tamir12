@@ -1,5 +1,6 @@
 import { Movie, Comment, Episode } from '../types';
 import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
+import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
@@ -83,6 +84,7 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
 export const SAMPLE_MOVIES: Movie[] = [
   DELHIIN_SUIREL_MOVIE,
   MY_HERO_ACADEMIA_S1,
+  MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
   {
     id: 'm_91_days',
