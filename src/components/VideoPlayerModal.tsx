@@ -1414,8 +1414,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               )}
 
               {/* Mobile Portrait Quick-Rotate Floating Prompt Button */}
-              {!isDeviceLandscape && !isForcedLandscape && controlsVisible && (
-                <div className="absolute top-4 right-4 z-30 sm:hidden animate-in fade-in zoom-in-90 duration-200">
+              {controlsVisible && (
+                <div className="absolute top-4 right-4 z-40 sm:hidden animate-in fade-in zoom-in-90 duration-200">
                   <button
                     type="button"
                     id="mobile-floating-rotate-btn"
@@ -1423,10 +1423,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       e.stopPropagation();
                       toggleRotateLandscape();
                     }}
-                    className="flex items-center gap-1.5 bg-cyan-500 text-black font-black text-xs px-3 py-1.5 rounded-full shadow-xl shadow-cyan-500/40 border border-cyan-300 active:scale-95 cursor-pointer"
+                    className={`flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full shadow-2xl border active:scale-95 cursor-pointer transition-all ${
+                      isForcedLandscape
+                        ? 'bg-zinc-900/95 text-cyan-300 border-cyan-500/80 shadow-cyan-500/30'
+                        : 'bg-cyan-500 text-black border-cyan-300 shadow-cyan-500/40'
+                    }`}
                   >
-                    <RotateCw className="w-3.5 h-3.5 fill-black" />
-                    <span>Хөндлөн харах</span>
+                    <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-cyan-400' : 'fill-black'}`} />
+                    <span>{isForcedLandscape ? '📱 Босоо харах' : '🔄 Хөндлөн харах'}</span>
                   </button>
                 </div>
               )}
@@ -1568,9 +1572,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 </div>
 
                 {/* Right Quick Quality Switcher & Controls */}
-                <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
-                  {/* Instant Quality Switcher Bar (1080p, 720p, 480p, Auto) */}
-                  <div className="flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 shadow-lg backdrop-blur-sm">
+                <div className="flex items-center gap-1 sm:gap-2 justify-end shrink-0">
+                  {/* Mobile Compact Quality Cycler */}
+                  <button
+                    type="button"
+                    id="mobile-bottom-quality-btn"
+                    onClick={() => {
+                      const keys = ['1080p', '720p', '480p', 'auto'];
+                      const nextKey = keys[(keys.indexOf(selectedQualityKey) + 1) % keys.length];
+                      handleQualitySelect(nextKey);
+                      resetControlsTimer();
+                    }}
+                    className="sm:hidden text-[10px] font-black bg-cyan-500 text-black px-2 py-1 rounded-lg shadow-sm cursor-pointer active:scale-95 flex items-center gap-0.5"
+                    title="Чанар солих"
+                  >
+                    <span>⚡</span>
+                    <span>{activeQualityOption.tag}</span>
+                  </button>
+
+                  {/* Tablet & Desktop Quality Switcher Bar (1080p, 720p, 480p, Auto) */}
+                  <div className="hidden sm:flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 shadow-lg backdrop-blur-sm">
                     <span className="text-[10px] text-zinc-400 px-1.5 font-bold hidden md:inline">Чанар:</span>
                     {QUALITY_OPTIONS.map((q) => (
                       <button
@@ -1624,8 +1645,104 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     </button>
 
                     {showSettingsMenu && (
-                      <div className="absolute right-0 bottom-12 w-72 bg-zinc-900/98 border border-zinc-700 rounded-2xl p-4 shadow-2xl space-y-3 z-50 text-xs text-zinc-200 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute right-0 bottom-12 w-80 max-h-[85vh] overflow-y-auto bg-zinc-900/98 border border-zinc-750 rounded-2xl p-4 shadow-2xl space-y-3.5 z-50 text-xs text-zinc-200 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
+                        {/* Orientation & Screen Rotation Setting */}
                         <div>
+                          <div className="font-bold text-cyan-400 mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <RotateCw className="w-4 h-4 text-cyan-400" />
+                              <span>Дэлгэцийн байрлал (Orientation)</span>
+                            </span>
+                            <span className="text-[10px] text-cyan-300 font-bold">
+                              {isForcedLandscape || isDeviceLandscape ? 'Хөндлөн' : 'Босоо'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isForcedLandscape) {
+                                  toggleRotateLandscape();
+                                }
+                                resetControlsTimer();
+                              }}
+                              className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer font-bold transition-all border ${
+                                !isForcedLandscape && !isDeviceLandscape
+                                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/20'
+                                  : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
+                              }`}
+                            >
+                              <span>📱 Босоо (Portrait)</span>
+                              {!isForcedLandscape && !isDeviceLandscape && <Check className="w-3.5 h-3.5 text-black ml-1" />}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isForcedLandscape) {
+                                  toggleRotateLandscape();
+                                }
+                                resetControlsTimer();
+                              }}
+                              className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer font-bold transition-all border ${
+                                isForcedLandscape || isDeviceLandscape
+                                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/20'
+                                  : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
+                              }`}
+                            >
+                              <span>🔄 Хөндлөн (Landscape)</span>
+                              {(isForcedLandscape || isDeviceLandscape) && <Check className="w-3.5 h-3.5 text-black ml-1" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Aspect Ratio / Screen Fit Mode Setting */}
+                        <div className="border-t border-zinc-800 pt-3">
+                          <div className="font-bold text-cyan-400 mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Layers className="w-4 h-4 text-cyan-400" />
+                              <span>Дэлгэцийн харьцаа (Screen Fit)</span>
+                            </span>
+                            <span className="text-[10px] text-zinc-400 capitalize">
+                              {videoFitMode === 'contain' ? '16:9 Стандарт' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {[
+                              { mode: 'contain' as const, label: '16:9', desc: 'Стандарт' },
+                              { mode: 'cover' as const, label: 'Дүүргэх', desc: 'Хар хүрээгүй' },
+                              { mode: 'fill' as const, label: 'Сунгах', desc: 'Бүтэн дэлгэц' },
+                            ].map((item) => (
+                              <button
+                                key={item.mode}
+                                type="button"
+                                onClick={() => {
+                                  setVideoFitMode(item.mode);
+                                  setQualityNotice(
+                                    item.mode === 'cover'
+                                      ? '📐 Дэлгэц дүүргэх горим (Crop to Fill)'
+                                      : item.mode === 'fill'
+                                      ? '↔️ Дэлгэц сунгах горим (Stretch to Fit)'
+                                      : '⬛ Стандарт 16:9 горим (Original Ratio)'
+                                  );
+                                  setTimeout(() => setQualityNotice(null), 2000);
+                                  resetControlsTimer();
+                                }}
+                                className={`py-1.5 px-2 rounded-xl text-center cursor-pointer transition-all border ${
+                                  videoFitMode === item.mode
+                                    ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-md shadow-cyan-500/20'
+                                    : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
+                                }`}
+                              >
+                                <div className="font-bold text-xs">{item.label}</div>
+                                <div className={`text-[9px] ${videoFitMode === item.mode ? 'text-black/80' : 'text-zinc-400'}`}>{item.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Audio Track Setting */}
+                        <div className="border-t border-zinc-800 pt-3">
                           <div className="font-bold text-cyan-400 mb-1.5 flex items-center gap-1.5">
                             <Languages className="w-4 h-4" />
                             <span>Дууны зам (Audio)</span>
