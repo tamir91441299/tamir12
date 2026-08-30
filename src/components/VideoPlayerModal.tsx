@@ -134,8 +134,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Default mode: Default to High-Definition Direct Player for 1080p crystal clear streaming
-  const [serverMode, setServerMode] = useState<ServerMode>('direct');
+  // Smart default mode: If Google Drive or YouTube/external embed, default to 'embed' for 100% cross-browser reliability
+  const [serverMode, setServerMode] = useState<ServerMode>(() => {
+    if (isGoogleDrive || isYouTube || isExternalEmbed) {
+      return 'embed';
+    }
+    return 'direct';
+  });
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
 
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
@@ -840,10 +845,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="font-bold text-white text-xs sm:text-sm">
-                      {isGoogleDrive ? '📁 Google Drive (Нөөц горим)' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
+                      {isGoogleDrive ? '📁 Google Drive HD Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
                     </span>
                     <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-md bg-cyan-950 border border-cyan-500/50 text-cyan-300 font-bold">
-                      💡 Чанарын сонголт:
+                      💡 1080p Full HD бэлэн
                     </span>
                   </div>
 
@@ -858,26 +863,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       title="1080p Full HD шууд дамжуулалт руу шилжих"
                     >
                       <Sparkles className="w-3.5 h-3.5 fill-black text-black" />
-                      <span>⚡ FULL HD (1080P) ШИЛЖИХ</span>
+                      <span>⚡ 1080P ШУУД СЕРВЕР</span>
                     </button>
 
-                    {/* Quality pills */}
-                    {QUALITY_OPTIONS.filter(q => q.key !== '1080p').map((q) => (
-                      <button
-                        key={q.key}
-                        id={`embed-quality-btn-${q.key}`}
-                        type="button"
-                        onClick={() => handleQualitySelect(q.key)}
-                        className={`px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1 shadow-sm ${
-                          q.key === '720p'
-                            ? 'bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-cyan-500/40'
-                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
-                        }`}
-                        title={`${q.label} (${q.resolution}) - ${q.description}`}
+                    {/* Open in Google Drive */}
+                    {isGoogleDrive && (
+                      <a
+                        href={rawVideoSrc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 hover:text-cyan-200 font-bold text-xs px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 border border-cyan-500/30"
+                        title="Google Drive-аар шинэ таб дээр бүтэн дэлгэцээр нээх"
                       >
-                        <span>{q.tag}</span>
-                      </button>
-                    ))}
+                        <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Шинэ цонхонд нээх</span>
+                      </a>
+                    )}
 
                     {isGoogleDrive && (
                       <button
@@ -889,27 +890,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         <span>Тусламж</span>
                       </button>
                     )}
-                    {isAdmin && (
-                      <a
-                        href={rawVideoSrc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 border border-zinc-700"
-                        title="Зөвхөн Админд харагдана"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Линк</span>
-                      </a>
-                    )}
                   </div>
                 </div>
 
                 {/* Clear quality notice banner for embed mode */}
-                <div className="text-[11px] text-zinc-400 bg-black/60 border border-zinc-800 px-3.5 py-2 rounded-xl flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span>
-                    Google Drive вэб тоглуулагч нь 360p-ээр хязгаарлагддаг тул дээрх <strong>FULL HD (1080P)</strong> товч дээр дарахад шууд өндөр чанарын HD тоглуулагч руу шилжинэ.
-                  </span>
+                <div className="text-[11px] text-zinc-300 bg-black/60 border border-zinc-800 px-3.5 py-2.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>
+                      ⚙️ <strong>1080p Full HD тохируулах:</strong> Тоглуулагчийн баруун доод буланд байрлах арааны тэмдэг (⚙️) дээр дарж чанарыг <strong>1080p HD</strong> болгон өөрчлөх боломжтой.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleQualitySelect('1080p')}
+                    className="text-cyan-400 hover:text-cyan-300 font-bold underline underline-offset-2 shrink-0 text-left sm:text-right cursor-pointer"
+                  >
+                    Шууд 1080p тоглуулагч руу шилжих ➔
+                  </button>
                 </div>
 
                 {/* Interactive Guide for Google Drive Public Sharing */}
@@ -995,15 +993,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   const mediaErr = videoRef.current?.error;
                   const errCode = mediaErr ? mediaErr.code : 'UNKNOWN';
                   const errMsg = mediaErr ? mediaErr.message : 'No message';
-                  appendDebugLog(`⚠️ Видео дамжуулалт шинэчлэгдэж байна (Код=${errCode})`);
+                  appendDebugLog(`⚠️ Шууд тоглуулагч алдаа өглөө (Код=${errCode}): ${errMsg}`);
                   setVideoElementState((prev) => ({
                     ...prev,
                     error: `Error Code: ${errCode}`,
                   }));
                   setIsBuffering(false);
 
-                  // Seamless CDN Fallback without causing black screen delay
-                  if (videoRef.current && videoRef.current.src && !videoRef.current.src.includes('commondatastorage')) {
+                  // If source is Google Drive or External embed, automatically switch to reliable Embed mode
+                  if (isGoogleDrive || isYouTube || isExternalEmbed) {
+                    appendDebugLog(`🔄 Google Drive HD тоглуулагч руу автоматаар шилжиж байна...`);
+                    setQualityNotice('💡 Google Drive HD тоглуулагч руу автоматаар шилжлээ');
+                    setServerMode('embed');
+                    serverModeRef.current = 'embed';
+                  } else if (videoRef.current && videoRef.current.src && !videoRef.current.src.includes('commondatastorage')) {
                     const fallbackStream = RELIABLE_CDN_STREAMS[0];
                     videoRef.current.src = fallbackStream;
                     videoRef.current.play().catch(() => {});

@@ -58,7 +58,7 @@ router.use("/api/stream", (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Range, Origin, Content-Type, Accept, User-Agent");
-  res.header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
+  res.header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges, Content-Type");
   if (req.method === "OPTIONS") {
     res.sendStatus(204);
     return;
