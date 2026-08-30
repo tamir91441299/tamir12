@@ -19,9 +19,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
                 🎬
               </div>
               <div className="flex flex-col text-left">
-                <span className="font-extrabold text-xl tracking-wider brand-text-luxury font-display leading-none">
-                  FlickNime
-                </span>
+                <div className="brand-glow-container">
+                  <span className="font-extrabold text-xl tracking-wider brand-text-luxury font-display leading-none">
+                    FlickNime
+                  </span>
+                </div>
                 <span className="text-[9px] font-mono tracking-widest text-zinc-500 uppercase">
                   Cinema & Anime
                 </span>

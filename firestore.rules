@@ -20,6 +20,11 @@ service cloud.firestore {
     match /promo_codes/{codeId} {
       allow read, write: if true;
     }
+
+    // Security Settings collection (Passcodes & global configs)
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }
 

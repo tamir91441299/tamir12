@@ -19,6 +19,8 @@ import {
   Edit2,
   Lock,
   ShieldAlert,
+  ShieldCheck,
+  ExternalLink,
   Copy,
   KeyRound,
   Ticket,
@@ -31,6 +33,8 @@ import { Movie, Comment, Episode } from '../types';
 import { SAMPLE_COMMENTS } from '../data/movies';
 import { getEmbedUrl } from '../lib/videoUtils';
 import { redeemCode } from '../lib/codeService';
+import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
+import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
 
 interface MovieDetailModalProps {
@@ -84,6 +88,33 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [newEpDuration, setNewEpDuration] = useState('24 мин');
   const [epSearch, setEpSearch] = useState('');
   const [selectedRange, setSelectedRange] = useState<string>('all');
+  const [showPasscodeModal, setShowPasscodeModal] = useState<boolean>(false);
+  const [pendingWindowEp, setPendingWindowEp] = useState<number>(1);
+
+  const openWindowDirect = (epNum: number = 1) => {
+    const baseUrl = window.location.href.split('?')[0].split('#')[0];
+    const targetUrl = `${baseUrl}?play=${encodeURIComponent(movie.id)}&ep=${epNum}&protected=1`;
+    try {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(targetUrl, '_blank');
+    }
+  };
+
+  const handleOpenProtectedWindow = (epNum: number = 1) => {
+    if (isPasscodeVerifiedInSession()) {
+      openWindowDirect(epNum);
+    } else {
+      setPendingWindowEp(epNum);
+      setShowPasscodeModal(true);
+    }
+  };
 
   useEffect(() => {
     if (movie) {
@@ -416,6 +447,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   >
                     <Play className="w-5 h-5 fill-black" />
                     ШУУД ҮЗЭХ
+                  </button>
+
+                  {/* Open in New Protected Window with Passcode Verification */}
+                  <button
+                    id="modal-open-new-window"
+                    onClick={() => handleOpenProtectedWindow(1)}
+                    className="px-4 py-3.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 hover:text-emerald-100 text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-105"
+                    title="Шинэ цонхоор нууц кодоор файл хамгаалалттай үзэх"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Шинэ цонхоор үзэх</span>
                   </button>
 
                   <button
@@ -983,6 +1025,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Passcode Security Verification Prompt for Protected Window */}
+      <PasscodePromptModal
+        isOpen={showPasscodeModal}
+        onClose={() => setShowPasscodeModal(false)}
+        onSuccess={() => {
+          setShowPasscodeModal(false);
+          openWindowDirect(pendingWindowEp);
+        }}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };

@@ -14,6 +14,8 @@ import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
 import { InstallAppModal } from './components/InstallAppModal';
+import { PasscodePromptModal } from './components/PasscodePromptModal';
+import { isPasscodeVerifiedInSession } from './lib/passcodeService';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
@@ -105,6 +107,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Pending movie & episode for direct URL launch if passcode is required
+  const [pendingDirectMovie, setPendingDirectMovie] = useState<Movie | null>(null);
+  const [pendingDirectEp, setPendingDirectEp] = useState<number>(1);
+  const [showDirectPasscodeModal, setShowDirectPasscodeModal] = useState<boolean>(false);
+
   // Handle direct launch when opened in a new protected window (e.g. ?play=m_91_days&ep=1)
   useEffect(() => {
     try {
@@ -112,14 +119,30 @@ export default function App() {
       const playId = params.get('play');
       const epParam = params.get('ep');
       if (playId) {
-        const found = moviesList.find((m) => m.id === playId);
+        const decodedPlayId = decodeURIComponent(playId).toLowerCase().trim();
+        const found = moviesList.find((m) => {
+          const mId = m.id.toLowerCase();
+          const cleanMId = mId.replace(/^m_/, '');
+          const cleanPlayId = decodedPlayId.replace(/^m_/, '');
+          return (
+            mId === decodedPlayId ||
+            cleanMId === cleanPlayId ||
+            m.title.toLowerCase().includes(decodedPlayId) ||
+            m.titleMongolian.toLowerCase().includes(decodedPlayId)
+          );
+        });
+
         if (found) {
-          setSelectedMovieForPlayer(found);
-          if (epParam) {
-            const parsedEp = parseInt(epParam, 10);
-            if (!isNaN(parsedEp) && parsedEp > 0) {
-              setPlayerInitialEpisode(parsedEp);
-            }
+          const parsedEp = epParam ? parseInt(epParam, 10) : 1;
+          const validEp = !isNaN(parsedEp) && parsedEp > 0 ? parsedEp : 1;
+
+          if (isPasscodeVerifiedInSession()) {
+            setSelectedMovieForPlayer(found);
+            setPlayerInitialEpisode(validEp);
+          } else {
+            setPendingDirectMovie(found);
+            setPendingDirectEp(validEp);
+            setShowDirectPasscodeModal(true);
           }
         }
       }
@@ -318,8 +341,14 @@ export default function App() {
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showNotifToast, setShowNotifToast] = useState(false);
 
-  // Real-time listener for notifications (New user registration alerts)
+  // Real-time listener for notifications - ONLY FOR ADMIN (Tamir)
   useEffect(() => {
+    if (!isAdmin) {
+      setLatestNotification(null);
+      setShowNotifToast(false);
+      return;
+    }
+
     const unsubscribe = subscribeNotificationsFromFirestore((notifs) => {
       if (notifs.length > 0) {
         const topNotif = notifs[0];
@@ -328,9 +357,9 @@ export default function App() {
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [isAdmin]);
 
-  // Track visitor / user session
+  // Track authenticated user session securely
   useEffect(() => {
     try {
       if (currentUser) {
@@ -338,26 +367,6 @@ export default function App() {
         saveUserToFirestore(currentUser);
       } else {
         localStorage.removeItem('ioio_user');
-        // If guest visitor on site, ensure they are registered into Firestore so Admin sees all visitors in real-time
-        const savedGuest = localStorage.getItem('ioio_guest_session');
-        if (!savedGuest) {
-          const guestId = 'visitor_' + Date.now();
-          const guestUser: UserAccount = {
-            id: guestId,
-            name: 'Шинэ Зочин ' + Math.floor(1000 + Math.random() * 9000),
-            email: `visitor_${guestId}@ioio.mn`,
-            phone: '99' + Math.floor(100000 + Math.random() * 900000),
-            registeredAt: new Date().toLocaleDateString('mn-MN'),
-          };
-          localStorage.setItem('ioio_guest_session', JSON.stringify(guestUser));
-          saveUserToFirestore(guestUser, {
-            role: 'user',
-            status: 'active',
-            packageType: 'free',
-            walletBalance: 0,
-            lastLogin: 'Шинээр зочилж байна',
-          });
-        }
       }
     } catch (e) {
       console.error(e);
@@ -1148,6 +1157,24 @@ export default function App() {
           onClose={() => setShowInstallModal(false)}
         />
       )}
+
+      {/* Secret Passcode Prompt when opening direct link or new protected window */}
+      <PasscodePromptModal
+        isOpen={showDirectPasscodeModal}
+        onClose={() => {
+          setShowDirectPasscodeModal(false);
+          setPendingDirectMovie(null);
+        }}
+        onSuccess={() => {
+          setShowDirectPasscodeModal(false);
+          if (pendingDirectMovie) {
+            setSelectedMovieForPlayer(pendingDirectMovie);
+            setPlayerInitialEpisode(pendingDirectEp || 1);
+            setPendingDirectMovie(null);
+          }
+        }}
+        isAdmin={isAdmin}
+      />
 
       {/* Footer */}
       <Footer 

@@ -36,6 +36,8 @@ import {
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
+import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
+import { PasscodePromptModal } from './PasscodePromptModal';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -213,6 +215,42 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [isBuffering, setIsBuffering] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<'left' | 'right' | null>(null);
+  const [showPasscodePrompt, setShowPasscodePrompt] = useState(false);
+
+  // Mobile Orientation & Landscape Rotation Mode State
+  const [isForcedLandscape, setIsForcedLandscape] = useState<boolean>(false);
+  const [isDeviceLandscape, setIsDeviceLandscape] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > window.innerHeight;
+    }
+    return false;
+  });
+
+  // Track physical device orientation changes (physical rotation)
+  useEffect(() => {
+    const handleOrientationOrResize = () => {
+      const isLandscape = window.innerWidth > window.innerHeight;
+      setIsDeviceLandscape(isLandscape);
+      // If the user physically rotates their device to landscape, turn off forced CSS landscape
+      if (isLandscape) {
+        setIsForcedLandscape(false);
+      }
+    };
+
+    window.addEventListener('resize', handleOrientationOrResize);
+    window.addEventListener('orientationchange', handleOrientationOrResize);
+    if (window.screen?.orientation) {
+      window.screen.orientation.addEventListener('change', handleOrientationOrResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleOrientationOrResize);
+      window.removeEventListener('orientationchange', handleOrientationOrResize);
+      if (window.screen?.orientation) {
+        window.screen.orientation.removeEventListener('change', handleOrientationOrResize);
+      }
+    };
+  }, []);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapTimeRef = useRef<number>(0);
@@ -252,17 +290,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const serverModeRef = useRef<ServerMode>(serverMode);
   serverModeRef.current = serverMode;
 
-  // Open protected cinema stream in a dedicated new window without revealing raw file source
-  const handleOpenProtectedNewWindow = useCallback(() => {
+  // Launch the window once verified
+  const doLaunchProtectedWindow = useCallback(() => {
     const currentEpNum = currentEpisode?.episodeNumber || currentEpisodeIndex + 1;
-    const url = `${window.location.origin}${window.location.pathname}?play=${encodeURIComponent(movie.id)}&ep=${currentEpNum}&protected=1`;
-    window.open(
-      url,
-      '_blank',
-      'noopener,noreferrer,menubar=no,toolbar=no,location=no,status=no,resizable=yes'
-    );
-    appendDebugLog('🛡️ Хамгаалалттай шинэ цонхонд тоглуулагч амжилттай нээгдлээ.');
+    const baseUrl = window.location.href.split('?')[0].split('#')[0];
+    const targetUrl = `${baseUrl}?play=${encodeURIComponent(movie.id)}&ep=${currentEpNum}&protected=1&cinema=1`;
+    
+    try {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      appendDebugLog('🛡️ Хамгаалалттай шинэ цонхонд тоглуулагч амжилттай нээгдлээ.');
+    } catch (e: any) {
+      window.open(targetUrl, '_blank');
+      appendDebugLog(`🛡️ Хамгаалалттай цонх нээгдлээ: ${e?.message || ''}`);
+    }
   }, [currentEpisode, currentEpisodeIndex, movie.id, appendDebugLog]);
+
+  // Open protected cinema stream in a dedicated new window with passcode security
+  const handleOpenProtectedNewWindow = useCallback(() => {
+    if (isPasscodeVerifiedInSession()) {
+      doLaunchProtectedWindow();
+    } else {
+      setShowPasscodePrompt(true);
+    }
+  }, [doLaunchProtectedWindow]);
 
   // Play video safely with audio / autoplay / error handling without cascading loops
   const playVideoSafe = useCallback(async () => {
@@ -556,7 +612,50 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     };
   }, [isFullscreen, isPlaying, isMuted, volume, togglePlay]);
 
-  // Cross-browser & Mobile-Safe Fullscreen
+  // Dedicated Screen Orientation / Landscape Rotation for Mobile (Handles Portrait Lock & Touch Devices)
+  const toggleRotateLandscape = async () => {
+    // If device is already physically in landscape, toggle fullscreen
+    if (isDeviceLandscape) {
+      toggleFullscreen();
+      return;
+    }
+
+    const nextState = !isForcedLandscape;
+    setIsForcedLandscape(nextState);
+
+    if (nextState) {
+      setQualityNotice('🔄 Хөндлөн (Landscape) бүтэн дэлгэцийн горим идэвхжлээ');
+      // Attempt Screen Orientation API lock if supported
+      try {
+        if ((screen?.orientation as any)?.lock) {
+          await (screen.orientation as any).lock('landscape');
+        } else if ((screen as any)?.lockOrientation) {
+          (screen as any).lockOrientation('landscape');
+        } else if ((screen as any)?.mozLockOrientation) {
+          (screen as any).mozLockOrientation('landscape');
+        } else if ((screen as any)?.msLockOrientation) {
+          (screen as any).msLockOrientation('landscape');
+        }
+      } catch {
+        // Smoothly handled by forced CSS landscape transform
+      }
+    } else {
+      setQualityNotice('📱 Босоо (Portrait) горимд шилжлээ');
+      try {
+        if (screen?.orientation?.unlock) {
+          screen.orientation.unlock();
+        } else if ((screen as any)?.unlockOrientation) {
+          (screen as any).unlockOrientation();
+        }
+      } catch {}
+    }
+
+    setTimeout(() => {
+      setQualityNotice(null);
+    }, 2200);
+  };
+
+  // Cross-browser & Mobile-Safe Fullscreen with Orientation Lock Support
   const toggleFullscreen = async () => {
     try {
       const isTouchOrMobile = window.innerWidth < 768 || ('ontouchstart' in window);
@@ -572,28 +671,69 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       );
 
       if (!isFS) {
-        // If native video on iOS/mobile webkit
-        if (isTouchOrMobile && videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
-          try {
-            (videoRef.current as any).webkitEnterFullscreen();
-          } catch {}
-        } else if (!isTouchOrMobile && targetElem?.requestFullscreen) {
+        let entered = false;
+        // 1. Try standard / Android element requestFullscreen
+        if (targetElem?.requestFullscreen) {
           try {
             await targetElem.requestFullscreen();
+            entered = true;
           } catch {}
-        } else if (!isTouchOrMobile && targetElem?.webkitRequestFullscreen) {
+        } else if (targetElem?.webkitRequestFullscreen) {
           try {
             await targetElem.webkitRequestFullscreen();
+            entered = true;
+          } catch {}
+        } else if (doc.documentElement?.requestFullscreen) {
+          try {
+            await doc.documentElement.requestFullscreen();
+            entered = true;
           } catch {}
         }
+
+        // 2. If mobile and couldn't enter element fullscreen, try iOS video.webkitEnterFullscreen
+        if (!entered && videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
+          try {
+            (videoRef.current as any).webkitEnterFullscreen();
+            entered = true;
+          } catch {}
+        }
+
+        // 3. Request landscape orientation lock on mobile
+        if (isTouchOrMobile) {
+          try {
+            if ((screen?.orientation as any)?.lock) {
+              await (screen.orientation as any).lock('landscape');
+            } else if ((screen as any)?.lockOrientation) {
+              (screen as any).lockOrientation('landscape');
+            }
+          } catch {}
+
+          // If on mobile portrait and device wasn't rotated, activate forced landscape
+          if (!isDeviceLandscape && window.innerHeight > window.innerWidth) {
+            setIsForcedLandscape(true);
+          }
+        }
+
         setIsFullscreen(true);
       } else {
         if (doc.exitFullscreen) {
           try { await doc.exitFullscreen(); } catch {}
         } else if (doc.webkitExitFullscreen) {
           try { await doc.webkitExitFullscreen(); } catch {}
+        } else if (doc.mozCancelFullScreen) {
+          try { await doc.mozCancelFullScreen(); } catch {}
+        } else if (doc.msExitFullscreen) {
+          try { await doc.msExitFullscreen(); } catch {}
         }
+
+        try {
+          if (screen?.orientation?.unlock) {
+            screen.orientation.unlock();
+          }
+        } catch {}
+
         setIsFullscreen(false);
+        setIsForcedLandscape(false);
       }
     } catch (err) {
       console.warn('Fullscreen handler:', err);
@@ -621,9 +761,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   if (!movie) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+    <div
+      className={`fixed z-50 bg-black backdrop-blur-2xl flex flex-col justify-between overflow-hidden transition-all duration-300 ${
+        isForcedLandscape && !isDeviceLandscape
+          ? 'w-[100vh] h-[100vw] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 origin-center shadow-2xl'
+          : 'inset-0'
+      }`}
+    >
       {/* Top Header Bar - Fully Responsive with Smooth Auto-Collapse in Fullscreen */}
-      <header className={`p-2.5 sm:p-4 bg-gradient-to-b from-black via-black/90 to-black/40 flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 border-b border-zinc-800/80 shrink-0 transition-all duration-300 ${
+      <header className={`p-2 sm:p-3.5 bg-gradient-to-b from-black via-black/90 to-black/40 flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 border-b border-zinc-800/80 shrink-0 transition-all duration-300 ${
         isFullscreen
           ? controlsVisible
             ? 'opacity-100 translate-y-0 relative'
@@ -670,8 +816,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </div>
           </div>
 
-          {/* Quick close button on mobile top right */}
+          {/* Quick actions on mobile top right */}
           <div className="flex sm:hidden items-center gap-1 shrink-0">
+            {/* Quick Rotate / Landscape on mobile */}
+            <button
+              type="button"
+              id="mobile-quick-rotate-btn"
+              onClick={toggleRotateLandscape}
+              className={`p-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
+                isForcedLandscape
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/30'
+                  : 'bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border-zinc-750'
+              }`}
+              title="Дэлгэцийг хөндлөн / босоо харах горим (Rotate Landscape/Portrait)"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+
             {episodes.length > 0 && (
               <button
                 id="toggle-episodes-mobile-top"
@@ -735,6 +896,46 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             ))}
           </div>
 
+          {/* Landscape / Rotate Screen Toggle Button (Explicit for Mobile & Desktop) */}
+          <button
+            type="button"
+            id="header-rotate-landscape-btn"
+            onClick={toggleRotateLandscape}
+            className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
+              isForcedLandscape
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-lg shadow-cyan-500/20 font-black'
+                : 'bg-zinc-800/90 hover:bg-zinc-700 text-cyan-300 border-zinc-700'
+            }`}
+            title="Дэлгэцийг хөндлөн / босоо эргүүлж үзэх (Rotate Landscape)"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-black fill-black' : 'text-cyan-400'}`} />
+            <span className="hidden sm:inline">{isForcedLandscape ? '📱 Босоо' : '🔄 Хөндлөн'}</span>
+          </button>
+
+          {/* Video Fit / Zoom Mode Button */}
+          <button
+            type="button"
+            id="video-fit-toggle-btn"
+            onClick={() => {
+              const modes: Array<'contain' | 'cover' | 'fill'> = ['contain', 'cover', 'fill'];
+              const nextMode = modes[(modes.indexOf(videoFitMode) + 1) % modes.length];
+              setVideoFitMode(nextMode);
+              setQualityNotice(
+                nextMode === 'cover'
+                  ? '📐 Дэлгэц дүүргэх горим (Crop to Fill)'
+                  : nextMode === 'fill'
+                  ? '↔️ Дэлгэц сунгах горим (Stretch to Fit)'
+                  : '⬛ Стандарт 16:9 горим (Original Ratio)'
+              );
+              setTimeout(() => setQualityNotice(null), 2000);
+            }}
+            className="hidden md:flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer"
+            title="Дэлгэцийн харьцаа: Агуулга (16:9), Дүүргэх (Cover), Сунгах (Fill)"
+          >
+            <Layers className="w-3.5 h-3.5 text-zinc-400" />
+            <span className="capitalize text-[11px]">{videoFitMode === 'contain' ? '16:9' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}</span>
+          </button>
+
           {/* Diagnostic / Debug Toggle Button */}
           <button
             type="button"
@@ -756,11 +957,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             type="button"
             id="protected-new-window-btn"
             onClick={handleOpenProtectedNewWindow}
-            className="hidden md:flex items-center gap-1.5 bg-emerald-950/60 hover:bg-emerald-900/90 text-emerald-300 hover:text-emerald-100 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-emerald-500/40 shadow-sm"
+            className="flex items-center gap-1.5 bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-emerald-100 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-emerald-500/50 shadow-sm active:scale-95"
             title="Энэ видеог файл болон холбоосыг нь хамгаалж шинэ цонхоор үзэх"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden lg:inline">Шинэ цонх</span>
+            <span className="hidden sm:inline">Шинэ цонх</span>
           </button>
 
           {/* Fullscreen Quick Button */}
@@ -1211,6 +1412,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   <span>{qualityNotice}</span>
                 </div>
               )}
+
+              {/* Mobile Portrait Quick-Rotate Floating Prompt Button */}
+              {!isDeviceLandscape && !isForcedLandscape && controlsVisible && (
+                <div className="absolute top-4 right-4 z-30 sm:hidden animate-in fade-in zoom-in-90 duration-200">
+                  <button
+                    type="button"
+                    id="mobile-floating-rotate-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleRotateLandscape();
+                    }}
+                    className="flex items-center gap-1.5 bg-cyan-500 text-black font-black text-xs px-3 py-1.5 rounded-full shadow-xl shadow-cyan-500/40 border border-cyan-300 active:scale-95 cursor-pointer"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 fill-black" />
+                    <span>Хөндлөн харах</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1514,6 +1733,48 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Video Fit / Zoom Mode Button on Bottom Bar */}
+                  <button
+                    id="player-fit-bottom-toggle"
+                    type="button"
+                    onClick={() => {
+                      const modes: Array<'contain' | 'cover' | 'fill'> = ['contain', 'cover', 'fill'];
+                      const nextMode = modes[(modes.indexOf(videoFitMode) + 1) % modes.length];
+                      setVideoFitMode(nextMode);
+                      setQualityNotice(
+                        nextMode === 'cover'
+                          ? '📐 Дэлгэц дүүргэх горим (Crop to Fill)'
+                          : nextMode === 'fill'
+                          ? '↔️ Дэлгэц сунгах горим (Stretch to Fit)'
+                          : '⬛ Стандарт 16:9 горим (Original Ratio)'
+                      );
+                      setTimeout(() => setQualityNotice(null), 2000);
+                      resetControlsTimer();
+                    }}
+                    className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white transition-colors cursor-pointer bg-zinc-900/80 border border-zinc-700/80"
+                    title={`Дэлгэцийн харьцаа: ${videoFitMode === 'contain' ? '16:9' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}`}
+                  >
+                    <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-300" />
+                  </button>
+
+                  {/* Rotate / Landscape Orientation Toggle Button */}
+                  <button
+                    id="player-rotate-bottom-toggle"
+                    type="button"
+                    onClick={() => {
+                      toggleRotateLandscape();
+                      resetControlsTimer();
+                    }}
+                    className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border ${
+                      isForcedLandscape
+                        ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
+                        : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
+                    }`}
+                    title={isForcedLandscape ? "Босоо харах (Portrait)" : "Дэлгэцийг хөндлөн эргүүлэх (Landscape)"}
+                  >
+                    <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
 
                   {/* Protected New Window Button */}
                   <button
@@ -1906,6 +2167,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Passcode Security Verification Prompt */}
+      <PasscodePromptModal
+        isOpen={showPasscodePrompt}
+        onClose={() => setShowPasscodePrompt(false)}
+        onSuccess={() => {
+          setShowPasscodePrompt(false);
+          doLaunchProtectedWindow();
+        }}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 };

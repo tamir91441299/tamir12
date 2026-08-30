@@ -57,6 +57,11 @@ import {
   deletePromoCode,
   subscribePromoCodesFromFirestore
 } from '../lib/codeService';
+import {
+  getProtectedWindowPasscode,
+  setProtectedWindowPasscode,
+  subscribePasscodeFromFirestore
+} from '../lib/passcodeService';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -219,11 +224,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     walletBalance: 0,
   });
 
-  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes'
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes'>('users');
+  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes' | 'security'
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes' | 'security'>('users');
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [promoCodesList, setPromoCodesList] = useState<PromoCode[]>(() => getAllPromoCodes());
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // New Window Security Passcode state
+  const [currentPasscode, setCurrentPasscode] = useState<string>(() => getProtectedWindowPasscode());
+  const [newPasscodeInput, setNewPasscodeInput] = useState<string>('');
+  const [passcodeSaveSuccess, setPasscodeSaveSuccess] = useState<boolean>(false);
 
   // New Promo Code Form State
   const [newCodeForm, setNewCodeForm] = useState({
@@ -330,6 +340,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
+  const handleUpdatePasscode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newPasscodeInput.trim();
+    if (!clean || clean.length < 3) return;
+
+    await setProtectedWindowPasscode(clean);
+    setCurrentPasscode(clean);
+    setNewPasscodeInput('');
+    setPasscodeSaveSuccess(true);
+    setTimeout(() => setPasscodeSaveSuccess(false), 3000);
+  };
+
   useEffect(() => {
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(deduplicateUserList(list));
@@ -340,10 +362,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const unsubscribeCodes = subscribePromoCodesFromFirestore((codes) => {
       setPromoCodesList(codes);
     });
+    const unsubscribePasscode = subscribePasscodeFromFirestore((code) => {
+      setCurrentPasscode(code);
+    });
     return () => {
       unsubscribeUsers();
       unsubscribeNotifs();
       unsubscribeCodes();
+      unsubscribePasscode();
     };
   }, []);
 
@@ -761,7 +787,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             }`}
           >
             <Ticket className="w-4 h-4 text-emerald-400" />
-            <span>🎟️ Эрхийн Код / Промо ({promoCodesList.length})</span>
+            <span>🎟️ Эрхийн Код ({promoCodesList.length})</span>
+          </button>
+
+          <button
+            id="admin-tab-security"
+            onClick={() => setActiveAdminTab('security')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 ${
+              activeAdminTab === 'security'
+                ? 'bg-zinc-800 text-amber-300 border-amber-400 shadow'
+                : 'text-zinc-400 hover:text-white border-transparent hover:bg-zinc-800/50'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span>🔒 Шинэ Цонхны Нууц Код</span>
           </button>
         </div>
 
@@ -1536,6 +1575,130 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        ) : activeAdminTab === 'security' ? (
+          <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-zinc-900 border border-amber-500/30 p-4 rounded-2xl gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                    🔒 Шинэ Цонхны Нууц Код & Хандалтын Хамгаалалт
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Шинэ цонхоор видео үзэхэд файл хамгаалах нууц код. Хэрэглэгч энэ кодыг зөв оруулж байж видеог шинэ цонхоор үзэх эрхтэй болно.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Passcode Display Card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-zinc-900/90 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-lg">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-amber-400" />
+                    Одоогийн Идэвхтэй Нууц Код
+                  </span>
+                  <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Идэвхтэй Хамгаалалт ✓
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-black/60 border-2 border-amber-500/40 p-4 rounded-xl">
+                  <div>
+                    <div className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest">Хандах Код:</div>
+                    <div className="font-mono text-3xl font-black text-amber-300 tracking-[0.2em]">
+                      {currentPasscode}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(currentPasscode, 'active_window_passcode')}
+                    className="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl border border-amber-500/40 flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {copiedCodeId === 'active_window_passcode' ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="text-emerald-400">Хуулагдлаа!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Код Хуулах</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  💡 Хэрэглэгчид &quot;Шинэ цонхоор үзэх&quot; товч дарах үед эсвэл шинэ цонхонд орох үед энэхүү нууц кодыг асууна. Зөвхөн кодтой хүмүүс үзэх боломжтой.
+                </p>
+              </div>
+
+              {/* Update Passcode Form */}
+              <form onSubmit={handleUpdatePasscode} className="bg-zinc-900/90 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+                    <span className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <Lock className="w-4 h-4 text-cyan-400" />
+                      Нууц Код Өөрчлөх
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-zinc-400 block">
+                      Шинэ 4-8 оронтой нууц код оруулна уу:
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      minLength={3}
+                      maxLength={8}
+                      placeholder="Жишээ: 9144, 2026, 7777..."
+                      value={newPasscodeInput}
+                      onChange={(e) => setNewPasscodeInput(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-amber-400 rounded-xl p-3 font-mono text-lg font-bold text-white tracking-widest uppercase focus:outline-none shadow-inner"
+                    />
+
+                    {/* Quick presets */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-zinc-500">Бэлэн:</span>
+                      {['9144', '1234', '7777', '8888'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setNewPasscodeInput(preset)}
+                          className="text-[10px] font-mono font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded border border-zinc-700 cursor-pointer"
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  {passcodeSaveSuccess && (
+                    <div className="mb-2 text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 p-2 rounded-xl text-center font-bold animate-in fade-in">
+                      ✓ Нууц код амжилттай солигдож Firestore болон системд хадгалагдлаа!
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs py-3 rounded-xl transition-all cursor-pointer shadow-lg active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Шинэ Нууц Кодыг Хадгалах</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         ) : null}

@@ -73,7 +73,7 @@ export const MY_HERO_ACADEMIA_S2: Movie = {
     createMhaEpisode(1, '1-р анги (14) - Тэр бол Миний Түүх (That\'s the Idea, Ochaco)', 'https://drive.google.com/file/d/1VV4WuQNWYEtNJ2K13v9AKna6t1yD7y8d/view?usp=drivesdk'),
     createMhaEpisode(2, '2-р анги (15) - Тамирчдын Их Наадам (Roaring Sports Festival)', 'https://drive.google.com/file/d/165fq1HUV4v13QW-flsBMgg_axyHRVa3_/view?usp=drivesdk'),
     createMhaEpisode(3, '3-р анги (16) - Тулааны гараа (In Their Own Quirky Ways)', 'https://drive.google.com/file/d/1HyRcIrtQAxnznKIQutT0BIA88SB7XyUe/view?usp=drivesdk'),
-    createMhaEpisode(4, '4-р анги (17) - Стратеги, Төлөвлөгөө (Strategy, Strategy, Strategy)', '1jjSBOPsIqXEZHSIF5sd5aaSN-FKi0K8h'),
+    createMhaEpisode(4, '4-р анги (17) - Стратеги, Төлөвлөгөө (Strategy, Strategy, Strategy)', '/'),
     createMhaEpisode(5, '5-р анги (18) - Морьтны тулааны төгсгөл (Cavalry Battle Finale)', '1lkye7Ooy6qjPuGfDRA_ugsJtr7ijIkh3'),
     createMhaEpisode(6, '6-р анги (19) - Бүхнийг хүртсэн хүү (The Boy Born with Everything)', '1Yiw53fhOze1axyJbXBFUP0eVi8xiKjqV'),
     createMhaEpisode(7, '7-р анги (20) - Ялалт ба Ялагдал (Victory or Defeat)', '1qBtj7rlUSg8pI1rL6Fe64l1rU6JfvrYy'),
