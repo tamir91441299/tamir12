@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, RotateCcw, Filter, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCcw, Filter, Sparkles } from 'lucide-react';
 import { GENRE_COUNTS, RELEASE_YEARS } from '../data/movies';
 
 interface SidebarFilterProps {
@@ -27,37 +27,37 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
   const hasActiveFilters = selectedYear !== null || selectedGenre !== null || selectedType !== 'all';
 
   return (
-    <aside className="w-full lg:w-72 bg-[#17171a] border border-zinc-800 rounded-2xl p-4 text-zinc-200 shadow-xl space-y-5 h-fit sticky top-20">
+    <aside className="w-full lg:w-72 cinema-glass rounded-3xl p-4 sm:p-5 text-zinc-200 shadow-2xl space-y-5 h-fit sticky top-20">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+      <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06]">
         <div className="flex items-center gap-2 font-bold text-sm text-zinc-100">
-          <Filter className="w-4 h-4 text-cyan-400" />
-          <span>Шүүлтүүр</span>
+          <Filter className="w-4 h-4 text-amber-400" />
+          <span className="font-display tracking-wide uppercase text-xs">Шүүлтүүр</span>
         </div>
         {hasActiveFilters && (
           <button
             id="reset-filter-button"
             onClick={onResetFilters}
-            className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-semibold cursor-pointer"
+            className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold cursor-pointer transition-colors"
           >
             <RotateCcw className="w-3 h-3" />
-            Арилгах
+            <span>Арилгах</span>
           </button>
         )}
       </div>
 
       {/* Type Toggle: Кино / Цуврал / Бүгд */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold uppercase text-zinc-400 tracking-wider">
-          Төрөл
+      <div className="space-y-2">
+        <label className="text-[11px] font-bold uppercase text-zinc-400 tracking-wider font-mono">
+          Төрөл сонголт
         </label>
-        <div className="grid grid-cols-4 gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-[11px] font-medium">
+        <div className="grid grid-cols-4 gap-1 bg-black/50 p-1 rounded-2xl border border-white/[0.06] text-[11px] font-semibold">
           <button
             id="type-all-button"
             onClick={() => setSelectedType('all')}
-            className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`py-1.5 rounded-xl transition-all cursor-pointer ${
               selectedType === 'all'
-                ? 'bg-cyan-500 text-black font-bold shadow'
+                ? 'gold-glow-btn text-black font-black'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -66,9 +66,9 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
           <button
             id="type-movie-button"
             onClick={() => setSelectedType('movie')}
-            className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`py-1.5 rounded-xl transition-all cursor-pointer ${
               selectedType === 'movie'
-                ? 'bg-cyan-500 text-black font-bold shadow'
+                ? 'gold-glow-btn text-black font-black'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -77,9 +77,9 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
           <button
             id="type-series-button"
             onClick={() => setSelectedType('series')}
-            className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`py-1.5 rounded-xl transition-all cursor-pointer ${
               selectedType === 'series'
-                ? 'bg-purple-500 text-white font-bold shadow'
+                ? 'bg-indigo-600 text-white font-bold shadow'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -88,9 +88,9 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
           <button
             id="type-anime-button"
             onClick={() => setSelectedType('anime')}
-            className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+            className={`py-1.5 rounded-xl transition-all cursor-pointer ${
               selectedType === 'anime'
-                ? 'bg-rose-500 text-white font-bold shadow'
+                ? 'bg-rose-600 text-white font-bold shadow'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -99,15 +99,15 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
         </div>
       </div>
 
-      {/* Release Year Accordion Section */}
-      <div className="border-t border-zinc-800/80 pt-3">
+      {/* Release Year Matrix Section */}
+      <div className="border-t border-white/[0.06] pt-3.5">
         <button
           id="toggle-year-accordion"
           onClick={() => setIsYearOpen(!isYearOpen)}
           className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white py-1 cursor-pointer"
         >
-          <span>Release year</span>
-          {isYearOpen ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+          <span className="font-mono text-[11px]">Нээлтийн он</span>
+          {isYearOpen ? <ChevronUp className="w-3.5 h-3.5 text-zinc-400" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />}
         </button>
 
         {isYearOpen && (
@@ -119,10 +119,10 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
                   key={year}
                   id={`year-filter-${year}`}
                   onClick={() => setSelectedYear(isSelected ? null : year)}
-                  className={`py-1.5 px-2 text-xs font-mono rounded-lg transition-all border cursor-pointer ${
+                  className={`py-1.5 px-2 text-xs font-mono rounded-xl transition-all border cursor-pointer ${
                     isSelected
-                      ? 'bg-cyan-500 text-black font-bold border-cyan-400 shadow-md'
-                      : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800'
+                      ? 'gold-glow-btn text-black font-black border-amber-400'
+                      : 'bg-white/[0.03] text-zinc-300 border-white/[0.06] hover:border-white/10 hover:bg-white/[0.07]'
                   }`}
                 >
                   {year}
@@ -134,18 +134,18 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
       </div>
 
       {/* Genres Section */}
-      <div className="border-t border-zinc-800/80 pt-3">
+      <div className="border-t border-white/[0.06] pt-3.5">
         <button
           id="toggle-genre-accordion"
           onClick={() => setIsGenreOpen(!isGenreOpen)}
           className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white py-1 cursor-pointer"
         >
-          <span>Genres</span>
-          {isGenreOpen ? <ChevronUp className="w-4 h-4 text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-400" />}
+          <span className="font-mono text-[11px]">Жанр & Ангилал</span>
+          {isGenreOpen ? <ChevronUp className="w-3.5 h-3.5 text-zinc-400" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />}
         </button>
 
         {isGenreOpen && (
-          <div className="space-y-1 mt-2.5 max-h-72 overflow-y-auto pr-1 text-xs">
+          <div className="space-y-1 mt-2.5 max-h-72 overflow-y-auto pr-1 text-xs no-scrollbar">
             {GENRE_COUNTS.map((g) => {
               const isSelected = selectedGenre === g.name;
               return (
@@ -153,21 +153,21 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
                   key={g.name}
                   id={`genre-filter-${g.name}`}
                   onClick={() => setSelectedGenre(isSelected ? null : g.name)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-all text-left cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer border ${
                     isSelected
-                      ? 'bg-cyan-950/80 text-cyan-300 font-bold border border-cyan-800/60'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                      ? 'bg-amber-500/15 text-amber-300 font-bold border-amber-500/30'
+                      : 'bg-transparent border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        isSelected ? 'bg-cyan-400' : 'bg-zinc-600'
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.8)]' : 'bg-zinc-600'
                       }`}
                     />
                     <span>{g.name}</span>
                   </div>
-                  <span className="text-[11px] text-zinc-500 font-mono">
+                  <span className="text-[10px] text-zinc-500 font-mono">
                     {g.count}
                   </span>
                 </button>

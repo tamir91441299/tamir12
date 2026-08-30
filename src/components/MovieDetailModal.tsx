@@ -265,21 +265,21 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-[#17171a] border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 max-h-[92vh] flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl cinema-glass-elevated border border-white/[0.08] rounded-3xl overflow-hidden shadow-2xl text-zinc-100 max-h-[92vh] flex flex-col my-auto film-frame-decor">
         {/* Close Button */}
         <button
           id="close-detail-modal"
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center border border-zinc-700 backdrop-blur transition-transform hover:scale-105 cursor-pointer"
+          className="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center border border-white/10 backdrop-blur transition-transform hover:scale-105 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Scrollable Container */}
-        <div className="overflow-y-auto flex-1 divide-y divide-zinc-800/80">
+        <div className="overflow-y-auto flex-1 divide-y divide-white/[0.06] no-scrollbar">
           {/* Top Hero Banner */}
-          <div className="relative h-64 sm:h-80 md:h-96 w-full overflow-hidden bg-zinc-950">
+          <div className="relative h-64 sm:h-80 md:h-96 w-full overflow-hidden bg-[#07080b]">
             {showTrailer ? (
               <iframe
                 src={getEmbedUrl(movie.trailerUrl)}
@@ -304,17 +304,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     className="w-full h-full object-cover select-none pointer-events-none"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-zinc-950 via-[#14141a] to-zinc-900 flex items-center justify-center">
-                    <Sparkles className="w-16 h-16 text-cyan-400/20" />
+                  <div className="w-full h-full bg-gradient-to-r from-[#07080b] via-[#14141a] to-[#07080b] flex items-center justify-center">
+                    <Sparkles className="w-16 h-16 text-amber-400/20" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#17171a] via-[#17171a]/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d13] via-[#0b0d13]/60 to-transparent" />
 
                 {/* Big Direct Play Button on Backdrop */}
                 <button
                   id="preview-play-backdrop-button"
                   onClick={() => onPlay(movie, 1)}
-                  className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-black flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10"
+                  className="absolute inset-0 m-auto w-16 h-16 rounded-full gold-glow-btn text-black flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10"
                   title="Шууд үзэх"
                 >
                   <Play className="w-8 h-8 fill-black ml-1 group-hover:scale-110 transition-transform" />
@@ -324,9 +324,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowTrailer(true)}
-                    className="absolute bottom-4 right-4 z-10 bg-black/70 hover:bg-black text-zinc-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-zinc-700 backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5"
+                    className="absolute bottom-4 right-4 z-10 bg-black/70 hover:bg-black text-zinc-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    <Film className="w-3.5 h-3.5 text-cyan-400" />
+                    <Film className="w-3.5 h-3.5 text-amber-400" />
                     <span>Трейлер үзэх</span>
                   </button>
                 )}
@@ -335,7 +335,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           </div>
 
           {/* Core Info Section */}
-          <div className="p-4 sm:p-6 space-y-6 -mt-12 relative z-10">
+          <div className="p-4 sm:p-6 space-y-6 -mt-12 relative z-10 bg-[#0b0d13]/80 backdrop-blur-md border-t border-white/[0.04]">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               {/* Poster Image */}
               {movie.poster ? (
@@ -349,12 +349,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   }}
                   draggable={false}
                   onContextMenu={(e) => e.preventDefault()}
-                  className="w-36 sm:w-48 aspect-[2/3] object-cover rounded-xl shadow-2xl border-2 border-zinc-700/80 shrink-0 mx-auto sm:mx-0 select-none"
+                  className="w-36 sm:w-48 aspect-[2/3] object-cover rounded-2xl shadow-2xl border border-white/10 shrink-0 mx-auto sm:mx-0 select-none"
                 />
               ) : (
-                <div className="w-36 sm:w-48 aspect-[2/3] rounded-xl shadow-2xl border-2 border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-950 flex flex-col items-center justify-center shrink-0 mx-auto sm:mx-0 p-4 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-zinc-800/80 flex items-center justify-center mb-2">
-                    <Sparkles className="w-6 h-6 text-rose-400" />
+                <div className="w-36 sm:w-48 aspect-[2/3] rounded-2xl shadow-2xl border border-white/10 bg-gradient-to-b from-[#181c26] to-[#0b0d13] flex flex-col items-center justify-center shrink-0 mx-auto sm:mx-0 p-4 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center mb-2">
+                    <Sparkles className="w-6 h-6 text-amber-400" />
                   </div>
                   <span className="text-xs font-bold text-zinc-300 line-clamp-2">
                     {movie.titleMongolian || movie.title}
@@ -365,26 +365,26 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               {/* Title & Metadata */}
               <div className="flex-1 space-y-3 text-center sm:text-left">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs">
-                  <span className="bg-cyan-500 text-black font-extrabold px-2.5 py-0.5 rounded">
-                    {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV SERIES' : 'MOVIE'}
+                  <span className="studio-badge-gold text-[10px] font-mono font-black px-2.5 py-0.5 rounded-md">
+                    {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV SERIES' : 'CINEMA'}
                   </span>
-                  <span className="bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded shadow flex items-center gap-1">
+                  <span className="bg-white/[0.06] text-amber-300 font-extrabold px-2.5 py-0.5 rounded-md border border-white/10 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
-                    ШУУД ҮЗЭХ
+                    4K ULTRA HD
                   </span>
-                  <span className="bg-zinc-800 text-zinc-300 font-bold px-2.5 py-0.5 rounded border border-zinc-700">
+                  <span className="bg-white/[0.04] text-zinc-300 font-mono font-bold px-2.5 py-0.5 rounded-md border border-white/[0.06]">
                     {movie.year}
                   </span>
-                  <span className="bg-rose-950 text-rose-300 font-bold px-2.5 py-0.5 rounded border border-rose-800">
+                  <span className="bg-rose-950/60 text-rose-300 font-bold px-2.5 py-0.5 rounded-md border border-rose-500/30">
                     {movie.ageRating}
                   </span>
-                  <span className="bg-amber-500/20 text-amber-300 font-bold px-2.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                  <span className="bg-amber-500/20 text-amber-300 font-bold px-2.5 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     {movie.rating} / 10
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-black text-white">
+                <h1 className="text-2xl sm:text-3xl font-black text-white font-display">
                   {movie.titleMongolian}
                 </h1>
 
@@ -397,7 +397,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   {movie.genres.map((g) => (
                     <span
                       key={g}
-                      className="bg-zinc-800 text-cyan-300 text-xs px-2.5 py-1 rounded-lg border border-zinc-700/80"
+                      className="bg-white/[0.04] text-zinc-300 text-xs px-2.5 py-1 rounded-lg border border-white/[0.06]"
                     >
                       {g}
                     </span>
@@ -412,7 +412,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian, 'videoUrl:', movie.videoUrl);
                       onPlay(movie);
                     }}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-500/20 hover:scale-105 transition-all cursor-pointer"
+                    className="gold-glow-btn text-black font-extrabold text-sm px-7 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 transition-all cursor-pointer"
                   >
                     <Play className="w-5 h-5 fill-black" />
                     ШУУД ҮЗЭХ
@@ -421,10 +421,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <button
                     id="modal-fav-toggle"
                     onClick={() => onToggleFavorite(movie.id)}
-                    className={`px-4 py-3 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                    className={`px-4 py-3.5 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                       isFavorite
                         ? 'bg-rose-500/20 border-rose-500 text-rose-400'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white'
+                        : 'bg-white/[0.04] border-white/10 text-zinc-300 hover:text-white'
                     }`}
                   >
                     <Bookmark className="w-4 h-4 fill-current" />
@@ -435,7 +435,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     href="https://www.facebook.com/share/r/17wruEiwvA/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                    className="px-4 py-3.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-400/40 text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md"
                   >
                     <span>FB Бичлэг 🎬</span>
                   </a>
@@ -443,7 +443,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <button
                     id="modal-share"
                     onClick={handleShare}
-                    className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer"
+                    className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 text-zinc-300 hover:text-white transition-all cursor-pointer"
                     title="Линк хуулах"
                   >
                     {copiedLink ? <Check className="w-5 h-5 text-emerald-400" /> : <Share2 className="w-5 h-5" />}

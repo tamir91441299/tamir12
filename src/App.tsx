@@ -542,7 +542,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121214] text-zinc-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen cinema-noir-bg text-zinc-100 flex flex-col font-sans selection:bg-amber-400 selection:text-black">
       {/* Dynamic SEO Head Manager */}
       <SeoHead
         activeTab={activeTab}
@@ -585,7 +585,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
         {/* Hero Carousel (On Home / All view) */}
         {activeTab === 'home' && !selectedYear && !selectedGenre && !searchQuery && (
           <BannerCarousel
@@ -599,38 +599,38 @@ export default function App() {
 
         {/* AI Banner Callout (Shown on Home view) */}
         {activeTab === 'home' && (
-          <div className="mb-4 bg-gradient-to-r from-cyan-950/80 via-zinc-900 to-purple-950/80 border border-cyan-800/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
-                <Sparkles className="w-6 h-6 animate-pulse" />
+          <div className="mb-5 cinema-glass-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl border border-white/[0.08]">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-amber-500/15 text-amber-300 rounded-xl border border-amber-500/30">
+                <Sparkles className="w-5 h-5 animate-pulse" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  FlickNime AI Кино & Санал Болгогч Сан
+                <h3 className="font-bold text-sm text-white flex items-center gap-2 font-display">
+                  FlickNime AI Зөвлөх & Санал Болгогч Сан
                 </h3>
                 <p className="text-xs text-zinc-400">
-                  Хиймэл оюун ухаант кино сан, AI зохиолч, тааварт тоглоом болон хувийн зөвлөгчтэй ажиллаарай.
+                  Хиймэл оюун ухаант кино зөвлөгч, сонирхолтой анимэ таавар тоглоомуудтай танилцаарай.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 shrink-0">
               <button
                 id="open-ai-movies-callout"
                 onClick={() => {
                   setSelectedMovieCategory('scifi');
                   setActiveTab('movies');
                 }}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                className="gold-glow-btn text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
               >
-                <Cpu className="w-4 h-4" />
-                <span>AI & Sci-Fi Кино Үзэх</span>
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Sci-Fi & AI Кино</span>
               </button>
 
               <button
                 id="open-ai-callout"
                 onClick={() => setActiveTab('ai')}
-                className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap border border-zinc-700"
+                className="bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap border border-white/10"
               >
                 AI Зөвлөх
               </button>
@@ -640,24 +640,24 @@ export default function App() {
 
         {/* Game Center Callout Banner (Shown on Home view) */}
         {activeTab === 'home' && (
-          <div className="mb-6 bg-gradient-to-r from-rose-950/90 via-zinc-900 to-purple-950/90 border border-rose-500/40 rounded-3xl p-5 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-2xl shadow-rose-950/30">
+          <div className="mb-7 cinema-glass-elevated rounded-3xl p-5 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-2xl border border-amber-500/30">
             <div className="flex items-center gap-3.5">
-              <div className="p-3.5 bg-gradient-to-br from-rose-500 to-amber-500 text-white rounded-2xl shadow-lg shadow-rose-500/30 shrink-0">
-                <Swords className="w-6 h-6 animate-pulse text-white" />
+              <div className="p-3.5 bg-gradient-to-br from-amber-500 to-rose-600 text-black rounded-2xl shadow-lg shadow-amber-500/20 shrink-0">
+                <Swords className="w-6 h-6 animate-pulse text-black" />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="bg-rose-500/20 text-rose-300 font-bold text-[10px] px-2 py-0.5 rounded-full border border-rose-500/40">
-                    🥊 ОНЛАЙН ТОГЛООМУУД
+                  <span className="studio-badge-gold font-bold text-[10px] px-2 py-0.5 rounded-md">
+                    🥊 ОНЛАЙН АРЕНА
                   </span>
-                  <span className="text-amber-400 text-[10px] font-black">
+                  <span className="text-amber-300 text-[10px] font-mono font-bold">
                     ⚡ Vibe Fighter & Анимэ Таавар
                   </span>
                 </div>
-                <h3 className="font-black text-sm sm:text-base text-white flex items-center gap-2">
-                  <span>Vibe Fighter Arena болон Анимэ таавар тоглоомууд</span>
+                <h3 className="font-black text-sm sm:text-base text-white flex items-center gap-2 font-display">
+                  <span>Vibe Fighter Arena болон Анимэ таавар сорилт</span>
                 </h3>
-                <p className="text-xs text-zinc-300 max-w-xl">
+                <p className="text-xs text-zinc-400 max-w-xl">
                   Өрсөлдөгчтэйгөө шууд тулалдах Vibe Fighter тоглоом болон 3 амьтай анимэ дүр/нэр таах сорилтыг тоглоорой!
                 </p>
               </div>
@@ -670,9 +670,9 @@ export default function App() {
                   setSelectedGameMode('vibe_fighter');
                   setActiveTab('games');
                 }}
-                className="bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                className="gold-glow-btn text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg hover:scale-105 cursor-pointer whitespace-nowrap flex items-center gap-1.5"
               >
-                <Swords className="w-4 h-4 text-white" />
+                <Swords className="w-4 h-4 text-black" />
                 <span>🥊 VIBE FIGHTER ТОГЛОХ</span>
               </button>
 
@@ -682,9 +682,9 @@ export default function App() {
                   setSelectedGameMode('character');
                   setActiveTab('games');
                 }}
-                className="bg-purple-900/60 hover:bg-purple-800 text-purple-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-purple-500/40"
+                className="bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-white/10"
               >
-                <Gamepad2 className="w-3.5 h-3.5" />
+                <Gamepad2 className="w-3.5 h-3.5 text-rose-400" />
                 <span>🎭 ДҮР ТААХ</span>
               </button>
 
@@ -694,7 +694,7 @@ export default function App() {
                   setSelectedGameMode('title');
                   setActiveTab('games');
                 }}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-zinc-700"
+                className="bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow cursor-pointer whitespace-nowrap flex items-center gap-1.5 border border-white/[0.06]"
               >
                 <span>🎬 НЭР ТААХ</span>
               </button>
@@ -733,43 +733,43 @@ export default function App() {
           <div className="flex-1 space-y-8 min-w-0">
             {/* Quick Movie Subcategories Bar when viewing Movies tab */}
             {activeTab === 'movies' && (
-              <div className="bg-[#17171c] border border-zinc-800 rounded-2xl p-3 shadow-lg">
+              <div className="cinema-glass rounded-2xl p-3 shadow-lg border border-white/[0.06]">
                 <div className="flex items-center justify-between gap-2 mb-2 px-1">
-                  <span className="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Film className="w-4 h-4" />
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <Film className="w-3.5 h-3.5" />
                     Киноны Ангилал & Сонголтууд ({filteredMovies.length} кино):
                   </span>
                   {selectedMovieCategory !== 'all' && (
                     <button
                       onClick={() => setSelectedMovieCategory('all')}
-                      className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
+                      className="text-xs text-zinc-400 hover:text-amber-300 underline cursor-pointer"
                     >
                       Бүгдийг үзэх
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                   {[
-                    { id: 'all' as MovieSubcategory, label: '🎬 Бүх Кино', color: 'hover:border-cyan-500' },
-                    { id: 'mongolian' as MovieSubcategory, label: '🇲🇳 Монгол', color: 'hover:border-rose-500' },
-                    { id: 'hollywood' as MovieSubcategory, label: '🇺🇸 Холливуд', color: 'hover:border-blue-500' },
-                    { id: 'korean' as MovieSubcategory, label: '🇰🇷 Солонгос', color: 'hover:border-pink-500' },
-                    { id: 'chinese' as MovieSubcategory, label: '🇨🇳 Хятад', color: 'hover:border-amber-500' },
-                    { id: 'new' as MovieSubcategory, label: '⚡ 2026/2025 Шинэ', color: 'hover:border-emerald-500' },
-                    { id: 'top_rated' as MovieSubcategory, label: '⭐ Шилдэг 9.0+', color: 'hover:border-amber-400' },
-                    { id: 'action' as MovieSubcategory, label: '💥 Тулаант', color: 'hover:border-red-500' },
-                    { id: 'horror' as MovieSubcategory, label: '👻 Аймшиг', color: 'hover:border-purple-500' },
-                    { id: 'comedy' as MovieSubcategory, label: '😂 Инээдэм', color: 'hover:border-yellow-500' },
-                    { id: 'scifi' as MovieSubcategory, label: '🤖 Sci-Fi & AI', color: 'hover:border-cyan-400' },
-                    { id: 'vip' as MovieSubcategory, label: '💎 VIP / Багц', color: 'hover:border-amber-400' },
+                    { id: 'all' as MovieSubcategory, label: '🎬 Бүх Кино' },
+                    { id: 'mongolian' as MovieSubcategory, label: '🇲🇳 Монгол' },
+                    { id: 'hollywood' as MovieSubcategory, label: '🇺🇸 Холливуд' },
+                    { id: 'korean' as MovieSubcategory, label: '🇰🇷 Солонгос' },
+                    { id: 'chinese' as MovieSubcategory, label: '🇨🇳 Хятад' },
+                    { id: 'new' as MovieSubcategory, label: '⚡ 2026/2025 Шинэ' },
+                    { id: 'top_rated' as MovieSubcategory, label: '⭐ Шилдэг 9.0+' },
+                    { id: 'action' as MovieSubcategory, label: '💥 Тулаант' },
+                    { id: 'horror' as MovieSubcategory, label: '👻 Аймшиг' },
+                    { id: 'comedy' as MovieSubcategory, label: '😂 Инээдэм' },
+                    { id: 'scifi' as MovieSubcategory, label: '🤖 Sci-Fi & AI' },
+                    { id: 'vip' as MovieSubcategory, label: '💎 VIP / Багц' },
                   ].map((subCat) => (
                     <button
                       key={subCat.id}
                       onClick={() => setSelectedMovieCategory(subCat.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer ${
                         selectedMovieCategory === subCat.id
-                          ? 'bg-cyan-500 text-black border-cyan-400 shadow-md font-black'
-                          : `bg-zinc-900 text-zinc-300 border-zinc-800 hover:text-white ${subCat.color}`
+                          ? 'gold-glow-btn text-black font-black border-amber-400'
+                          : 'bg-white/[0.03] text-zinc-300 border-white/[0.06] hover:text-white hover:bg-white/[0.07]'
                       }`}
                     >
                       {subCat.label}
@@ -780,8 +780,9 @@ export default function App() {
             )}
 
             {activeTab === 'favorites' && (
-              <div className="border-l-4 border-rose-500 pl-3">
-                <h2 className="text-xl font-black uppercase text-white flex items-center gap-2">
+              <div className="flex items-center gap-2.5 pb-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+                <h2 className="text-lg sm:text-xl font-black uppercase text-white font-display flex items-center gap-2">
                   <Heart className="w-5 h-5 text-rose-500 fill-current" />
                   Таалагдсан Кинонууд ({filteredMovies.length})
                 </h2>
@@ -789,8 +790,9 @@ export default function App() {
             )}
 
             {activeTab === 'purchased' && (
-              <div className="border-l-4 border-emerald-500 pl-3">
-                <h2 className="text-xl font-black uppercase text-white flex items-center gap-2">
+              <div className="flex items-center gap-2.5 pb-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                <h2 className="text-lg sm:text-xl font-black uppercase text-white font-display flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                   Миний Худалдаж Авсан Кинонууд ({filteredMovies.length})
                 </h2>

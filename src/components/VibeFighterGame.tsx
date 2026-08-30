@@ -219,7 +219,7 @@ export const VibeFighterGame: React.FC<VibeFighterGameProps> = ({
         )}
 
         {/* Embedded Game Iframe */}
-        <div className="relative w-full aspect-video min-h-[520px] sm:min-h-[640px] bg-black">
+        <div className="relative w-full aspect-video min-h-[300px] sm:min-h-[480px] md:min-h-[580px] bg-black">
           <iframe
             key={reloadKey}
             ref={iframeRef}

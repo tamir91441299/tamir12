@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Star, Bookmark, ShieldCheck, Sparkles, Tv, Film } from 'lucide-react';
+import { Play, Star, Bookmark, Sparkles, Tv, Film, Clapperboard } from 'lucide-react';
 import { Movie } from '../types';
 
 interface MovieCardProps {
@@ -18,11 +18,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   onToggleFavorite,
   isFavorite,
 }) => {
+  const typeBadgeLabel = movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'SERIES' : 'CINEMA';
+  const audioLabel = movie.country === 'Монгол' ? 'MN ORIGINAL' : movie.type === 'anime' ? 'MN SUB / DUB' : 'MN DUB';
+
   return (
-    <div className="group relative bg-[#131317] rounded-2xl overflow-hidden border border-zinc-800/80 hover:border-cyan-500/60 transition-all duration-300 flex flex-col h-full shadow-lg hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1.5">
+    <div className="group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer">
       {/* Poster Image Container */}
       <div
-        className="relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-b from-zinc-800 to-zinc-950 cursor-pointer flex items-center justify-center"
+        className="relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-b from-[#181b24] via-[#101218] to-[#0a0b0f] flex items-center justify-center"
         onClick={() => onOpenDetails(movie)}
       >
         {movie.poster ? (
@@ -36,51 +39,57 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             }}
             draggable={false}
             onContextMenu={(e) => e.preventDefault()}
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out select-none"
+            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out select-none"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-gradient-to-br from-zinc-900 via-[#16161b] to-zinc-950">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-cyan-500/50 transition-all">
+          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#181c26] via-[#12141c] to-[#08090d]">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-amber-400/40 transition-all">
               {movie.type === 'anime' ? (
                 <Sparkles className="w-6 h-6 text-rose-400" />
               ) : movie.type === 'series' ? (
-                <Tv className="w-6 h-6 text-blue-400" />
+                <Tv className="w-6 h-6 text-indigo-400" />
               ) : (
-                <Film className="w-6 h-6 text-purple-400" />
+                <Film className="w-6 h-6 text-amber-400" />
               )}
             </div>
-            <p className="text-xs font-black text-zinc-200 line-clamp-2 px-1">
+            <p className="text-xs font-bold text-zinc-200 line-clamp-2 px-1">
               {movie.titleMongolian || movie.title}
             </p>
-            <span className="text-[10px] text-zinc-500 font-semibold mt-1">
+            <span className="text-[10px] text-zinc-500 font-medium mt-1">
               {movie.year} • {movie.genres?.[0] || 'Кино'}
             </span>
           </div>
         )}
 
-        {/* Ambient Bottom Gradient on Poster */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#131317] via-transparent to-black/30 opacity-60 group-hover:opacity-80 transition-opacity pointer-events-none" />
+        {/* Ambient Theatrical Vignette & Bottom Film Shade */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e14] via-[#0c0e14]/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity pointer-events-none" />
 
-        {/* Top Badges */}
+        {/* Top Floating Studio Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none gap-1 z-10">
-          <div className="flex items-center gap-1">
-            <span
-              className={`text-[10px] font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-0.5 ${
-                movie.type === 'anime'
-                  ? 'bg-rose-600 text-white'
-                  : movie.type === 'series'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-purple-600 text-white'
-              }`}
-            >
-              {movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'TV' : 'MOVIE'}
-            </span>
-          </div>
+          <span
+            className={`text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-md backdrop-blur-md border ${
+              movie.type === 'anime'
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                : movie.type === 'series'
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            }`}
+          >
+            {typeBadgeLabel}
+          </span>
 
-          <span className="bg-emerald-500/90 text-black text-[10px] font-black px-2 py-0.5 rounded-md shadow-md backdrop-blur-md flex items-center gap-0.5">
-            <ShieldCheck className="w-3 h-3" />
-            <span>ШУУД ✓</span>
+          {/* Rating Pill */}
+          <span className="bg-black/60 backdrop-blur-md border border-amber-500/30 text-amber-300 text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+            <span>{movie.rating}</span>
+          </span>
+        </div>
+
+        {/* Bottom Format / Audio Tag (Sleek Studio Film Spec) */}
+        <div className="absolute bottom-2.5 left-2.5 pointer-events-none z-10">
+          <span className="bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300 text-[9px] font-mono font-medium px-1.5 py-0.5 rounded">
+            {audioLabel}
           </span>
         </div>
 
@@ -93,52 +102,52 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           }}
           className={`absolute bottom-2.5 right-2.5 p-2 rounded-xl border backdrop-blur-md transition-all cursor-pointer z-10 ${
             isFavorite
-              ? 'bg-rose-500 border-rose-400 text-white shadow-lg shadow-rose-500/40 scale-105'
-              : 'bg-black/60 border-zinc-700/80 text-zinc-300 hover:text-white hover:bg-black/80 hover:scale-105'
+              ? 'bg-rose-500/90 border-rose-400 text-white shadow-lg shadow-rose-500/40 scale-105'
+              : 'bg-black/60 border-white/10 text-zinc-400 hover:text-white hover:bg-black/90 hover:scale-105'
           }`}
           title="Хадгалах"
         >
           <Bookmark className="w-3.5 h-3.5 fill-current" />
         </button>
 
-        {/* Hover Overlay Play Button */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+        {/* Cinematic Play Orb Hover Overlay */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-[2px]">
           <button
             id={`card-play-${movie.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              console.log(`🎬 [MovieCard] Play button clicked for "${movie.titleMongolian}" (ID: ${movie.id}), videoUrl: ${movie.videoUrl}`);
               onPlay(movie);
             }}
-            className="w-13 h-13 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-black flex items-center justify-center shadow-2xl shadow-cyan-500/50 hover:scale-115 active:scale-95 transition-all cursor-pointer"
+            className="w-13 h-13 rounded-full gold-glow-btn text-black flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-300 cursor-pointer"
             title="Тоглуулах"
           >
-            <Play className="w-6 h-6 fill-black ml-0.5" />
+            <Play className="w-5 h-5 fill-black translate-x-0.5" />
           </button>
         </div>
       </div>
 
       {/* Card Info Content */}
-      <div className="p-3.5 flex flex-col flex-1 justify-between bg-[#131317]">
+      <div 
+        className="p-3 sm:p-3.5 flex flex-col flex-1 justify-between bg-gradient-to-b from-[#0e1017] to-[#0a0b10] border-t border-white/[0.05]"
+        onClick={() => onOpenDetails(movie)}
+      >
         <div>
           <h3
-            onClick={() => onOpenDetails(movie)}
-            className="font-extrabold text-sm text-zinc-100 group-hover:text-cyan-400 transition-colors line-clamp-1 cursor-pointer"
+            className="font-bold text-xs sm:text-sm text-zinc-100 group-hover:text-amber-300 transition-colors line-clamp-1"
             title={movie.titleMongolian}
           >
             {movie.titleMongolian}
           </h3>
-          <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5 font-medium">
+          <p className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5 font-normal">
             {movie.title}
           </p>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-3 pt-2.5 border-t border-zinc-800/80">
-          <span className="font-mono text-zinc-300 font-semibold">{movie.year}</span>
-          <div className="flex items-center gap-1 text-amber-400 font-black">
-            <Star className="w-3.5 h-3.5 fill-amber-400" />
-            <span>{movie.rating}</span>
-          </div>
+        <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-400 mt-2.5 pt-2 border-t border-white/[0.04]">
+          <span className="font-mono text-zinc-400">{movie.year}</span>
+          <span className="text-zinc-500 font-medium truncate max-w-[90px]">
+            {movie.genres?.[0] || 'Кино'}
+          </span>
         </div>
       </div>
     </div>
