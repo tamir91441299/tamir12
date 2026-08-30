@@ -105,6 +105,29 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Handle direct launch when opened in a new protected window (e.g. ?play=m_91_days&ep=1)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const playId = params.get('play');
+      const epParam = params.get('ep');
+      if (playId) {
+        const found = moviesList.find((m) => m.id === playId);
+        if (found) {
+          setSelectedMovieForPlayer(found);
+          if (epParam) {
+            const parsedEp = parseInt(epParam, 10);
+            if (!isNaN(parsedEp) && parsedEp > 0) {
+              setPlayerInitialEpisode(parsedEp);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing player URL search params:', e);
+    }
+  }, [moviesList]);
+
   // Favorites state
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {

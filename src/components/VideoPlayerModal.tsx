@@ -30,7 +30,9 @@ import {
   Terminal,
   Copy,
   RotateCw,
-  Lock
+  Lock,
+  ShieldCheck,
+  Shield
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -249,6 +251,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   const serverModeRef = useRef<ServerMode>(serverMode);
   serverModeRef.current = serverMode;
+
+  // Open protected cinema stream in a dedicated new window without revealing raw file source
+  const handleOpenProtectedNewWindow = useCallback(() => {
+    const currentEpNum = currentEpisode?.episodeNumber || currentEpisodeIndex + 1;
+    const url = `${window.location.origin}${window.location.pathname}?play=${encodeURIComponent(movie.id)}&ep=${currentEpNum}&protected=1`;
+    window.open(
+      url,
+      '_blank',
+      'noopener,noreferrer,menubar=no,toolbar=no,location=no,status=no,resizable=yes'
+    );
+    appendDebugLog('🛡️ Хамгаалалттай шинэ цонхонд тоглуулагч амжилттай нээгдлээ.');
+  }, [currentEpisode, currentEpisodeIndex, movie.id, appendDebugLog]);
 
   // Play video safely with audio / autoplay / error handling without cascading loops
   const playVideoSafe = useCallback(async () => {
@@ -618,6 +632,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       }`}>
         {/* Title and metadata row */}
         <div className="flex items-center justify-between sm:justify-start gap-2.5 min-w-0 w-full sm:w-auto">
+          {/* FlickNime Luxury Multicolor Glow Brand Logo */}
+          <div className="hidden xl:flex items-center gap-2 mr-2 shrink-0 border-r border-zinc-800 pr-3">
+            <div className="w-7 h-7 rounded-xl brand-insignia text-black font-black flex items-center justify-center text-xs shadow-md">
+              🎬
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="font-black text-sm tracking-wider brand-text-luxury font-display leading-none">
+                FlickNime
+              </span>
+              <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase">
+                Protected Cinema
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 min-w-0">
             <span className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md shrink-0 shadow-md">
               {movie.type === 'series' ? 'ЦУВРАЛ' : movie.type === 'anime' ? 'АНИМЭ' : 'КИНО'}
@@ -722,6 +751,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <span className="hidden sm:inline">Дебаг</span>
           </button>
 
+          {/* Protected New Window Watch Button */}
+          <button
+            type="button"
+            id="protected-new-window-btn"
+            onClick={handleOpenProtectedNewWindow}
+            className="hidden md:flex items-center gap-1.5 bg-emerald-950/60 hover:bg-emerald-900/90 text-emerald-300 hover:text-emerald-100 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-emerald-500/40 shadow-sm"
+            title="Энэ видеог файл болон холбоосыг нь хамгаалж шинэ цонхоор үзэх"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden lg:inline">Шинэ цонх</span>
+          </button>
+
           {/* Fullscreen Quick Button */}
           <button
             type="button"
@@ -812,8 +853,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <div className="relative w-full h-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-black aspect-video flex items-center justify-center">
                 {/* Pop-out & Download Shield Overlay for Google Drive and Embed Players */}
                 <div
-                  className="absolute top-0 right-0 w-24 h-16 z-20 pointer-events-auto bg-transparent cursor-default select-none"
-                  title="Хуулбарлах болон татахыг хориглосон"
+                  className="absolute top-0 right-0 w-36 h-20 z-20 pointer-events-auto bg-transparent cursor-default select-none"
+                  title="Файлыг шууд татах болон хуулбарлахыг хамгаалсан"
                   onContextMenu={(e) => e.preventDefault()}
                   onClick={(e) => {
                     e.preventDefault();
@@ -821,7 +862,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   }}
                 />
                 <div
-                  className="absolute top-0 left-0 right-0 h-10 z-20 pointer-events-auto bg-transparent cursor-default select-none"
+                  className="absolute top-0 left-0 right-0 h-14 z-20 pointer-events-auto bg-transparent cursor-default select-none"
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+                <div
+                  className="absolute bottom-0 right-0 w-24 h-12 z-20 pointer-events-auto bg-transparent cursor-default select-none"
                   onContextMenu={(e) => e.preventDefault()}
                 />
 
@@ -866,19 +911,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       <span>⚡ 1080P ШУУД СЕРВЕР</span>
                     </button>
 
-                    {/* Open in Google Drive */}
-                    {isGoogleDrive && (
-                      <a
-                        href={rawVideoSrc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-zinc-800 hover:bg-zinc-700 text-cyan-300 hover:text-cyan-200 font-bold text-xs px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 border border-cyan-500/30"
-                        title="Google Drive-аар шинэ таб дээр бүтэн дэлгэцээр нээх"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Шинэ цонхонд нээх</span>
-                      </a>
-                    )}
+                    {/* Open in Protected Cinema New Window */}
+                    <button
+                      type="button"
+                      id="embed-protected-new-window-btn"
+                      onClick={handleOpenProtectedNewWindow}
+                      className="bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 hover:text-emerald-100 font-bold text-xs px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-1.5 border border-emerald-500/40 cursor-pointer shadow-md active:scale-95"
+                      title="Файлыг хамгаалж шинэ тусгай цонхоор бүтэн дэлгэцээр нээж үзэх"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Шинэ цонхоор үзэх (Хамгаалалттай)</span>
+                    </button>
 
                     {isGoogleDrive && (
                       <button
@@ -1471,6 +1514,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Protected New Window Button */}
+                  <button
+                    id="player-new-window-bottom-toggle"
+                    type="button"
+                    onClick={() => {
+                      handleOpenProtectedNewWindow();
+                      resetControlsTimer();
+                    }}
+                    className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg text-emerald-300 hover:text-white transition-colors cursor-pointer bg-zinc-900/80 border border-emerald-500/40"
+                    title="Шинэ тусгай цонхоор үзэх (Файл хамгаалалттай)"
+                  >
+                    <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+                  </button>
 
                   {/* Fullscreen Toggle */}
                   <button
