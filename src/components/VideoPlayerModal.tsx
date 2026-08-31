@@ -138,13 +138,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Smart default mode: If Google Drive or YouTube/external embed, default to 'embed' for 100% cross-browser reliability
-  const [serverMode, setServerMode] = useState<ServerMode>(() => {
-    if (isGoogleDrive || isYouTube || isExternalEmbed) {
-      return 'embed';
-    }
-    return 'direct';
-  });
+  // Smart default mode: Default to 1080p direct server for ultra-crisp Full HD playback on all anime
+  const [serverMode, setServerMode] = useState<ServerMode>('direct');
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
 
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
@@ -963,21 +958,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <span className="capitalize text-[11px]">{videoFitMode === 'contain' ? '16:9' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}</span>
           </button>
 
-          {/* Diagnostic / Debug Toggle Button */}
-          <button
-            type="button"
-            id="debug-panel-toggle-btn"
-            onClick={() => setShowDebugPanel(!showDebugPanel)}
-            className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
-              showDebugPanel
-                ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
-                : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
-            }`}
-            title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
-          >
-            <Bug className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Дебаг</span>
-          </button>
+          {/* Diagnostic / Debug Toggle Button - Only visible to Admin */}
+          {isAdmin && (
+            <button
+              type="button"
+              id="debug-panel-toggle-btn"
+              onClick={() => setShowDebugPanel(!showDebugPanel)}
+              className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
+                showDebugPanel
+                  ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
+              }`}
+              title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
+            >
+              <Bug className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Дебаг</span>
+            </button>
+          )}
 
           {/* Protected New Window Watch Button */}
           <button
@@ -2011,8 +2008,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         )}
       </div>
 
-      {/* Interactive Debug Diagnostic Modal */}
-      {showDebugPanel && (
+      {/* Interactive Debug Diagnostic Modal - Admin Only */}
+      {isAdmin && showDebugPanel && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-zinc-950 border border-zinc-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
