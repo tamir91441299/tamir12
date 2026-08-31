@@ -210,7 +210,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [qualityNotice, setQualityNotice] = useState<string | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(true);
+  const [showEpisodesDrawer, setShowEpisodesDrawer] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -221,7 +221,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [isForcedLandscape, setIsForcedLandscape] = useState<boolean>(false);
   const [isDeviceLandscape, setIsDeviceLandscape] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return window.innerWidth > window.innerHeight;
+      return (
+        (window.screen?.orientation?.type ? window.screen.orientation.type.includes('landscape') : false) ||
+        (typeof window.orientation === 'number' && Math.abs(window.orientation) === 90)
+      );
     }
     return false;
   });
@@ -229,18 +232,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   // Track physical device orientation changes (physical rotation)
   useEffect(() => {
     const handleOrientationOrResize = () => {
-      const isLandscape = window.innerWidth > window.innerHeight;
-      setIsDeviceLandscape(isLandscape);
-      // If the user physically rotates their device to landscape, turn off forced CSS landscape
-      if (isLandscape) {
-        setIsForcedLandscape(false);
-      }
+      const isPhysicalLandscape =
+        (window.screen?.orientation?.type ? window.screen.orientation.type.includes('landscape') : false) ||
+        (typeof window.orientation === 'number' && Math.abs(window.orientation) === 90) ||
+        (window.matchMedia ? window.matchMedia('(orientation: landscape)').matches : false);
+
+      setIsDeviceLandscape(isPhysicalLandscape);
     };
+
+    handleOrientationOrResize();
 
     window.addEventListener('resize', handleOrientationOrResize);
     window.addEventListener('orientationchange', handleOrientationOrResize);
     if (window.screen?.orientation) {
       window.screen.orientation.addEventListener('change', handleOrientationOrResize);
+    }
+    const mediaQuery = window.matchMedia ? window.matchMedia('(orientation: landscape)') : null;
+    if (mediaQuery?.addEventListener) {
+      mediaQuery.addEventListener('change', handleOrientationOrResize);
     }
 
     return () => {
@@ -248,6 +257,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       window.removeEventListener('orientationchange', handleOrientationOrResize);
       if (window.screen?.orientation) {
         window.screen.orientation.removeEventListener('change', handleOrientationOrResize);
+      }
+      if (mediaQuery?.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleOrientationOrResize);
       }
     };
   }, []);
@@ -614,17 +626,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Dedicated Screen Orientation / Landscape Rotation for Mobile (Handles Portrait Lock & Touch Devices)
   const toggleRotateLandscape = async () => {
-    // If device is already physically in landscape, toggle fullscreen
-    if (isDeviceLandscape) {
-      toggleFullscreen();
-      return;
-    }
-
     const nextState = !isForcedLandscape;
     setIsForcedLandscape(nextState);
 
     if (nextState) {
-      setQualityNotice('🔄 Хөндлөн (Landscape) бүтэн дэлгэцийн горим идэвхжлээ');
+      setQualityNotice('🔄 Хөндлөн (Landscape) горим идэвхжлээ');
       // Attempt Screen Orientation API lock if supported
       try {
         if ((screen?.orientation as any)?.lock) {
@@ -658,7 +664,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   // Cross-browser & Mobile-Safe Fullscreen with Orientation Lock Support
   const toggleFullscreen = async () => {
     try {
-      const isTouchOrMobile = window.innerWidth < 768 || ('ontouchstart' in window);
+      const isTouchOrMobile =
+        typeof window !== 'undefined' &&
+        (window.innerWidth < 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
       const doc: any = document;
       const targetElem: any = playerContainerRef.current || videoRef.current;
 
@@ -708,10 +716,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             }
           } catch {}
 
-          // If on mobile portrait and device wasn't rotated, activate forced landscape
-          if (!isDeviceLandscape && window.innerHeight > window.innerWidth) {
-            setIsForcedLandscape(true);
-          }
+          setIsForcedLandscape(true);
         }
 
         setIsFullscreen(true);
@@ -762,17 +767,39 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   return (
     <div
-      className={`fixed z-50 bg-black backdrop-blur-2xl flex flex-col justify-between overflow-hidden transition-all duration-300 ${
-        isForcedLandscape && !isDeviceLandscape
-          ? 'w-[100vh] h-[100vw] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 origin-center shadow-2xl'
-          : 'inset-0'
+      className={`fixed bg-black flex flex-col justify-between overflow-hidden transition-all duration-300 ${
+        isForcedLandscape
+          ? 'shadow-2xl'
+          : 'inset-0 w-full h-full z-50'
       }`}
+      style={
+        isForcedLandscape
+          ? {
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              width: '100dvh',
+              height: '100dvw',
+              maxWidth: '100dvh',
+              maxHeight: '100dvw',
+              transform: 'translate(-50%, -50%) rotate(90deg)',
+              transformOrigin: 'center center',
+              zIndex: 999999,
+            }
+          : {
+              position: 'fixed',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 50,
+            }
+      }
     >
-      {/* Top Header Bar - Fully Responsive with Smooth Auto-Collapse in Fullscreen */}
-      <header className={`p-2 sm:p-3.5 bg-gradient-to-b from-black via-black/90 to-black/40 flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 border-b border-zinc-800/80 shrink-0 transition-all duration-300 ${
-        isFullscreen
+      {/* Top Header Bar - Fully Responsive with Smooth Auto-Collapse in Landscape/Fullscreen */}
+      <header className={`p-2 sm:p-3 bg-gradient-to-b from-black/60 via-black/25 to-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
+        isFullscreen || isForcedLandscape || isDeviceLandscape
           ? controlsVisible
-            ? 'opacity-100 translate-y-0 relative'
+            ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
             : 'opacity-0 -translate-y-full pointer-events-none absolute inset-x-0 top-0'
           : 'opacity-100 relative'
       }`}>
@@ -1048,14 +1075,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               </div>
             </div>
           ) : isEmbed ? (
-            <div className={`w-full h-full p-2 sm:p-4 flex flex-col items-center justify-center relative select-none no-download-shield ${
-              isFullscreen || videoFitMode === 'cover' ? 'max-w-none' : 'max-w-7xl'
-            }`}>
-              <div className="relative w-full h-full rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-black aspect-video flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center relative select-none bg-black overflow-hidden">
+              <div className="relative w-full h-full bg-black flex items-center justify-center">
                 {/* Pop-out & Download Shield Overlay for Google Drive and Embed Players */}
                 <div
                   className="absolute top-0 right-0 w-36 h-20 z-20 pointer-events-auto bg-transparent cursor-default select-none"
-                  title="Файлыг шууд татах болон хуулбарлахыг хамгаалсан"
+                  title="Файлыг хамгаалсан"
                   onContextMenu={(e) => e.preventDefault()}
                   onClick={(e) => {
                     e.preventDefault();
@@ -1076,7 +1101,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   src={iframeUrl}
                   onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${iframeUrl}`)}
                   onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа: ${iframeUrl}`)}
-                  className="w-full h-full rounded-2xl border-0 bg-black aspect-video pointer-events-auto"
+                  className="w-full h-full border-0 bg-black pointer-events-auto"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                   referrerPolicy="no-referrer"
                   allowFullScreen
@@ -1084,101 +1109,36 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   onContextMenu={(e) => e.preventDefault()}
                 />
               </div>
-              
-              {/* Google Drive / Embed Helper Bar with Full Multi-Quality Switcher */}
-              <div className="w-full mt-2 space-y-2">
-                <div className="text-xs text-zinc-300 bg-zinc-900/95 border border-cyan-500/40 py-2.5 px-3 sm:px-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="font-bold text-white text-xs sm:text-sm">
-                      {isGoogleDrive ? '📁 Google Drive HD Тоглуулагч' : isYouTube ? '📺 YouTube Тоглуулагч' : '🎬 Эх Холбоос'}
-                    </span>
-                    <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-md bg-cyan-950 border border-cyan-500/50 text-cyan-300 font-bold">
-                      💡 1080p Full HD бэлэн
-                    </span>
-                  </div>
 
-                  {/* High Quality Switcher Action & Instant 1080p Booster */}
-                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
-                    {/* Instant HD Booster button */}
-                    <button
-                      type="button"
-                      id="embed-hd-booster-btn"
-                      onClick={() => handleQualitySelect('1080p')}
-                      className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs px-3.5 py-1.5 rounded-xl transition-all shadow-lg shadow-cyan-500/25 flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-                      title="1080p Full HD шууд дамжуулалт руу шилжих"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 fill-black text-black" />
-                      <span>⚡ 1080P ШУУД СЕРВЕР</span>
-                    </button>
-
-                    {/* Open in Protected Cinema New Window */}
-                    <button
-                      type="button"
-                      id="embed-protected-new-window-btn"
-                      onClick={handleOpenProtectedNewWindow}
-                      className="bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 hover:text-emerald-100 font-bold text-xs px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-1.5 border border-emerald-500/40 cursor-pointer shadow-md active:scale-95"
-                      title="Файлыг хамгаалж шинэ тусгай цонхоор бүтэн дэлгэцээр нээж үзэх"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Шинэ цонхоор үзэх (Хамгаалалттай)</span>
-                    </button>
-
-                    {isGoogleDrive && (
-                      <button
-                        type="button"
-                        onClick={() => setShowDriveGuide(!showDriveGuide)}
-                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-amber-300 px-2.5 py-1.5 rounded-xl border border-zinc-700 font-semibold flex items-center gap-1 cursor-pointer"
-                      >
-                        <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Тусламж</span>
-                      </button>
-                    )}
-                  </div>
+              {/* Floating Quality Change Toast Notification */}
+              {qualityNotice && (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
+                  <Layers className="w-4 h-4 text-cyan-400" />
+                  <span>{qualityNotice}</span>
                 </div>
+              )}
 
-                {/* Clear quality notice banner for embed mode */}
-                <div className="text-[11px] text-zinc-300 bg-black/60 border border-zinc-800 px-3.5 py-2.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <span>
-                      ⚙️ <strong>1080p Full HD тохируулах:</strong> Тоглуулагчийн баруун доод буланд байрлах арааны тэмдэг (⚙️) дээр дарж чанарыг <strong>1080p HD</strong> болгон өөрчлөх боломжтой.
-                    </span>
-                  </div>
+              {/* Mobile Quick Rotate Floating Button */}
+              {controlsVisible && (
+                <div className="absolute top-4 right-4 z-40 sm:hidden animate-in fade-in zoom-in-90 duration-200 pointer-events-auto">
                   <button
                     type="button"
-                    onClick={() => handleQualitySelect('1080p')}
-                    className="text-cyan-400 hover:text-cyan-300 font-bold underline underline-offset-2 shrink-0 text-left sm:text-right cursor-pointer"
+                    id="mobile-floating-rotate-btn-embed"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleRotateLandscape();
+                    }}
+                    className={`flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full shadow-2xl border active:scale-95 cursor-pointer transition-all ${
+                      isForcedLandscape
+                        ? 'bg-zinc-900/95 text-cyan-300 border-cyan-500/80 shadow-cyan-500/30'
+                        : 'bg-cyan-500 text-black border-cyan-300 shadow-cyan-500/40'
+                    }`}
                   >
-                    Шууд 1080p тоглуулагч руу шилжих ➔
+                    <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-cyan-400' : 'fill-black'}`} />
+                    <span>{isForcedLandscape ? '📱 Босоо харах' : '🔄 Хөндлөн харах'}</span>
                   </button>
                 </div>
-
-                {/* Interactive Guide for Google Drive Public Sharing */}
-                {isGoogleDrive && showDriveGuide && (
-                  <div className="p-3 bg-amber-950/40 border border-amber-500/40 rounded-xl text-xs text-amber-200 space-y-2 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between font-bold text-amber-300">
-                      <span className="flex items-center gap-1.5">
-                        <FolderLock className="w-4 h-4 text-amber-400" />
-                        Google Drive-аас үзэгчдээс Gmail нэвтрэх / хандах хүсэлт нэхэхгүй байлгах заавар:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowDriveGuide(false)}
-                        className="text-zinc-400 hover:text-white"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <ol className="list-decimal list-inside space-y-1 text-zinc-300 text-[11px]">
-                      <li>Google Drive руугаа орж тухайн бичлэг эсвэл хавтас дээрээ хулганы баруун товч дарна.</li>
-                      <li><strong>"Share (Хуваалцах)"</strong> ➡️ <strong>"Share"</strong> сонголтыг дарна.</li>
-                      <li><strong>"General access (Ерөнхий хандалт)"</strong> хэсгийн <em>"Restricted"</em> тохиргоог <strong>"Anyone with the link" (Холбоостой хүн бүр)</strong> болгож <strong>"Viewer"</strong> эрхтэйгээр хадгална.</li>
-                      <li>Ингэснээр ямар ч хэрэглэгч Gmail-дээ нэвтрэх шаардлагагүйгээр бичлэгийг шууд үзэх боломжтой болно!</li>
-                    </ol>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
@@ -1440,7 +1400,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           {/* Custom Transparent Overlay Controls (Auto-hides smoothly without darkening video) */}
           {!isEmbed && (
             <div
-              className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent p-3 sm:p-5 transition-all duration-300 z-30 space-y-2.5 ${
+              className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent p-3 sm:p-5 transition-all duration-300 z-30 space-y-2.5 ${
                 controlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'
               }`}
               onMouseMove={resetControlsTimer}
