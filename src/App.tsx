@@ -516,19 +516,47 @@ export default function App() {
     }
   };
 
-  const handleSubscribePackage = (packageType: 'anime' | 'movie' | 'full_vip', deductedAmount: number = 0) => {
+  const handleSubscribePackage = (
+    packageType: 'anime' | 'movie' | 'full_vip',
+    deductedAmount: number = 0,
+    durationMonths: number = 1
+  ) => {
     if (deductedAmount > 0) {
       setUserBalance((prev) => Math.max(0, prev - deductedAmount));
     }
 
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + durationMonths * 30);
+    const expiryStr = expiryDate.toLocaleDateString('mn-MN');
+
     if (packageType === 'anime') {
       setIsAnimePackage(true);
+      try {
+        localStorage.setItem('ioio_anime_package', 'true');
+        localStorage.setItem('ioio_anime_expiry', expiryStr);
+      } catch (e) {
+        console.error('Error saving anime package status:', e);
+      }
     } else if (packageType === 'movie') {
       setIsMoviePackage(true);
+      try {
+        localStorage.setItem('ioio_movie_package', 'true');
+        localStorage.setItem('ioio_movie_expiry', expiryStr);
+      } catch (e) {
+        console.error('Error saving movie package status:', e);
+      }
     } else if (packageType === 'full_vip') {
       setIsMonthlyVip(true);
       setIsAnimePackage(true);
       setIsMoviePackage(true);
+      try {
+        localStorage.setItem('ioio_monthly_vip', 'true');
+        localStorage.setItem('ioio_anime_package', 'true');
+        localStorage.setItem('ioio_movie_package', 'true');
+        localStorage.setItem('ioio_vip_expiry', expiryStr);
+      } catch (e) {
+        console.error('Error saving VIP status:', e);
+      }
     }
 
     setShowPaymentModal(false);

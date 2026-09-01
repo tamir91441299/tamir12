@@ -38,7 +38,7 @@ function createMhaEpisode(
 export const MY_HERO_ACADEMIA_S2: Movie = {
   id: 'm_mha_s2',
   title: 'My Hero Academia Season 2',
-  titleMongolian: 'Миний Баатрын Академи Бүлэг 2 (My Hero Academia S2)',
+  titleMongolian: 'Миний Баатрын Сургууль Бүлэг 2',
   type: 'anime',
   poster: 'https://i.pinimg.com/originals/f7/97/f5/f797f539cc6fc62d0b13ccf678d12ab2.png',
   backdrop: 'https://images.alphacoders.com/814/814674.jpg',

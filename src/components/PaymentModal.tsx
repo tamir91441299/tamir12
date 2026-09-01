@@ -6,12 +6,12 @@ import { redeemCode } from '../lib/codeService';
 interface PaymentModalProps {
   movie: Movie | null;
   userBalance: number;
-  isMonthlyVip: boolean;
+  isMonthlyVip?: boolean;
   isAnimePackage: boolean;
-  isMoviePackage: boolean;
+  isMoviePackage?: boolean;
   onClose: () => void;
   onPaymentSuccess: (movieId: string, deductedAmount?: number) => void;
-  onSubscribePackage: (packageType: 'anime' | 'movie' | 'full_vip', deductedAmount: number) => void;
+  onSubscribePackage: (packageType: 'anime' | 'movie' | 'full_vip', deductedAmount: number, durationMonths?: number) => void;
   onTopUpBalance: (amount: number) => void;
 }
 
@@ -26,29 +26,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onSubscribePackage,
   onTopUpBalance,
 }) => {
-  // Plan type defaults: 'anime' (4000), 'movie' (4000), or 'full_vip' (7000)
-  const initialPlan = movie
-    ? movie.type === 'anime'
-      ? 'anime'
-      : 'movie'
-    : 'full_vip';
+  // Only Anime subscription package
+  const [durationMonths, setDurationMonths] = useState<1 | 2 | 3>(1);
 
-  const [planType, setPlanType] = useState<'anime' | 'movie' | 'full_vip'>(initialPlan);
-
-  const getPlanPrice = (plan: 'anime' | 'movie' | 'full_vip') => {
-    switch (plan) {
-      case 'anime':
-        return 4000;
-      case 'movie':
-        return 4000;
-      case 'full_vip':
-        return 7000;
-      default:
-        return 4000;
-    }
+  // Pricing: 1 month = 4,000₮, 2 months = 7,000₮ (7k), 3 months = 10,000₮ (10k)
+  const getPlanPrice = (months: 1 | 2 | 3) => {
+    if (months === 1) return 4000;
+    if (months === 2) return 7000;
+    return 10000;
   };
 
-  const activePrice = getPlanPrice(planType);
+  const activePrice = getPlanPrice(durationMonths);
 
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('code');
   const [selectedBank, setSelectedBank] = useState<string>('monpay');
@@ -89,13 +77,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setSuccessMsgText(res.message);
 
         setTimeout(() => {
-          if (res.type === 'full_vip') {
-            onSubscribePackage('full_vip', 0);
-          } else if (res.type === 'anime') {
-            onSubscribePackage('anime', 0);
-          } else if (res.type === 'movie') {
-            onSubscribePackage('movie', 0);
-          } else if (res.type === 'points' && res.pointsAdded) {
+          onSubscribePackage('anime', 0, res.durationDays ? Math.round(res.durationDays / 30) : 1);
+          if (res.type === 'points' && res.pointsAdded) {
             onTopUpBalance(res.pointsAdded);
           }
         }, 1200);
@@ -134,15 +117,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setIsVerifying(false);
         setIsSuccess(true);
         setSuccessMsgText(
-          planType === 'anime'
-            ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
-            : planType === 'movie'
-            ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
-            : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...'
+          `Анимэ Багц (${durationMonths} сар - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`
         );
 
         setTimeout(() => {
-          onSubscribePackage(planType, activePrice);
+          onSubscribePackage('anime', activePrice, durationMonths);
         }, 1200);
       }, 1000);
     } else {
@@ -156,19 +135,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#17171a] border border-cyan-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col max-h-[92vh] my-auto">
+      <div className="relative w-full max-w-lg bg-[#17171a] border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col max-h-[92vh] my-auto">
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-zinc-900 via-[#121214] to-zinc-900 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+            <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
               <h2 className="font-extrabold text-sm sm:text-base text-white">
-                БАГЦ ИДЭВХЖҮҮЛЭХ / ЭРХ АВАХ
+                АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ
               </h2>
               <p className="text-[11px] text-zinc-400">
-                Анимэ багц (4,000 оноо) эсвэл Кино багцыг (4,000 оноо) сонгон идэвхжүүлнэ үү
+                1 сар (4,000₮) • 2 сар (7,000₮) • 3 сар (10,000₮) хэмнэлттэй багцууд
               </p>
             </div>
           </div>
@@ -184,92 +163,130 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {/* Content with smooth independent scrolling */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
-          {/* Package Selection */}
+          {/* Active Package Banner */}
+          <div className="p-3 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 flex items-center justify-between shadow-inner">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow shrink-0">
+                🎌
+              </div>
+              <div>
+                <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5">
+                  <span>Анимэ Багц</span>
+                  {isAnimePackage && (
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-bold">
+                      Идэвхтэй байна
+                    </span>
+                  )}
+                </h3>
+                <p className="text-[11px] text-zinc-400">
+                  Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Duration Selection: 1 Sar (4k), 2 Sar (7k), 3 Sar (10k) */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
-              Анимэ Багц сонгоно уу:
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
+                Хугацаа сонгох (Хэмнэлттэй):
+              </label>
+              <span className="text-[10px] text-amber-400 font-bold">2+ сараар авбал хямдралтай</span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {/* 1 Month */}
               <button
-                id="select-plan-anime"
+                id="select-duration-1m"
                 type="button"
-                onClick={() => setPlanType('anime')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-                  planType === 'anime'
-                    ? 'bg-gradient-to-b from-rose-950/80 to-zinc-900 border-rose-500 text-white shadow-lg ring-1 ring-rose-500'
-                    : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white'
+                onClick={() => setDurationMonths(1)}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                  durationMonths === 1
+                    ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
+                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
                 }`}
               >
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
-                    🎌 САРЫН ЭРХ
-                  </span>
-                  <span className="text-xs font-bold text-white block mt-0.5">
-                    Анимэ Сар Багц
-                  </span>
+                  <span className="text-[10px] font-bold text-zinc-400 block uppercase">1 САР</span>
+                  <span className="text-xs font-bold text-zinc-200">30 Хоног</span>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="bg-rose-600 text-white font-black text-[10px] px-1.5 py-0.5 rounded">
-                    4,000 ₮
-                  </span>
-                  {isAnimePackage && <span className="text-[9px] text-emerald-400 font-bold">Идэвхтэй</span>}
+                <div className="mt-1.5 font-black text-xs font-mono text-white">
+                  {getPlanPrice(1).toLocaleString()} ₮
                 </div>
               </button>
 
+              {/* 2 Months - 7,000₮ (7k) */}
               <button
-                id="select-plan-full"
+                id="select-duration-2m"
                 type="button"
-                onClick={() => setPlanType('full_vip')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-                  planType === 'full_vip'
-                    ? 'bg-gradient-to-b from-amber-950/80 to-zinc-900 border-amber-400 text-white shadow-lg ring-1 ring-amber-400'
-                    : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white'
+                onClick={() => setDurationMonths(2)}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                  durationMonths === 2
+                    ? 'bg-gradient-to-b from-rose-950/70 to-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
+                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
                 }`}
               >
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block flex items-center gap-1">
-                    👑 VIP ПРЕМИУМ
-                  </span>
-                  <span className="text-xs font-bold text-white block mt-0.5">
-                    VIP 4K Анимэ Багц
-                  </span>
+                <div className="absolute top-1 right-1 bg-rose-600 text-white text-[8px] font-black px-1 py-0.5 rounded shadow">
+                  7k Хямдрал
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="bg-amber-400 text-black font-black text-[10px] px-1.5 py-0.5 rounded">
-                    7,000 ₮
-                  </span>
-                  {isMonthlyVip && <span className="text-[9px] text-emerald-400 font-bold">Идэвхтэй</span>}
+                <div>
+                  <span className="text-[10px] font-bold text-rose-400 block uppercase">2 САР</span>
+                  <span className="text-xs font-bold text-zinc-200">60 Хоног</span>
+                </div>
+                <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
+                  {getPlanPrice(2).toLocaleString()} ₮
+                </div>
+              </button>
+
+              {/* 3 Months - 10,000₮ (10k) */}
+              <button
+                id="select-duration-3m"
+                type="button"
+                onClick={() => setDurationMonths(3)}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                  durationMonths === 3
+                    ? 'bg-gradient-to-b from-amber-950/70 to-zinc-800 border-amber-400 text-white ring-1 ring-amber-400 shadow-md'
+                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
+                }`}
+              >
+                <div className="absolute top-1 right-1 bg-amber-500 text-black text-[8px] font-black px-1 py-0.5 rounded shadow">
+                  10k Супер
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-amber-400 block uppercase">3 САР</span>
+                  <span className="text-xs font-bold text-zinc-200">90 Хоног</span>
+                </div>
+                <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
+                  {getPlanPrice(3).toLocaleString()} ₮
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Selected Package Details */}
-          <div className="p-3 bg-zinc-900 rounded-xl border border-zinc-800 flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl font-black flex items-center justify-center text-lg shadow shrink-0 ${
-                planType === 'anime'
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-amber-400 text-black'
-              }`}
-            >
-              {planType === 'anime' ? '🎌' : '👑'}
+          {/* Selected Package Summary Card */}
+          <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 shadow-inner">
+            <div className="w-11 h-11 rounded-xl font-black flex items-center justify-center text-xl shadow shrink-0 bg-rose-600 text-white">
+              🎌
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-extrabold text-xs text-white flex items-center gap-1">
-                {planType === 'anime'
-                  ? 'Анимэ Багц (30 Хоног)'
-                  : 'VIP Премиум 4K Багц (30 Хоног)'}
+              <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                <span>Анимэ Багц</span>
+                <span className="text-amber-400 bg-amber-400/10 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded font-black">
+                  {durationMonths} Сар ({durationMonths * 30} хоног)
+                </span>
               </h3>
-              <p className="text-[11px] text-zinc-400">
-                {planType === 'anime'
-                  ? 'Solo Leveling, Megalo Box, Attack on Titan, Demon Slayer зэрэг бүх анимэ цувралыг монгол хадмал/дуу оруулалттайгаар хязгааргүй үзнэ.'
-                  : 'Бүх анимэ цуврал, 4K чанар, шинэ ангиудыг түрүүлж үзэх тусгай VIP эрх багтсан.'}
+              <p className="text-[11px] text-zinc-400 truncate">
+                Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх.
               </p>
             </div>
-            <span className="font-mono text-amber-400 text-sm font-black shrink-0">
-              {activePrice.toLocaleString()} ₮
-            </span>
+            <div className="text-right shrink-0">
+              <span className="font-mono text-amber-400 text-base font-black block">
+                {activePrice.toLocaleString()} ₮
+              </span>
+              {durationMonths > 1 && (
+                <span className="text-[9px] text-emerald-400 font-bold">Хэмнэлттэй</span>
+              )}
+            </div>
           </div>
 
           {/* Payment Method Tabs */}
@@ -279,7 +296,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               onClick={() => setPaymentMethod('code')}
               className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 paymentMethod === 'code'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-md font-extrabold'
+                  ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-black shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -329,10 +346,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* Option 1: Activation / Promo Code Option */}
           {paymentMethod === 'code' && (
-            <div className="space-y-3 bg-gradient-to-b from-cyan-950/30 via-zinc-900 to-zinc-900 p-3.5 rounded-xl border border-cyan-500/40">
+            <div className="space-y-3 bg-gradient-to-b from-rose-950/30 via-zinc-900 to-zinc-900 p-3.5 rounded-xl border border-rose-500/40">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-cyan-500 text-black flex items-center justify-center font-black text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center font-black text-xs">
                     🎟️
                   </div>
                   <div>
@@ -340,7 +357,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <p className="text-[10px] text-zinc-400">Админаас өгсөн эсвэл урамшууллын кодоо оруулна уу</p>
                   </div>
                 </div>
-                <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
+                <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
                   Шууд Идэвхжинэ
                 </span>
               </div>
@@ -365,13 +382,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         handleRedeemActivationCode();
                       }
                     }}
-                    className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-cyan-400 text-white font-mono text-sm font-bold px-3 py-2 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
+                    className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono text-sm font-bold px-3 py-2 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
                   />
                   <button
                     type="button"
                     onClick={() => handleRedeemActivationCode()}
                     disabled={isVerifying || !inputActivationCode.trim()}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1"
+                    className="bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 disabled:opacity-50 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1"
                   >
                     {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                     <span>Идэвхжүүлэх</span>
@@ -437,7 +454,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-zinc-400 italic">
-                  * Гүйлгээний утга: <span className="text-cyan-300 font-mono font-bold">{planType === 'monthly' ? 'IOIO-VIP-1MONTH' : `IOIO-${movie?.id.toUpperCase()}`}</span>
+                  * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{`IOIO-ANIME-${durationMonths}M`}</span>
                 </p>
               </div>
 
@@ -464,13 +481,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {paymentMethod === 'qpay' && (
             <div className="space-y-3">
               <div className="bg-zinc-900 p-3.5 rounded-xl border border-zinc-800/80 flex flex-col items-center justify-center text-center space-y-2">
-                <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-cyan-400">
+                <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-rose-400">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IOIO_CINEMA_${planType.toUpperCase()}_${activePrice}MNT`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IOIO_ANIME_${activePrice}MNT`}
                     alt="QPay QR Code"
                     className="w-28 h-28 object-contain"
                   />
-                  <div className="absolute -bottom-2 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2">
+                  <div className="absolute -bottom-2 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2">
                     {activePrice.toLocaleString()} ₮
                   </div>
                 </div>
@@ -493,7 +510,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       onClick={() => setSelectedBank(bank.id)}
                       className={`p-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer ${
                         selectedBank === bank.id
-                          ? 'bg-zinc-800 border-cyan-400 text-cyan-300 shadow'
+                          ? 'bg-zinc-800 border-rose-400 text-rose-300 shadow'
                           : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -549,18 +566,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
                 {successMsgText ||
-                  (planType === 'anime'
-                    ? 'Анимэ Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...'
-                    : planType === 'movie'
-                    ? 'Кино Багц (4,000₮) оноогоор амжилттай идэвхжлээ! Бүх кино, цуврал нээгдлээ...'
-                    : 'VIP Бүтэн Багц (7,000₮) оноогоор амжилттай идэвхжлээ! Бүх контент нээгдлээ...')}
+                  `Анимэ Багц (${durationMonths} сар - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`}
               </span>
             </div>
           ) : topUpRequestSent ? (
-            <div className="bg-cyan-500/20 border border-cyan-500 text-cyan-200 text-xs font-bold p-3 rounded-xl flex items-center justify-between gap-2 animate-in zoom-in-95">
+            <div className="bg-rose-500/20 border border-rose-500 text-rose-200 text-xs font-bold p-3 rounded-xl flex items-center justify-between gap-2 animate-in zoom-in-95">
               <div className="space-y-0.5">
                 <p className="text-white font-extrabold flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-rose-400 shrink-0" />
                   <span>📩 Оноо цэнэглүүлэх хүсэлт Админд хүрэглээ!</span>
                 </p>
                 <p className="text-[11px] text-zinc-300">
@@ -573,7 +586,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               id="confirm-payment-action"
               onClick={handleConfirmPayment}
               disabled={isVerifying || (paymentMethod === 'wallet' && userBalance < activePrice)}
-              className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+              className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
             >
               {isVerifying ? (
                 <>
@@ -582,15 +595,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </>
               ) : paymentMethod === 'wallet' ? (
                 <span>
-                  {planType === 'anime'
-                    ? `ОНООГООР АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} оноо)`
-                    : planType === 'movie'
-                    ? `ОНООГООР КИНО БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()} оноо)`
-                    : `ОНООГООР VIP БҮТЭН БАГЦ АВАХ (${activePrice.toLocaleString()} оноо)`}
+                  {`ОНООГООР АНИМЭ БАГЦ (${durationMonths} САР - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
                 </span>
               ) : (
                 <span>
-                  📩 АДМИНААС ОНОО ЦЭНЭГЛҮҮЛЭХ ХҮСЭЛТ ИЛГЭЭХ
+                  📩 АДМИНААС {activePrice.toLocaleString()}₮ ОНОО ЦЭНЭГЛҮҮЛЭХ ХҮСЭЛТ ИЛГЭЭХ
                 </span>
               )}
             </button>
@@ -600,3 +609,4 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     </div>
   );
 };
+

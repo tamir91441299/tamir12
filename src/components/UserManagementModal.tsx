@@ -924,7 +924,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                         type="button"
                         onClick={() => handleQuickPointsChange(u.id, 4000)}
                         className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+4,000₮ (1 сарын кино/анимэ эрхийн оноо нэмэх)"
+                        title="+4,000₮ (1 сарын эрх)"
                       >
                         +4k
                       </button>
@@ -932,9 +932,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                         type="button"
                         onClick={() => handleQuickPointsChange(u.id, 7000)}
                         className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+7,000₮ (1 сарын FULL VIP эрхийн оноо нэмэх)"
+                        title="+7,000₮ (2 сарын эрх - 7k)"
                       >
                         +7k
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPointsChange(u.id, 10000)}
+                        className="bg-purple-950/90 hover:bg-purple-900 text-purple-300 border border-purple-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                        title="+10,000₮ (3 сарын эрх - 10k)"
+                      >
+                        +10k
                       </button>
                       <button
                         type="button"
@@ -1798,12 +1806,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               {pointsOperation === 'add' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { label: '+4,000 ₮ (Кино/Анимэ эрх)', val: 4000, color: 'border-cyan-500/40 text-cyan-300 font-bold' },
-                    { label: '+7,000 ₮ (FULL VIP эрх)', val: 7000, color: 'border-amber-500/40 text-amber-300 font-black' },
-                    { label: '+1,000 ₮', val: 1000, color: 'border-zinc-800 text-zinc-300' },
-                    { label: '+5,000 ₮', val: 5000, color: 'border-zinc-800 text-zinc-300' },
-                    { label: '+10,000 ₮', val: 10000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
-                    { label: '+20,000 ₮', val: 20000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
+                    { label: '+4,000 ₮ (1 сар эрх)', val: 4000, color: 'border-cyan-500/40 text-cyan-300 font-bold' },
+                    { label: '+7,000 ₮ (2 сар эрх / 7k)', val: 7000, color: 'border-amber-500/40 text-amber-300 font-black' },
+                    { label: '+10,000 ₮ (3 сар эрх / 10k)', val: 10000, color: 'border-purple-500/40 text-purple-300 font-black' },
+                    { label: '+1,000 ₮ (Нэг удаа)', val: 1000, color: 'border-zinc-800 text-zinc-300' },
+                    { label: '+15,000 ₮ (VIP 3 сар)', val: 15000, color: 'border-amber-500/40 text-amber-300 font-bold' },
+                    { label: '+20,000 ₮ (Хэтэвч)', val: 20000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
                   ].map((p) => (
                     <button
                       key={p.val}

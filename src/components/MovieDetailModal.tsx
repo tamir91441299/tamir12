@@ -578,7 +578,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       1-р анги Үнэгүй
                     </span>
                     <span className="text-zinc-300 text-[11px]">
-                      2-р ангиас эхлэн эрх авсан ({movie.type === 'anime' ? 'Анимэ' : 'Кино'} / VIP багцтай) хэрэглэгчид үзэх боломжтой.
+                      2-р ангиас эхлэн эрх авсан (Анимэ багцтай) хэрэглэгчид үзэх боломжтой.
                     </span>
                   </div>
                   {!userHasAccessToEpisode(2) && onRequestPurchase && (

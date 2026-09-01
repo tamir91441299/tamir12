@@ -159,11 +159,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     },
     {
       id: 'vip',
-      label: 'VIP Онцгой Анимэ',
-      description: 'VIP эрхтэй хязгааргүй үзэх',
+      label: 'Онцгой Анимэ',
+      description: 'Эрхтэй хэрэглэгчид үзэх',
       icon: Crown,
-      accentColor: 'text-amber-400',
-      badge: 'VIP',
+      accentColor: 'text-rose-400',
+      badge: 'ЭРХТЭЙ',
     },
   ];
 
@@ -470,25 +470,25 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right: Wallet + Pass + Search + Favorites */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-1 lg:flex-none justify-end min-w-0">
           {/* Subscription Package Button */}
-          {isMonthlyVip || isAnimePackage ? (
+          {isAnimePackage || isMonthlyVip ? (
             <button
               onClick={onOpenVipModal}
               className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-amber-500 text-black px-2.5 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current shrink-0" />
-              <span className="hidden sm:inline">🎌 АНИМЭ VIP</span>
-              <span className="sm:hidden">VIP</span>
+              <span className="hidden sm:inline">🎌 АНИМЭ БАГЦТАЙ</span>
+              <span className="sm:hidden">Эрхтэй</span>
             </button>
           ) : (
             <button
               id="vip-monthly-pass-btn"
               onClick={onOpenVipModal}
               className="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-              title="Анимэ VIP багц идэвхжүүлэх"
+              title="Анимэ багц идэвхжүүлэх"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">АНИМЭ VIP (4,000 ₮)</span>
-              <span className="sm:hidden">VIP (4k)</span>
+              <span className="hidden sm:inline">АНИМЭ БАГЦ (4,000 ₮)</span>
+              <span className="sm:hidden">Эрх (4k)</span>
             </button>
           )}
 

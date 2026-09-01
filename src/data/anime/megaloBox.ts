@@ -7,7 +7,7 @@ import { Movie } from '../../types';
 export const MEGALO_BOX_S1: Movie = {
   id: 'm_megalo_box_s1',
   title: 'Megalo Box (Season 1)',
-  titleMongolian: 'Мегало Бокс Бүлэг 1 (Megalo Box S1)',
+  titleMongolian: 'Мегало Бокс Бүлэг 1',
   type: 'anime',
   poster: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
   backdrop: 'https://m.media-amazon.com/images/M/MV5BODQwZGFkODktZDk4MS00MTY2LWIzOTgtNTc5YjM4YTAxMjcwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',

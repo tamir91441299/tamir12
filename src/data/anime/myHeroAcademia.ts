@@ -3,7 +3,7 @@ import { Movie } from '../../types';
 export const MY_HERO_ACADEMIA_S1: Movie = {
   id: 'm_mha_s1',
   title: 'My Hero Academia Season 1',
-  titleMongolian: 'Миний Баатрын Академи Бүлэг 1 (My Hero Academia S1)',
+  titleMongolian: 'Миний Баатрын Сургууль Бүлэг 1',
   type: 'anime',
   poster: 'https://tse2.mm.bing.net/th/id/OIP.u6OP9gu-9w_f_QQB-EioUQHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   backdrop: 'https://tse2.mm.bing.net/th/id/OIP.u6OP9gu-9w_f_QQB-EioUQHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',

@@ -1183,7 +1183,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   2-р ангиас эхлэн эрх авсан хэрэглэгчид үзнэ
                 </h3>
                 <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн багцын ({movie.type === 'anime' ? 'Анимэ' : 'Кино'} эсвэл Бүтэн VIP) эрхээ идэвхжүүлж үзнэ үү.
+                  1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

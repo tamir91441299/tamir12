@@ -2,6 +2,7 @@ import { Movie, Comment, Episode } from '../types';
 import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
 import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
+import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -85,7 +86,7 @@ export const SAMPLE_MOVIES: Movie[] = [
   {
     id: 'm_91_days',
     title: '91 Days',
-    titleMongolian: '91 Өдөр (91 Days)',
+    titleMongolian: '91 Өдөр',
     type: 'anime',
     poster: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/2023/10/91-days-anime-cover-art.jpg',
     backdrop: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/99b0b4b2-1ec2-42db-8d72-689653733407/dagx653-ad709f69-bf46-4136-b075-6ae9c48a78e6.png/v1/fill/w_512,h_512,q_80,strp/91_days_folder_icon_by_holiekay_dagx653-fullview.jpg',
@@ -192,8 +193,11 @@ export const SAMPLE_MOVIES: Movie[] = [
   },
   MY_HERO_ACADEMIA_S1,
   MY_HERO_ACADEMIA_S2,
-  MEGALO_BOX_S1
+  MEGALO_BOX_S1,
+  JUJUTSU_KAISEN_S1
 ];
+
+export { JUJUTSU_KAISEN_S1 };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 51 },
