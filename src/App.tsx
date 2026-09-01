@@ -408,56 +408,38 @@ export default function App() {
   const filteredMovies = useMemo(() => {
     return moviesList.filter((movie) => {
       // Tab filter
-      if (activeTab === 'movies') {
-        if (movie.type !== 'movie') return false;
-
-        // Subcategory filtering for movies
-        if (selectedMovieCategory === 'mongolian') {
-          if (movie.country !== 'Монгол' && !movie.genres.includes('Монгол') && !movie.genres.includes('Монгол кино')) return false;
-        } else if (selectedMovieCategory === 'hollywood') {
-          if (['Монгол', 'Хятад', 'Өмнөд Солонгос', 'Япон'].includes(movie.country) && !movie.genres.includes('Холливуд')) return false;
-        } else if (selectedMovieCategory === 'korean') {
-          if (movie.country !== 'Өмнөд Солонгос' && !movie.genres.includes('Солонгос') && !movie.genres.includes('Солонгос кино')) return false;
-        } else if (selectedMovieCategory === 'chinese') {
-          if (movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
-        } else if (selectedMovieCategory === 'new') {
-          if (movie.year < 2025) return false;
+      if (activeTab === 'anime') {
+        // Subcategory filtering for anime
+        if (selectedMovieCategory === 'shounen') {
+          if (!movie.genres.some(g => ['Shounen', 'Action', 'Шонэн', 'Тулаант'].includes(g))) return false;
+        } else if (selectedMovieCategory === 'action') {
+          if (!movie.genres.some(g => ['Action', 'Тулаант', 'Action & Adventure'].includes(g))) return false;
+        } else if (selectedMovieCategory === 'sports') {
+          if (!movie.genres.some(g => ['Sports', 'Спорт', 'Бокс'].includes(g))) return false;
+        } else if (selectedMovieCategory === 'mystery') {
+          if (!movie.genres.some(g => ['Mystery', 'Crime', 'Drama', 'Триллер', 'Өшөө авалт'].includes(g))) return false;
+        } else if (selectedMovieCategory === 'fantasy') {
+          if (!movie.genres.some(g => ['Fantasy', 'Magic', 'Уран зөгнөлт', 'Ид шид', 'Isekai'].includes(g))) return false;
+        } else if (selectedMovieCategory === 'scifi') {
+          if (!movie.genres.some(g => ['Sci-Fi', 'Mecha', 'Меха'].includes(g))) return false;
         } else if (selectedMovieCategory === 'top_rated') {
           if (movie.rating < 8.8) return false;
-        } else if (selectedMovieCategory === 'action') {
-          if (!movie.genres.includes('Action') && !movie.genres.includes('Action & Adventure') && !movie.genres.includes('Тулаант')) return false;
-        } else if (selectedMovieCategory === 'horror') {
-          if (!movie.genres.includes('Horror') && !movie.genres.includes('Thriller') && !movie.genres.includes('Аймшиг')) return false;
-        } else if (selectedMovieCategory === 'comedy') {
-          if (!movie.genres.includes('Comedy') && !movie.genres.includes('Инээдэм') && !movie.genres.includes('Комеди')) return false;
-        } else if (selectedMovieCategory === 'scifi') {
-          const isAiSciFi = movie.genres.includes('Sci-Fi') || movie.genres.includes('AI Кино') || movie.description.toLowerCase().includes('хиймэл') || movie.description.toLowerCase().includes('робот') || movie.title.toLowerCase().includes('creator') || movie.title.toLowerCase().includes('matrix');
-          if (!isAiSciFi) return false;
+        } else if (selectedMovieCategory === 'new') {
+          if (movie.year < 2024 && !movie.isNewEpisode) return false;
         } else if (selectedMovieCategory === 'vip') {
           if (!movie.price || movie.price <= 0) return false;
         }
       }
 
       if (activeTab === 'series' && movie.type !== 'series') return false;
-      if (activeTab === 'anime' && movie.type !== 'anime' && !movie.genres.includes('Animation') && !movie.genres.includes('Анимэ')) return false;
-      if (activeTab === 'chinese' && movie.country !== 'Хятад' && !movie.genres.includes('Хятад') && !movie.genres.includes('Хятад кино')) return false;
       if (activeTab === 'favorites' && !favorites.includes(movie.id)) return false;
       if (activeTab === 'purchased' && !purchasedMovies.includes(movie.id)) return false;
 
-      // Sidebar type filter (apply only when not on specialized tab, or if compatible)
+      // Sidebar type filter
       if (selectedType !== 'all') {
-        if (activeTab === 'home' || activeTab === 'favorites' || activeTab === 'purchased') {
-          if (selectedType === 'movie' && movie.type !== 'movie') return false;
-          if (selectedType === 'series' && movie.type !== 'series') return false;
-          if (selectedType === 'anime' && movie.type !== 'anime' && !movie.genres.includes('Animation') && !movie.genres.includes('Анимэ')) return false;
-        } else if (activeTab === 'anime') {
-          // Inside anime tab, allowing filtering movies vs series
-          if (selectedType === 'movie' && movie.type !== 'movie' && !movie.genres.includes('Animation')) return false;
-          if (selectedType === 'series' && movie.type !== 'series') return false;
-        } else if (activeTab === 'chinese') {
-          if (selectedType === 'movie' && movie.type !== 'movie') return false;
-          if (selectedType === 'series' && movie.type !== 'series') return false;
-        }
+        if (selectedType === 'movie' && movie.type !== 'movie') return false;
+        if (selectedType === 'series' && movie.type !== 'series') return false;
+        if (selectedType === 'anime' && movie.type !== 'anime') return false;
       }
 
       // Year filter
@@ -477,36 +459,24 @@ export default function App() {
 
       return true;
     });
-  }, [moviesList, activeTab, selectedType, selectedYear, selectedGenre, searchQuery, favorites, purchasedMovies]);
+  }, [moviesList, activeTab, selectedMovieCategory, selectedType, selectedYear, selectedGenre, searchQuery, favorites, purchasedMovies]);
 
   // Featured Movies for Hero Carousel
   const featuredMovies = useMemo(() => {
     return moviesList.filter((m) => m.featured);
   }, [moviesList]);
 
-  // Section categories
+  // Section categories for Anime
   const newEpisodesMovies = useMemo(() => {
-    return filteredMovies.filter((m) => m.isNewEpisode);
-  }, [filteredMovies]);
-
-  const animeMovies = useMemo(() => {
-    return filteredMovies.filter((m) => m.type === 'anime' || m.genres.includes('Animation') || m.genres.includes('Анимэ'));
-  }, [filteredMovies]);
-
-  const featureMoviesOnly = useMemo(() => {
-    return filteredMovies.filter((m) => m.type === 'movie');
+    return filteredMovies.filter((m) => m.isNewEpisode || m.episodes?.some(e => e.isNew));
   }, [filteredMovies]);
 
   const seriesOnly = useMemo(() => {
-    return filteredMovies.filter((m) => m.type === 'series');
+    return filteredMovies.filter((m) => m.type === 'series' || (m.episodes && m.episodes.length > 1));
   }, [filteredMovies]);
 
-  const mongolianMovies = useMemo(() => {
-    return filteredMovies.filter((m) => m.country === 'Монгол');
-  }, [filteredMovies]);
-
-  const chineseMovies = useMemo(() => {
-    return filteredMovies.filter((m) => m.country === 'Хятад' || m.genres.includes('Хятад') || m.genres.includes('Хятад кино'));
+  const topRatedAnime = useMemo(() => {
+    return filteredMovies.filter((m) => m.rating >= 8.8);
   }, [filteredMovies]);
 
   const popularMovies = useMemo(() => {
@@ -650,13 +620,13 @@ export default function App() {
               <button
                 id="open-ai-movies-callout"
                 onClick={() => {
-                  setSelectedMovieCategory('scifi');
-                  setActiveTab('movies');
+                  setSelectedMovieCategory('shounen');
+                  setActiveTab('anime');
                 }}
                 className="gold-glow-btn text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap flex items-center gap-1.5"
               >
-                <Cpu className="w-3.5 h-3.5" />
-                <span>Sci-Fi & AI Кино</span>
+                <Flame className="w-3.5 h-3.5" />
+                <span>Шонэн & Тулаант Анимэ</span>
               </button>
 
               <button
@@ -763,13 +733,13 @@ export default function App() {
           <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Catalog View */}
           <div className="flex-1 space-y-8 min-w-0">
-            {/* Quick Movie Subcategories Bar when viewing Movies tab */}
-            {activeTab === 'movies' && (
+            {/* Quick Anime Subcategories Bar when viewing Anime tab */}
+            {activeTab === 'anime' && (
               <div className="cinema-glass rounded-2xl p-3 shadow-lg border border-white/[0.06]">
                 <div className="flex items-center justify-between gap-2 mb-2 px-1">
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                    <Film className="w-3.5 h-3.5" />
-                    Киноны Ангилал & Сонголтууд ({filteredMovies.length} кино):
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Анимэ Жанр & Ангилал ({filteredMovies.length} анимэ):
                   </span>
                   {selectedMovieCategory !== 'all' && (
                     <button
@@ -782,18 +752,16 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                   {[
-                    { id: 'all' as MovieSubcategory, label: '🎬 Бүх Кино' },
-                    { id: 'mongolian' as MovieSubcategory, label: '🇲🇳 Монгол' },
-                    { id: 'hollywood' as MovieSubcategory, label: '🇺🇸 Холливуд' },
-                    { id: 'korean' as MovieSubcategory, label: '🇰🇷 Солонгос' },
-                    { id: 'chinese' as MovieSubcategory, label: '🇨🇳 Хятад' },
-                    { id: 'new' as MovieSubcategory, label: '⚡ 2026/2025 Шинэ' },
+                    { id: 'all' as MovieSubcategory, label: '✨ Бүх Анимэ' },
+                    { id: 'shounen' as MovieSubcategory, label: '🔥 Шонэн' },
+                    { id: 'action' as MovieSubcategory, label: '⚔️ Тулаант' },
+                    { id: 'sports' as MovieSubcategory, label: '🥊 Спорт / Бокс' },
+                    { id: 'mystery' as MovieSubcategory, label: '💀 Өшөө авалт / Триллер' },
+                    { id: 'fantasy' as MovieSubcategory, label: '🔮 Уран зөгнөлт' },
+                    { id: 'scifi' as MovieSubcategory, label: '🤖 Sci-Fi & Меха' },
                     { id: 'top_rated' as MovieSubcategory, label: '⭐ Шилдэг 9.0+' },
-                    { id: 'action' as MovieSubcategory, label: '💥 Тулаант' },
-                    { id: 'horror' as MovieSubcategory, label: '👻 Аймшиг' },
-                    { id: 'comedy' as MovieSubcategory, label: '😂 Инээдэм' },
-                    { id: 'scifi' as MovieSubcategory, label: '🤖 Sci-Fi & AI' },
-                    { id: 'vip' as MovieSubcategory, label: '💎 VIP / Багц' },
+                    { id: 'new' as MovieSubcategory, label: '⚡ Шинэ Ангиуд' },
+                    { id: 'vip' as MovieSubcategory, label: '👑 VIP Анимэ' },
                   ].map((subCat) => (
                     <button
                       key={subCat.id}
@@ -816,7 +784,7 @@ export default function App() {
                 <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
                 <h2 className="text-lg sm:text-xl font-black uppercase text-white font-display flex items-center gap-2">
                   <Heart className="w-5 h-5 text-rose-500 fill-current" />
-                  Таалагдсан Кинонууд ({filteredMovies.length})
+                  Таалагдсан Анимэ ({filteredMovies.length})
                 </h2>
               </div>
             )}
@@ -826,7 +794,7 @@ export default function App() {
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                 <h2 className="text-lg sm:text-xl font-black uppercase text-white font-display flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  Миний Худалдаж Авсан Кинонууд ({filteredMovies.length})
+                  Миний Үзэх Эрхтэй Анимэ ({filteredMovies.length})
                 </h2>
               </div>
             )}
@@ -835,40 +803,32 @@ export default function App() {
             {selectedYear || selectedGenre || searchQuery || selectedType !== 'all' || activeTab !== 'home' ? (
               <MovieGrid
                 title={
-                  activeTab === 'movies'
-                    ? selectedMovieCategory === 'mongolian'
-                      ? '🇲🇳 МОНГОЛ УРАН САЙХНЫ КИНОНУУД'
-                      : selectedMovieCategory === 'hollywood'
-                      ? '🇺🇸 ХОЛЛИВУД & ОЛОН УЛСЫН КИНОНУУД'
-                      : selectedMovieCategory === 'korean'
-                      ? '🇰🇷 СОЛОНГОС КИНОНУУД'
-                      : selectedMovieCategory === 'chinese'
-                      ? '🇨🇳 ХЯТАД КИНО & ТУЛААНТ БҮТЭЭЛҮҮД'
-                      : selectedMovieCategory === 'new'
-                      ? '⚡ 2026/2025 ОНЫ ШИНЭ НЭЭЛТ КИНОНУУД'
-                      : selectedMovieCategory === 'top_rated'
-                      ? '⭐ ШИЛДЭГ ҮНЭЛГЭЭТЭЙ (IMDB 9.0+) КИНОНУУД'
+                  activeTab === 'anime'
+                    ? selectedMovieCategory === 'shounen'
+                      ? '🔥 ШОНЭН & ТУЛААНТ АНИМЭ ЦУВРАЛУУД'
                       : selectedMovieCategory === 'action'
-                      ? '💥 ТУЛААНТ & АДАЛ ЯВДАЛТ КИНОНУУД'
-                      : selectedMovieCategory === 'horror'
-                      ? '👻 АЙМШИГ & ТРИЛЛЕР КИНОНУУД'
-                      : selectedMovieCategory === 'comedy'
-                      ? '😂 ИНЭЭДЭМ & ХӨГЖИЛТЭЙ КИНОНУУД'
+                      ? '⚔️ ТУЛААНТ & АДАЛ ЯВДАЛТ АНИМЭ'
+                      : selectedMovieCategory === 'sports'
+                      ? '🥊 СПОРТ & БОКС АНИМЭ (МЕГАЛО БОКС)'
+                      : selectedMovieCategory === 'mystery'
+                      ? '💀 ӨШӨӨ АВАЛТ, ТРИЛЛЕР & ДРАМ АНИМЭ'
+                      : selectedMovieCategory === 'fantasy'
+                      ? '🔮 УРАН ЗӨГНӨЛТ & ИД ШИД АНИМЭ'
                       : selectedMovieCategory === 'scifi'
-                      ? '🤖 SCI-FI & ХИЙМЭЛ ОЮУН УХААНТ КИНОНУУД'
+                      ? '🤖 SCI-FI & МЕХА АНИМЭ'
+                      : selectedMovieCategory === 'top_rated'
+                      ? '⭐ ШИЛДЭГ ҮНЭЛГЭЭТЭЙ (9.0+) АНИМЭ'
+                      : selectedMovieCategory === 'new'
+                      ? '⚡ ШИНЭЭР ОРСОН АНИМЭ АНГИУД'
                       : selectedMovieCategory === 'vip'
-                      ? '💎 VIP & БАГЦЫН КИНОНУУД'
-                      : '🎬 БҮХ УРАН САЙХНЫ КИНОНУУД'
+                      ? '👑 VIP ОНЦГОЙ АНИМЭ'
+                      : '✨ БҮХ АНИМЭ САН'
                     : activeTab === 'series'
-                    ? 'ОЛОН АНГИТ ЦУВРАЛУУД'
-                    : activeTab === 'anime'
-                    ? 'АНИМЭ КИНО & ЦУВРАЛУУД'
-                    : activeTab === 'chinese'
-                    ? 'ХЯТАД КИНО & ЦУВРАЛУУД'
+                    ? '📺 ОЛОН АНГИТ АНИМЭ ЦУВРАЛУУД'
                     : activeTab === 'favorites'
-                    ? 'ХАДГАЛСАН КИНОНУУД'
+                    ? '❤️ ХАДГАЛСАН АНИМЭ'
                     : activeTab === 'purchased'
-                    ? 'АВСАН КИНОНУУД (ХЯЗГААРГҮЙ ҮЗЭХ)'
+                    ? '🎟️ АВСАН АНИМЭ (ХЯЗГААРГҮЙ ҮЗЭХ)'
                     : 'ХАЙЛТЫН ИЛЭРЦ'
                 }
                 totalCount={filteredMovies.length}
@@ -895,10 +855,10 @@ export default function App() {
                   />
                 )}
 
-                {/* 1. New Episodes section (ШИНЭ АНГИ) */}
+                {/* 1. New Episodes Section (ШИНЭ АНГИУД) */}
                 {newEpisodesMovies.length > 0 && (
                   <MovieGrid
-                    title="ШИНЭ АНГИ"
+                    title="ШИНЭ АНГИУД & ТАСРАЛТГҮЙ ОРЖ БАЙГАА"
                     totalCount={534}
                     movies={newEpisodesMovies}
                     onPlayMovie={(m) => handlePlayMovie(m)}
@@ -910,25 +870,11 @@ export default function App() {
                   />
                 )}
 
-                {/* 2. Chinese Movies Section (ХЯТАД КИНО & ЦУВРАЛ) */}
-                {chineseMovies.length > 0 && (
+                {/* 2. Top Anime Series (ОЛОН АНГИТ ШИЛДЭГ АНИМЭ) */}
+                {seriesOnly.length > 0 && (
                   <MovieGrid
-                    title="ХЯТАД КИНО & ЦУВРАЛ"
-                    movies={chineseMovies}
-                    onPlayMovie={(m) => handlePlayMovie(m)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleFavorite={toggleFavorite}
-                    isFavorite={isFavorite}
-                    isPurchased={isPurchased}
-                    onSeeAll={() => setActiveTab('chinese')}
-                  />
-                )}
-
-                {/* 2. Anime Section (АНИМЭ КИНО & ЦУВРАЛ) */}
-                {animeMovies.length > 0 && (
-                  <MovieGrid
-                    title="ЭРЭЛТТЭЙ АНИМЭ КИНО & ЦУВРАЛ"
-                    movies={animeMovies}
+                    title="ОЛОН АНГИТ ШИЛДЭГ АНИМЭ ЦУВРАЛУУД"
+                    movies={seriesOnly}
                     onPlayMovie={(m) => handlePlayMovie(m)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleFavorite={toggleFavorite}
@@ -938,25 +884,11 @@ export default function App() {
                   />
                 )}
 
-                {/* 3. Feature Movies Section (УРАН САЙХНЫ КИНО) */}
-                {featureMoviesOnly.length > 0 && (
+                {/* 3. Top Rated Anime (ШИЛДЭГ ҮНЭЛГЭЭТЭЙ АНИМЭ) */}
+                {topRatedAnime.length > 0 && (
                   <MovieGrid
-                    title="УРАН САЙХНЫ КИНОНУУД"
-                    movies={featureMoviesOnly}
-                    onPlayMovie={(m) => handlePlayMovie(m)}
-                    onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-                    onToggleFavorite={toggleFavorite}
-                    isFavorite={isFavorite}
-                    isPurchased={isPurchased}
-                    onSeeAll={() => setActiveTab('movies')}
-                  />
-                )}
-
-                {/* 4. Mongolian Movies Section */}
-                {mongolianMovies.length > 0 && (
-                  <MovieGrid
-                    title="МОНГОЛ КИНОНУУД"
-                    movies={mongolianMovies}
+                    title="ШИЛДЭГ ҮНЭЛГЭЭТЭЙ АНИМЭ (9.0+)"
+                    movies={topRatedAnime}
                     onPlayMovie={(m) => handlePlayMovie(m)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleFavorite={toggleFavorite}
@@ -965,17 +897,17 @@ export default function App() {
                   />
                 )}
 
-                {/* 5. TV Series Section (ОЛОН АНГИТ ЦУВРАЛ) */}
-                {seriesOnly.length > 0 && (
+                {/* 4. All anime collection */}
+                {filteredMovies.length > 0 && (
                   <MovieGrid
-                    title="ОЛОН АНГИТ ЦУВРАЛУУД"
-                    movies={seriesOnly}
+                    title="СҮҮЛД НЭМЭГДСЭН АНИМЭ САН"
+                    movies={filteredMovies}
                     onPlayMovie={(m) => handlePlayMovie(m)}
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
-                    onSeeAll={() => setActiveTab('series')}
+                    onSeeAll={() => setActiveTab('anime')}
                   />
                 )}
               </>

@@ -30,7 +30,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   if (!featuredMovies || featuredMovies.length === 0) return null;
 
   const currentMovie = featuredMovies[currentIndex];
-  const audioLabel = currentMovie.country === 'Монгол' ? 'MN ORIGINAL' : currentMovie.type === 'anime' ? 'MN SUB / DUB' : 'MN DUBBED';
+  const audioLabel = 'MN SUB / DUB';
 
   return (
     <div className="relative w-full rounded-3xl overflow-hidden cinema-glass-elevated mb-8 group/banner film-frame-decor">

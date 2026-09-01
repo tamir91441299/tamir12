@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { 
   Search, 
-  Film, 
   Tv, 
   Sparkles, 
   Heart, 
@@ -23,7 +22,9 @@ import {
   Skull,
   Smile,
   Cpu,
-  Smartphone
+  Smartphone,
+  BookOpen,
+  Film
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -74,13 +75,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenInstallModal,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isMovieDropdownOpen, setIsMovieDropdownOpen] = useState(false);
-  const [isMobileMovieMenuOpen, setIsMobileMovieMenuOpen] = useState(false);
-  const movieDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
+  const [isMobileAnimeMenuOpen, setIsMobileAnimeMenuOpen] = useState(false);
+  const animeDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
 
-  const movieCategories: {
+  const animeCategories: {
     id: MovieSubcategory;
     label: string;
     description: string;
@@ -90,114 +91,102 @@ export const Navbar: React.FC<NavbarProps> = ({
   }[] = [
     {
       id: 'all',
-      label: 'Бүх Кинонууд',
-      description: 'Бүх төрлийн шилдэг кинонуудыг үзэх',
-      icon: Film,
+      label: 'Бүх Анимэ Сан',
+      description: 'Монгол орчуулгатай бүх анимэ цуврал',
+      icon: Sparkles,
       accentColor: 'text-amber-400',
     },
     {
-      id: 'mongolian',
-      label: 'Монгол Кино',
-      description: 'Монголын шилдэг уран бүтээлүүд',
+      id: 'shounen',
+      label: 'Шонэн (Shounen)',
+      description: 'Баатрууд, тулаан, өсөлт дэвшил',
       icon: Flame,
       accentColor: 'text-rose-400',
-      badge: 'ОНЦЛОХ',
+      badge: 'ТОП',
     },
     {
-      id: 'hollywood',
-      label: 'Холливуд / Гадаад Кино',
-      description: 'Олон улсын блокбастер бүтээлүүд',
-      icon: Globe,
-      accentColor: 'text-sky-400',
-    },
-    {
-      id: 'korean',
-      label: 'Солонгос Кино & Дорама',
-      description: 'К-Кино, сэтгэл хөдөлгөм драма',
-      icon: Sparkles,
-      accentColor: 'text-pink-400',
-      badge: 'TOP',
-    },
-    {
-      id: 'chinese',
-      label: 'Хятад Кино & Тулаант',
-      description: 'Уся, эртний хаант улс, тулааны урлаг',
-      icon: Clapperboard,
+      id: 'action',
+      label: 'Тулаант & Адал явдал',
+      description: 'Хурц тулаан, өрсөлдөөн, адал явдал',
+      icon: Swords,
       accentColor: 'text-amber-400',
+    },
+    {
+      id: 'sports',
+      label: 'Спорт & Бокс',
+      description: 'Хөлс хүч, бокс, тэмцээн',
+      icon: Zap,
+      accentColor: 'text-yellow-400',
+      badge: 'МЕГАЛО',
+    },
+    {
+      id: 'mystery',
+      label: 'Өшөө авалт & Драм',
+      description: 'Мафи, өшөө авалт, сэтгэл зүй',
+      icon: Skull,
+      accentColor: 'text-purple-400',
+      badge: '91 DAYS',
+    },
+    {
+      id: 'fantasy',
+      label: 'Уран зөгнөлт & Ид шид',
+      description: 'Ид шидийн ертөнц, онцгой хүч',
+      icon: Sparkles,
+      accentColor: 'text-indigo-400',
+    },
+    {
+      id: 'scifi',
+      label: 'Sci-Fi & Меха',
+      description: 'Ирээдүй, робот техник, супер хүч',
+      icon: Cpu,
+      accentColor: 'text-sky-300',
+    },
+    {
+      id: 'top_rated',
+      label: 'Шилдэг Үнэлгээтэй (9.5+)',
+      description: 'Хамгийн өндөр үнэлгээтэй шилдэг анимэ',
+      icon: Star,
+      accentColor: 'text-amber-300',
+      badge: 'HOT',
     },
     {
       id: 'new',
-      label: '2026/2025 Шинэ Нээлт',
-      description: 'Хамгийн сүүлийн үеийн нээлтүүд',
+      label: 'Шинэ Ангиуд & 2025/2026',
+      description: 'Сүүлд нэмэгдсэн шинэ ангиуд',
       icon: Zap,
       accentColor: 'text-emerald-400',
       badge: 'ШИНЭ',
     },
     {
-      id: 'top_rated',
-      label: 'Шилдэг Үнэлгээтэй (9.0+)',
-      description: 'IMDb өндөр үнэлгээтэй кинонууд',
-      icon: Star,
-      accentColor: 'text-amber-300',
-    },
-    {
-      id: 'action',
-      label: 'Тулаант & Адал Явдал',
-      description: 'Ширүүн тулаан, адал явдал',
-      icon: Flame,
-      accentColor: 'text-red-400',
-    },
-    {
-      id: 'horror',
-      label: 'Аймшиг & Триллер',
-      description: 'Сүнстэй, нууцлаг триллер бүтээлүүд',
-      icon: Skull,
-      accentColor: 'text-purple-400',
-    },
-    {
-      id: 'comedy',
-      label: 'Инээдэм & Комеди',
-      description: 'Хөгжилтэй, гэр бүлийн кино',
-      icon: Smile,
-      accentColor: 'text-yellow-400',
-    },
-    {
-      id: 'scifi',
-      label: 'Sci-Fi & Хиймэл Оюун (AI)',
-      description: 'Шинжлэх ухааны уран зөгнөлт & AI',
-      icon: Cpu,
-      accentColor: 'text-sky-300',
-    },
-    {
       id: 'vip',
-      label: 'VIP & Багцын Кино',
-      description: 'Түрээс ба VIP эрхтэй үзэх кино',
+      label: 'VIP Онцгой Анимэ',
+      description: 'VIP эрхтэй хязгааргүй үзэх',
       icon: Crown,
       accentColor: 'text-amber-400',
       badge: 'VIP',
     },
   ];
 
-  const handleMouseEnterMovieDropdown = () => {
-    if (movieDropdownTimerRef.current) {
-      clearTimeout(movieDropdownTimerRef.current);
+  const handleMouseEnterAnimeDropdown = () => {
+    if (animeDropdownTimerRef.current) {
+      clearTimeout(animeDropdownTimerRef.current);
     }
-    setIsMovieDropdownOpen(true);
+    setIsAnimeDropdownOpen(true);
   };
 
-  const handleMouseLeaveMovieDropdown = () => {
-    movieDropdownTimerRef.current = setTimeout(() => {
-      setIsMovieDropdownOpen(false);
+  const handleMouseLeaveAnimeDropdown = () => {
+    animeDropdownTimerRef.current = setTimeout(() => {
+      setIsAnimeDropdownOpen(false);
     }, 250);
   };
 
   const handleSelectCategory = (catId: MovieSubcategory) => {
-    setIsMovieDropdownOpen(false);
-    setIsMobileMovieMenuOpen(false);
+    setIsAnimeDropdownOpen(false);
+    setIsMobileAnimeMenuOpen(false);
     if (onSelectMovieCategory) {
       onSelectMovieCategory(catId);
     }
-    setActiveTab('movies');
+    setActiveTab('anime');
   };
 
   const searchResults = searchQuery.trim()
@@ -216,9 +205,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
           <span className="hidden sm:inline font-mono tracking-wide text-zinc-400">
-            FlickNime — Монгол хадмал & дуу оруулгатай кино, анимэ сан
+            FlickNime — Монгол хадмал & дуу оруулгатай анимэ платформ
           </span>
-          <span className="sm:hidden font-mono text-zinc-400">FlickNime Cinema</span>
+          <span className="sm:hidden font-mono text-zinc-400">FlickNime Anime</span>
         </div>
 
         <div className="flex items-center gap-2.5 sm:gap-3 text-zinc-300">
@@ -246,7 +235,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
           >
-            <span>FB Reels</span>
+            <span>FB Нийгэмлэг</span>
           </a>
         </div>
       </div>
@@ -261,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
           >
             <div className="w-8 h-8 rounded-xl brand-insignia text-black font-black flex items-center justify-center text-base shadow-lg group-hover:scale-105 transition-transform font-display">
-              🎬
+              ⚡
             </div>
             <div className="flex flex-col text-left">
               <div className="brand-glow-container">
@@ -269,8 +258,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   FlickNime
                 </span>
               </div>
-              <span className="text-[9px] font-mono tracking-widest text-zinc-500 uppercase">
-                Cinema & Anime
+              <span className="text-[9px] font-mono tracking-widest text-amber-400/90 uppercase font-semibold">
+                ANIME PLATFORM
               </span>
             </div>
           </button>
@@ -302,47 +291,78 @@ export const Navbar: React.FC<NavbarProps> = ({
               ЭХЛЭЛ
             </button>
 
-            {/* КИНО Dropdown */}
+            {/* БҮХ АНИМЭ */}
+            <button
+              id="nav-anime"
+              onClick={() => {
+                setActiveTab('anime');
+                if (onSelectMovieCategory) onSelectMovieCategory('all');
+              }}
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'anime' && selectedMovieCategory === 'all'
+                  ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40 shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+              <span>БҮХ АНИМЭ</span>
+            </button>
+
+            {/* ОЛОН АНГИТ */}
+            <button
+              id="nav-series"
+              onClick={() => setActiveTab('series')}
+              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'series'
+                  ? 'bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/40 shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5 text-indigo-400" />
+              <span>ОЛОН АНГИТ</span>
+            </button>
+
+            {/* АНИМЭ ЖАНРУУД Dropdown */}
             <div
               className="relative"
-              onMouseEnter={handleMouseEnterMovieDropdown}
-              onMouseLeave={handleMouseLeaveMovieDropdown}
+              onMouseEnter={handleMouseEnterAnimeDropdown}
+              onMouseLeave={handleMouseLeaveAnimeDropdown}
             >
               <button
-                id="nav-movies-dropdown-btn"
+                id="nav-anime-dropdown-btn"
                 onClick={() => {
-                  if (activeTab !== 'movies') {
-                    setActiveTab('movies');
+                  if (activeTab !== 'anime') {
+                    setActiveTab('anime');
                   }
-                  setIsMovieDropdownOpen((prev) => !prev);
+                  setIsAnimeDropdownOpen((prev) => !prev);
                 }}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'movies'
+                  activeTab === 'anime' && selectedMovieCategory !== 'all'
                     ? 'bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30 shadow-sm'
                     : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
-                aria-expanded={isMovieDropdownOpen}
+                aria-expanded={isAnimeDropdownOpen}
               >
-                <Film className="w-3.5 h-3.5 text-amber-400" />
-                <span>КИНО</span>
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span>ЖАНРУУД</span>
                 <ChevronDown
                   className={`w-3 h-3 text-zinc-500 transition-transform duration-200 ${
-                    isMovieDropdownOpen ? 'rotate-180 text-amber-400' : ''
+                    isAnimeDropdownOpen ? 'rotate-180 text-amber-400' : ''
                   }`}
                 />
               </button>
 
-              {/* Mega Dropdown Menu for КИНО */}
-              {isMovieDropdownOpen && (
+              {/* Mega Dropdown Menu for АНИМЭ ЖАНРУУД */}
+              {isAnimeDropdownOpen && (
                 <div
                   className="absolute left-0 top-full mt-2 w-96 cinema-glass-elevated rounded-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150"
-                  onMouseEnter={handleMouseEnterMovieDropdown}
-                  onMouseLeave={handleMouseLeaveMovieDropdown}
+                  onMouseEnter={handleMouseEnterAnimeDropdown}
+                  onMouseLeave={handleMouseLeaveAnimeDropdown}
                 >
                   <div className="px-2 py-1.5 border-b border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 font-bold uppercase tracking-wider mb-2">
                     <span className="flex items-center gap-1.5 text-amber-400">
-                      <Film className="w-3.5 h-3.5" />
-                      Киноны Ангилал & Төрлүүд
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Анимэ Жанр & Ангилал
                     </span>
                     <button
                       onClick={() => handleSelectCategory('all')}
@@ -353,14 +373,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-1.5 max-h-[380px] overflow-y-auto pr-1 no-scrollbar">
-                    {movieCategories.map((cat) => {
+                    {animeCategories.map((cat) => {
                       const Icon = cat.icon;
-                      const isSelected = activeTab === 'movies' && selectedMovieCategory === cat.id;
+                      const isSelected = activeTab === 'anime' && selectedMovieCategory === cat.id;
 
                       return (
                         <button
                           key={cat.id}
-                          id={`nav-movie-cat-${cat.id}`}
+                          id={`nav-anime-cat-${cat.id}`}
                           onClick={() => handleSelectCategory(cat.id)}
                           className={`text-left p-2.5 rounded-xl transition-all flex items-start gap-2.5 cursor-pointer border ${
                             isSelected
@@ -391,45 +411,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
 
                   <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs px-2 text-zinc-400">
-                    <span className="text-[11px]">Бүх уран сайхны кино сан</span>
+                    <span className="text-[11px]">Монгол орчуулгатай бүх анимэ</span>
                     <button
                       onClick={() => handleSelectCategory('all')}
                       className="gold-glow-btn text-black font-black text-[11px] px-3 py-1 rounded-lg cursor-pointer"
                     >
-                      Бүх Кино
+                      Бүх Анимэ
                     </button>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* ОЛОН АНГИТ */}
-            <button
-              id="nav-series"
-              onClick={() => setActiveTab('series')}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'series'
-                  ? 'bg-indigo-500/15 text-indigo-300 font-bold border border-indigo-500/30 shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <Tv className="w-3.5 h-3.5 text-indigo-400" />
-              <span>ОЛОН АНГИТ</span>
-            </button>
-
-            {/* АНИМЭ */}
-            <button
-              id="nav-anime"
-              onClick={() => setActiveTab('anime')}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'anime'
-                  ? 'bg-rose-500/15 text-rose-300 font-bold border border-rose-500/30 shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
-              <span>АНИМЭ</span>
-            </button>
 
             {/* ТОГЛООМ */}
             <button
@@ -478,50 +470,25 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right: Wallet + Pass + Search + Favorites */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-1 lg:flex-none justify-end min-w-0">
           {/* Subscription Package Button */}
-          {isMonthlyVip ? (
+          {isMonthlyVip || isAnimePackage ? (
             <button
               onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-600 text-black px-2.5 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-amber-500 text-black px-2.5 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current shrink-0" />
-              <span className="hidden sm:inline">VIP БҮТЭН</span>
+              <span className="hidden sm:inline">🎌 АНИМЭ VIP</span>
               <span className="sm:hidden">VIP</span>
-            </button>
-          ) : isAnimePackage && isMoviePackage ? (
-            <button
-              onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-md cursor-pointer shrink-0"
-            >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">АНИМЭ + КИНО</span>
-              <span className="sm:hidden">БАГЦ</span>
-            </button>
-          ) : isAnimePackage ? (
-            <button
-              onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-rose-600/90 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow cursor-pointer shrink-0"
-            >
-              <span className="hidden sm:inline">🎌 АНИМЭ БАГЦ</span>
-              <span className="sm:hidden">🎌 БАГЦ</span>
-            </button>
-          ) : isMoviePackage ? (
-            <button
-              onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-amber-500/90 text-black px-2.5 py-1.5 rounded-xl text-xs font-black shadow cursor-pointer shrink-0"
-            >
-              <span className="hidden sm:inline">🎬 КИНО БАГЦ</span>
-              <span className="sm:hidden">🎬 БАГЦ</span>
             </button>
           ) : (
             <button
               id="vip-monthly-pass-btn"
               onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-              title="Багц идэвхжүүлэх"
+              className="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+              title="Анимэ VIP багц идэвхжүүлэх"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">БАГЦ (4,000 ₮)</span>
-              <span className="sm:hidden">БАГЦ</span>
+              <span className="hidden sm:inline">АНИМЭ VIP (4,000 ₮)</span>
+              <span className="sm:hidden">VIP (4k)</span>
             </button>
           )}
 
@@ -560,13 +527,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Desktop Search Box with ⌘K Badge */}
+          {/* Desktop Search Box */}
           <div className="relative hidden md:block w-40 lg:w-56 xl:w-64">
             <div className="relative flex items-center">
               <input
                 id="search-input-desktop"
                 type="text"
-                placeholder="Кино, анимэ хайх..."
+                placeholder="Анимэ хайх..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
@@ -617,8 +584,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                             {m.title} ({m.year})
                           </div>
                           <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-500">
-                            <span className="bg-black/80 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold border border-white/10">
-                              {m.type === 'series' ? 'SERIES' : 'CINEMA'}
+                            <span className="bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-mono font-bold border border-rose-500/30">
+                              ANIME
                             </span>
                             <span className="text-amber-400 font-bold">★ {m.rating}</span>
                           </div>
@@ -628,7 +595,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 ) : (
                   <div className="p-5 text-center text-xs text-zinc-400">
-                    "{searchQuery}" хайлтаар кино олдсонгүй.
+                    "{searchQuery}" хайлтаар анимэ олдсонгүй.
                   </div>
                 )}
               </div>
@@ -644,7 +611,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-rose-500/20 text-rose-400 border-rose-500/50'
                 : 'bg-black/50 border-white/[0.08] text-zinc-400 hover:bg-white/[0.08] hover:text-white'
             }`}
-            title="Таалагдсан кинонууд"
+            title="Таалагдсан анимэ"
           >
             <Heart className="w-4 h-4 fill-current" />
             {favoritesCount > 0 && (
@@ -662,7 +629,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <input
             id="search-input-mobile"
             type="text"
-            placeholder="Кино, анимэ, цуврал хайх..."
+            placeholder="Анимэ хайх..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
@@ -713,8 +680,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {m.title} ({m.year})
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-zinc-500">
-                        <span className="bg-black/80 text-amber-300 px-1 py-0.2 rounded font-mono font-bold">
-                          {m.type === 'series' ? 'SERIES' : 'CINEMA'}
+                        <span className="bg-rose-500/20 text-rose-300 px-1 py-0.2 rounded font-mono font-bold">
+                          ANIME
                         </span>
                         <span className="text-amber-400 font-bold">★ {m.rating}</span>
                       </div>
@@ -724,7 +691,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div className="p-4 text-center text-xs text-zinc-400">
-                "{searchQuery}" хайлтаар кино олдсонгүй.
+                "{searchQuery}" хайлтаар анимэ олдсонгүй.
               </div>
             )}
           </div>
@@ -754,54 +721,85 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
             }`}
           >
-            <Clapperboard className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Эхлэл</span>
           </button>
 
-          {/* Mobile Кино Submenu */}
+          {/* Mobile Анимэ Бүх Сан */}
+          <button
+            id="mobile-nav-anime"
+            onClick={() => {
+              setActiveTab('anime');
+              if (onSelectMovieCategory) onSelectMovieCategory('all');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+              activeTab === 'anime' && selectedMovieCategory === 'all'
+                ? 'bg-rose-600 text-white font-bold shadow-md'
+                : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+            <span>Бүх Анимэ</span>
+          </button>
+
+          {/* Mobile Олон Ангит */}
+          <button
+            id="mobile-nav-series"
+            onClick={() => setActiveTab('series')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+              activeTab === 'series'
+                ? 'bg-indigo-600 text-white font-bold shadow-md'
+                : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
+            }`}
+          >
+            <Tv className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Олон Ангит</span>
+          </button>
+
+          {/* Mobile Жанрууд Submenu */}
           <div className="relative shrink-0">
             <button
-              id="mobile-nav-movies"
+              id="mobile-nav-genres"
               onClick={() => {
-                if (activeTab === 'movies') {
-                  setIsMobileMovieMenuOpen((prev) => !prev);
+                if (activeTab === 'anime') {
+                  setIsMobileAnimeMenuOpen((prev) => !prev);
                 } else {
-                  setActiveTab('movies');
-                  setIsMobileMovieMenuOpen(true);
+                  setActiveTab('anime');
+                  setIsMobileAnimeMenuOpen(true);
                 }
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
-                activeTab === 'movies'
+                activeTab === 'anime' && selectedMovieCategory !== 'all'
                   ? 'gold-glow-btn text-black font-black'
                   : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
               }`}
             >
-              <Film className="w-3.5 h-3.5" />
-              <span>Кино</span>
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>Жанрууд</span>
               <ChevronDown className="w-3 h-3 ml-0.5" />
             </button>
 
-            {isMobileMovieMenuOpen && (
+            {isMobileAnimeMenuOpen && (
               <div className="fixed inset-x-3 top-24 cinema-glass-elevated rounded-2xl p-3 z-50 max-h-[75vh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95">
                 <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] mb-2.5">
                   <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
-                    <Film className="w-4 h-4" /> КИНОНЫ ТӨРЛҮҮД
+                    <Sparkles className="w-4 h-4" /> АНИМЭ ЖАНРУУД
                   </span>
                   <button
-                    onClick={() => setIsMobileMovieMenuOpen(false)}
-                    className="p-1 text-zinc-400 hover:text-white rounded-lg bg-black/60"
+                    onClick={() => setIsMobileAnimeMenuOpen(false)}
+                    className="p-1 text-zinc-400 hover:text-white rounded-lg bg-black/60 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {movieCategories.map((cat) => {
+                  {animeCategories.map((cat) => {
                     const Icon = cat.icon;
                     return (
                       <button
                         key={cat.id}
                         onClick={() => handleSelectCategory(cat.id)}
-                        className={`text-left p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
+                        className={`text-left p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer ${
                           selectedMovieCategory === cat.id
                             ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
                             : 'bg-white/[0.03] border-white/[0.05] text-zinc-300 active:bg-white/[0.08]'
@@ -816,32 +814,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
-
-          <button
-            id="mobile-nav-series"
-            onClick={() => setActiveTab('series')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'series'
-                ? 'bg-indigo-600 text-white font-bold shadow-md'
-                : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Цуврал</span>
-          </button>
-
-          <button
-            id="mobile-nav-anime"
-            onClick={() => setActiveTab('anime')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-              activeTab === 'anime'
-                ? 'bg-rose-600 text-white font-bold shadow-md'
-                : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06]'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-rose-400" />
-            <span>Анимэ</span>
-          </button>
 
           <button
             id="mobile-nav-games"

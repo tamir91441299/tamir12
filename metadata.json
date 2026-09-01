@@ -1,6 +1,6 @@
 {
-  "name": "FlickNime - Кино & Анимэ",
-  "description": "Монгол хадмал, дуу оруулгатай анимэ, кино болон олон ангит цувралуудыг үзэх FlickNime онлайн платформ.",
+  "name": "FlickNime - Анимэ Платформ",
+  "description": "Монгол хадмал болон дуу оруулгатай шилдэг анимэ, цувралуудыг өндөр чанартайгаар үзэх FlickNime онлайн платформ.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -187,14 +187,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* Package Selection */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
-              Багц сонгоно уу:
+              Анимэ Багц сонгоно уу:
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 id="select-plan-anime"
                 type="button"
                 onClick={() => setPlanType('anime')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                   planType === 'anime'
                     ? 'bg-gradient-to-b from-rose-950/80 to-zinc-900 border-rose-500 text-white shadow-lg ring-1 ring-rose-500'
                     : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white'
@@ -202,10 +202,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               >
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
-                    🎌 Анимэ
+                    🎌 САРЫН ЭРХ
                   </span>
                   <span className="text-xs font-bold text-white block mt-0.5">
-                    Анимэ Багц
+                    Анимэ Сар Багц
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
@@ -217,36 +217,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </button>
 
               <button
-                id="select-plan-movie"
-                type="button"
-                onClick={() => setPlanType('movie')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-                  planType === 'movie'
-                    ? 'bg-gradient-to-b from-cyan-950/80 to-zinc-900 border-cyan-500 text-white shadow-lg ring-1 ring-cyan-500'
-                    : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400 block">
-                    🎬 Кино
-                  </span>
-                  <span className="text-xs font-bold text-white block mt-0.5">
-                    Кино Багц
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="bg-cyan-600 text-white font-black text-[10px] px-1.5 py-0.5 rounded">
-                    4,000 ₮
-                  </span>
-                  {isMoviePackage && <span className="text-[9px] text-emerald-400 font-bold">Идэвхтэй</span>}
-                </div>
-              </button>
-
-              <button
                 id="select-plan-full"
                 type="button"
                 onClick={() => setPlanType('full_vip')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                   planType === 'full_vip'
                     ? 'bg-gradient-to-b from-amber-950/80 to-zinc-900 border-amber-400 text-white shadow-lg ring-1 ring-amber-400'
                     : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white'
@@ -254,10 +228,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               >
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block flex items-center gap-1">
-                    👑 VIP Бүтэн
+                    👑 VIP ПРЕМИУМ
                   </span>
                   <span className="text-xs font-bold text-white block mt-0.5">
-                    Анимэ + Кино
+                    VIP 4K Анимэ Багц
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
@@ -276,27 +250,21 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               className={`w-10 h-10 rounded-xl font-black flex items-center justify-center text-lg shadow shrink-0 ${
                 planType === 'anime'
                   ? 'bg-rose-600 text-white'
-                  : planType === 'movie'
-                  ? 'bg-cyan-500 text-black'
                   : 'bg-amber-400 text-black'
               }`}
             >
-              {planType === 'anime' ? '🎌' : planType === 'movie' ? '🎬' : '👑'}
+              {planType === 'anime' ? '🎌' : '👑'}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-extrabold text-xs text-white flex items-center gap-1">
                 {planType === 'anime'
                   ? 'Анимэ Багц (30 Хоног)'
-                  : planType === 'movie'
-                  ? 'Кино & Цуврал Багц (30 Хоног)'
-                  : 'VIP Бүтэн Багц (30 Хоног)'}
+                  : 'VIP Премиум 4K Багц (30 Хоног)'}
               </h3>
               <p className="text-[11px] text-zinc-400">
                 {planType === 'anime'
-                  ? 'Demon Slayer, Solo Leveling зэрэг анимэ хэсгийн бүх цуврал, киног хязгааргүй үзнэ.'
-                  : planType === 'movie'
-                  ? 'Платформ дээрх бүх Уран сайхны кино болон Олон ангит цувралуудыг хязгааргүй үзнэ.'
-                  : 'Анимэ + Уран сайхны кино + Олон ангит цувралууд БҮГД ХЯЗГААРГҮЙ багтсан хямдралтай багц.'}
+                  ? 'Solo Leveling, Megalo Box, Attack on Titan, Demon Slayer зэрэг бүх анимэ цувралыг монгол хадмал/дуу оруулалттайгаар хязгааргүй үзнэ.'
+                  : 'Бүх анимэ цуврал, 4K чанар, шинэ ангиудыг түрүүлж үзэх тусгай VIP эрх багтсан.'}
               </p>
             </div>
             <span className="font-mono text-amber-400 text-sm font-black shrink-0">

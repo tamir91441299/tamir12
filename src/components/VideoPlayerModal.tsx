@@ -32,7 +32,8 @@ import {
   RotateCw,
   Lock,
   ShieldCheck,
-  Shield
+  Shield,
+  Sun
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -214,20 +215,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Mobile Orientation & Landscape Rotation Mode State
   const [isForcedLandscape, setIsForcedLandscape] = useState<boolean>(false);
+  const [videoBrightness, setVideoBrightness] = useState<number>(100); // 100%, 115%, 130%, 145%
   const [isDeviceLandscape, setIsDeviceLandscape] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return (
+        window.innerWidth > window.innerHeight ||
         (window.screen?.orientation?.type ? window.screen.orientation.type.includes('landscape') : false) ||
-        (typeof window.orientation === 'number' && Math.abs(window.orientation) === 90)
+        (typeof window.orientation === 'number' && Math.abs(window.orientation) === 90) ||
+        (window.matchMedia ? window.matchMedia('(orientation: landscape)').matches : false)
       );
     }
     return false;
   });
 
-  // Track physical device orientation changes (physical rotation)
+  // Track physical device orientation and viewport changes (physical rotation)
   useEffect(() => {
     const handleOrientationOrResize = () => {
+      if (typeof window === 'undefined') return;
       const isPhysicalLandscape =
+        window.innerWidth > window.innerHeight ||
         (window.screen?.orientation?.type ? window.screen.orientation.type.includes('landscape') : false) ||
         (typeof window.orientation === 'number' && Math.abs(window.orientation) === 90) ||
         (window.matchMedia ? window.matchMedia('(orientation: landscape)').matches : false);
@@ -517,6 +523,83 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     }
   };
 
+  // Quick Relative Seek (-10s / +10s)
+  const seekRelative = (seconds: number) => {
+    if (videoRef.current) {
+      const dur = videoRef.current.duration || duration || 0;
+      const target = Math.max(0, Math.min(dur, (videoRef.current.currentTime || currentTime) + seconds));
+      videoRef.current.currentTime = target;
+      setCurrentTime(target);
+      if (seconds < 0) {
+        setDoubleTapFeedback('left');
+        setTimeout(() => setDoubleTapFeedback(null), 700);
+      } else {
+        setDoubleTapFeedback('right');
+        setTimeout(() => setDoubleTapFeedback(null), 700);
+      }
+    }
+    resetControlsTimer();
+  };
+
+  // Custom Interactive Scrubber Touch & Drag System
+  const scrubTrackRef = useRef<HTMLDivElement | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [hoverSeekTime, setHoverSeekTime] = useState<number | null>(null);
+  const [hoverSeekPercent, setHoverSeekPercent] = useState<number>(0);
+
+  const calculateScrubPosition = useCallback((clientX: number, clientY: number) => {
+    if (!scrubTrackRef.current || !duration) return 0;
+    const rect = scrubTrackRef.current.getBoundingClientRect();
+    let ratio = 0;
+    if (isForcedLandscape && !isDeviceLandscape) {
+      // Rotated 90deg clockwise: visual horizontal corresponds to DOM top-to-bottom
+      ratio = (clientY - rect.top) / rect.height;
+    } else {
+      ratio = (clientX - rect.left) / rect.width;
+    }
+    ratio = Math.max(0, Math.min(1, ratio));
+    return ratio * duration;
+  }, [duration, isForcedLandscape, isDeviceLandscape]);
+
+  const handleScrubStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsScrubbing(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const targetTime = calculateScrubPosition(clientX, clientY);
+    setCurrentTime(targetTime);
+    if (videoRef.current) {
+      videoRef.current.currentTime = targetTime;
+    }
+    resetControlsTimer();
+  };
+
+  const handleScrubMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    if (isScrubbing) {
+      e.preventDefault();
+      const targetTime = calculateScrubPosition(clientX, clientY);
+      setCurrentTime(targetTime);
+      if (videoRef.current) {
+        videoRef.current.currentTime = targetTime;
+      }
+      resetControlsTimer();
+    } else if (scrubTrackRef.current && duration > 0) {
+      const rect = scrubTrackRef.current.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      setHoverSeekPercent(ratio * 100);
+      setHoverSeekTime(ratio * duration);
+    }
+  };
+
+  const handleScrubEnd = () => {
+    setIsScrubbing(false);
+    resetControlsTimer();
+  };
+
   // Volume
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -621,26 +704,33 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Dedicated Screen Orientation / Landscape Rotation for Mobile (Handles Portrait Lock & Touch Devices)
   const toggleRotateLandscape = async () => {
-    const nextState = !isForcedLandscape;
-    setIsForcedLandscape(nextState);
+    const isCurrentlyWide = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
 
-    if (nextState) {
+    // If not wide and not forced, toggle to landscape
+    if (!isForcedLandscape && !isCurrentlyWide) {
+      setIsForcedLandscape(true);
       setQualityNotice('🔄 Хөндлөн (Landscape) горим идэвхжлээ');
-      // Attempt Screen Orientation API lock if supported
+      // Attempt Screen Orientation API lock or fullscreen if supported
       try {
+        const doc: any = document;
+        const targetElem: any = playerContainerRef.current || videoRef.current || document.documentElement;
+        if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+          if (targetElem?.requestFullscreen) {
+            await targetElem.requestFullscreen();
+          } else if (targetElem?.webkitRequestFullscreen) {
+            await targetElem.webkitRequestFullscreen();
+          }
+        }
         if ((screen?.orientation as any)?.lock) {
           await (screen.orientation as any).lock('landscape');
         } else if ((screen as any)?.lockOrientation) {
           (screen as any).lockOrientation('landscape');
-        } else if ((screen as any)?.mozLockOrientation) {
-          (screen as any).mozLockOrientation('landscape');
-        } else if ((screen as any)?.msLockOrientation) {
-          (screen as any).msLockOrientation('landscape');
         }
       } catch {
         // Smoothly handled by forced CSS landscape transform
       }
     } else {
+      setIsForcedLandscape(false);
       setQualityNotice('📱 Босоо (Portrait) горимд шилжлээ');
       try {
         if (screen?.orientation?.unlock) {
@@ -758,17 +848,46 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  // Safe Exit & Close Handler that always cleans up Fullscreen & Orientation Lock
+  const handleCloseSafely = useCallback(() => {
+    try {
+      const doc: any = document;
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen().catch(() => {});
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen().catch(() => {});
+      } else if (doc.mozCancelFullScreen) {
+        doc.mozCancelFullScreen().catch(() => {});
+      } else if (doc.msExitFullscreen) {
+        doc.msExitFullscreen().catch(() => {});
+      }
+
+      if (screen?.orientation?.unlock) {
+        screen.orientation.unlock();
+      } else if ((screen as any)?.unlockOrientation) {
+        (screen as any).unlockOrientation();
+      }
+    } catch {}
+
+    setIsForcedLandscape(false);
+    setIsFullscreen(false);
+    onClose();
+  }, [onClose]);
+
   if (!movie) return null;
+
+  const isViewportLandscape = isDeviceLandscape || (typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
+  const shouldApplyCssRotation = isForcedLandscape && !isViewportLandscape;
 
   return (
     <div
       className={`fixed bg-black flex flex-col justify-between overflow-hidden transition-all duration-300 ${
-        isForcedLandscape
+        shouldApplyCssRotation
           ? 'shadow-2xl'
           : 'inset-0 w-full h-full z-50'
       }`}
       style={
-        isForcedLandscape
+        shouldApplyCssRotation
           ? {
               position: 'fixed',
               top: '50%',
@@ -779,7 +898,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               maxHeight: '100dvw',
               transform: 'translate(-50%, -50%) rotate(90deg)',
               transformOrigin: 'center center',
-              zIndex: 999999,
+              zIndex: 99999,
             }
           : {
               position: 'fixed',
@@ -790,9 +909,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             }
       }
     >
-      {/* Top Header Bar - Fully Responsive with Smooth Auto-Collapse in Landscape/Fullscreen */}
-      <header className={`p-2 sm:p-3 bg-gradient-to-b from-black/60 via-black/25 to-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
-        isFullscreen || isForcedLandscape || isDeviceLandscape
+      {/* BACK / EXIT BUTTON (Auto-hides with controls, 100% clean) */}
+      <button
+        type="button"
+        id="always-visible-back-btn"
+        onClick={handleCloseSafely}
+        className={`fixed top-3 left-3 z-[999999] bg-zinc-950/80 hover:bg-zinc-800 active:bg-zinc-700 text-white hover:text-cyan-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-zinc-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 group ${
+          controlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-3 pointer-events-none'
+        }`}
+        title="Тоглуулагчийг хаах / Үндсэн цэс рүү буцах (Esc)"
+      >
+        <div className="w-4 h-4 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500 group-hover:text-black transition-colors">
+          <X className="w-3 h-3" />
+        </div>
+        <span className="tracking-wide text-xs">Буцах</span>
+      </button>
+
+      {/* Top Header Bar - Clean transparent header, NO screen darkening */}
+      <header className={`p-2 sm:p-3 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
+        isFullscreen || isForcedLandscape || isDeviceLandscape || isViewportLandscape
           ? controlsVisible
             ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
             : 'opacity-0 -translate-y-full pointer-events-none absolute inset-x-0 top-0'
@@ -871,7 +1006,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             )}
             <button
               id="close-player-button-mobile"
-              onClick={onClose}
+              onClick={handleCloseSafely}
               className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center border border-zinc-700 cursor-pointer"
               title="Хаах (Esc)"
             >
@@ -1018,7 +1153,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           {/* Desktop Close Button */}
           <button
             id="close-player-button"
-            onClick={onClose}
+            onClick={handleCloseSafely}
             className="hidden sm:flex w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white items-center justify-center border border-zinc-700 cursor-pointer transition-transform hover:scale-105"
             title="Хаах (Esc)"
           >
@@ -1072,27 +1207,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               </div>
             </div>
           ) : isEmbed ? (
-            <div className="w-full h-full flex items-center justify-center relative select-none bg-black overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center relative bg-black overflow-hidden">
               <div className="relative w-full h-full bg-black flex items-center justify-center">
-                {/* Pop-out & Download Shield Overlay for Google Drive and Embed Players */}
-                <div
-                  className="absolute top-0 right-0 w-36 h-20 z-20 pointer-events-auto bg-transparent cursor-default select-none"
-                  title="Файлыг хамгаалсан"
-                  onContextMenu={(e) => e.preventDefault()}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                />
-                <div
-                  className="absolute top-0 left-0 right-0 h-14 z-20 pointer-events-auto bg-transparent cursor-default select-none"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-                <div
-                  className="absolute bottom-0 right-0 w-24 h-12 z-20 pointer-events-auto bg-transparent cursor-default select-none"
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-
                 <iframe
                   ref={iframeRef}
                   src={iframeUrl}
@@ -1103,39 +1219,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   referrerPolicy="no-referrer"
                   allowFullScreen
                   title={movie.titleMongolian}
-                  onContextMenu={(e) => e.preventDefault()}
                 />
               </div>
-
-              {/* Floating Quality Change Toast Notification */}
-              {qualityNotice && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
-                  <Layers className="w-4 h-4 text-cyan-400" />
-                  <span>{qualityNotice}</span>
-                </div>
-              )}
-
-              {/* Mobile Quick Rotate Floating Button */}
-              {controlsVisible && (
-                <div className="absolute top-4 right-4 z-40 sm:hidden animate-in fade-in zoom-in-90 duration-200 pointer-events-auto">
-                  <button
-                    type="button"
-                    id="mobile-floating-rotate-btn-embed"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleRotateLandscape();
-                    }}
-                    className={`flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full shadow-2xl border active:scale-95 cursor-pointer transition-all ${
-                      isForcedLandscape
-                        ? 'bg-zinc-900/95 text-cyan-300 border-cyan-500/80 shadow-cyan-500/30'
-                        : 'bg-cyan-500 text-black border-cyan-300 shadow-cyan-500/40'
-                    }`}
-                  >
-                    <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-cyan-400' : 'fill-black'}`} />
-                    <span>{isForcedLandscape ? '📱 Босоо харах' : '🔄 Хөндлөн харах'}</span>
-                  </button>
-                </div>
-              )}
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
@@ -1238,6 +1323,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     ? 'object-fill'
                     : 'object-contain'
                 }`}
+                style={{
+                  filter: videoBrightness !== 100 ? `brightness(${videoBrightness}%) contrast(105%)` : undefined,
+                }}
               />
 
               {/* Smart Non-Dimming Tap & Gesture Surface */}
@@ -1369,56 +1457,72 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   <span>{qualityNotice}</span>
                 </div>
               )}
-
-              {/* Mobile Portrait Quick-Rotate Floating Prompt Button */}
-              {controlsVisible && (
-                <div className="absolute top-4 right-4 z-40 sm:hidden animate-in fade-in zoom-in-90 duration-200">
-                  <button
-                    type="button"
-                    id="mobile-floating-rotate-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleRotateLandscape();
-                    }}
-                    className={`flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full shadow-2xl border active:scale-95 cursor-pointer transition-all ${
-                      isForcedLandscape
-                        ? 'bg-zinc-900/95 text-cyan-300 border-cyan-500/80 shadow-cyan-500/30'
-                        : 'bg-cyan-500 text-black border-cyan-300 shadow-cyan-500/40'
-                    }`}
-                  >
-                    <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-cyan-400' : 'fill-black'}`} />
-                    <span>{isForcedLandscape ? '📱 Босоо харах' : '🔄 Хөндлөн харах'}</span>
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
           {/* Custom Transparent Overlay Controls (Auto-hides smoothly without darkening video) */}
           {!isEmbed && (
             <div
-              className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent p-3 sm:p-5 transition-all duration-300 z-30 space-y-2.5 ${
+              className={`absolute inset-x-0 bottom-0 bg-transparent p-3 sm:p-5 transition-all duration-300 z-30 space-y-2.5 ${
                 controlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'
               }`}
               onMouseMove={resetControlsTimer}
             >
-              {/* Timeline Progress Bar */}
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <span className="text-xs font-mono font-bold text-cyan-300 shrink-0">
+              {/* Responsive Touch-Friendly Custom Timeline Scrubber */}
+              <div className="flex items-center gap-2.5 sm:gap-4 select-none">
+                <span className="text-xs font-mono font-bold text-cyan-300 shrink-0 w-12 text-right">
                   {formatTime(currentTime)}
                 </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={duration || 100}
-                  value={currentTime}
-                  onChange={(e) => {
-                    handleSeek(e);
-                    resetControlsTimer();
+                
+                {/* Scrubber Interactive Track with Generous Hit Area */}
+                <div
+                  ref={scrubTrackRef}
+                  onMouseDown={handleScrubStart}
+                  onMouseMove={handleScrubMove}
+                  onMouseUp={handleScrubEnd}
+                  onMouseLeave={() => {
+                    handleScrubEnd();
+                    setHoverSeekTime(null);
                   }}
-                  className="flex-1 h-2 bg-zinc-750 accent-cyan-400 rounded-lg cursor-pointer transition-all hover:h-2.5"
-                />
-                <span className="text-xs font-mono text-zinc-400 shrink-0">
+                  onTouchStart={handleScrubStart}
+                  onTouchMove={handleScrubMove}
+                  onTouchEnd={handleScrubEnd}
+                  className="flex-1 h-9 flex items-center relative cursor-pointer group/scrub touch-none select-none"
+                  title="Хугацааг урагш, хойш гүйлгэх"
+                >
+                  {/* Track Background */}
+                  <div className="w-full h-2.5 bg-zinc-800/90 rounded-full overflow-hidden relative border border-zinc-700/60 shadow-inner group-hover/scrub:h-3 transition-all">
+                    {/* Played Progress Bar */}
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-400 via-cyan-300 to-blue-500 rounded-full relative shadow-md shadow-cyan-500/50 transition-[width] duration-75"
+                      style={{
+                        width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Scrubber Thumb */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-cyan-300 rounded-full border-2 border-white shadow-xl shadow-cyan-400/80 group-hover/scrub:scale-125 transition-transform pointer-events-none flex items-center justify-center"
+                    style={{
+                      left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                    }}
+                  >
+                    <div className="w-1.5 h-1.5 bg-black rounded-full" />
+                  </div>
+
+                  {/* Hover / Drag Time Preview Tooltip */}
+                  {hoverSeekTime !== null && (
+                    <div
+                      className="absolute -top-7 -translate-x-1/2 bg-zinc-950 text-cyan-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-cyan-500/40 shadow-xl pointer-events-none whitespace-nowrap"
+                      style={{ left: `${hoverSeekPercent}%` }}
+                    >
+                      {formatTime(hoverSeekTime)}
+                    </div>
+                  )}
+                </div>
+
+                <span className="text-xs font-mono text-zinc-400 shrink-0 w-12 text-left">
                   {formatTime(duration)}
                 </span>
               </div>
@@ -1434,47 +1538,36 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       togglePlay();
                       resetControlsTimer();
                     }}
-                    className="p-1.5 sm:p-2 hover:bg-zinc-800/80 rounded-full transition-all cursor-pointer text-cyan-400 hover:scale-110 active:scale-95"
+                    className="p-2 sm:p-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-2xl transition-all cursor-pointer hover:scale-110 active:scale-95 border border-cyan-500/30 shadow-md"
                     title={isPlaying ? "Түр зогсоох (Space)" : "Тоглуулах (Space)"}
                   >
                     {isPlaying ? (
                       <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
                     ) : (
-                      <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+                      <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current translate-x-0.5" />
                     )}
                   </button>
 
                   {/* 10s Backward */}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
-                      }
-                      resetControlsTimer();
-                    }}
-                    className="p-1 sm:p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-[11px] sm:text-xs font-bold bg-zinc-900/60 border border-zinc-700/60"
-                    title="10 секунд ухраах"
+                    onClick={() => seekRelative(-10)}
+                    className="px-3 py-1.5 sm:px-3.5 sm:py-2 hover:bg-zinc-800 active:bg-zinc-700 rounded-xl text-zinc-200 hover:text-cyan-300 cursor-pointer text-xs font-black bg-zinc-900/80 border border-zinc-700/80 shadow-md flex items-center gap-1 transition-all active:scale-95"
+                    title="10 секунд ухраах (← Arrow Left)"
                   >
-                    -10s
+                    <span className="text-cyan-400">⏪</span>
+                    <span>-10с</span>
                   </button>
 
                   {/* 10s Forward */}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.currentTime = Math.min(
-                          videoRef.current.duration || 0,
-                          videoRef.current.currentTime + 10
-                        );
-                      }
-                      resetControlsTimer();
-                    }}
-                    className="p-1 sm:p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white cursor-pointer text-[11px] sm:text-xs font-bold bg-zinc-900/60 border border-zinc-700/60"
-                    title="10 секунд гүйлгэх"
+                    onClick={() => seekRelative(10)}
+                    className="px-3 py-1.5 sm:px-3.5 sm:py-2 hover:bg-zinc-800 active:bg-zinc-700 rounded-xl text-zinc-200 hover:text-cyan-300 cursor-pointer text-xs font-black bg-zinc-900/80 border border-zinc-700/80 shadow-md flex items-center gap-1 transition-all active:scale-95"
+                    title="10 секунд гүйлгэх (→ Arrow Right)"
                   >
-                    +10s
+                    <span>+10с</span>
+                    <span className="text-cyan-400">⏩</span>
                   </button>
 
                   {/* Next Episode Button */}
@@ -1486,7 +1579,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         selectEpisode(currentEpisodeIndex + 1);
                         resetControlsTimer();
                       }}
-                      className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-full text-zinc-300 hover:text-white cursor-pointer"
+                      className="p-2 hover:bg-zinc-800 active:bg-zinc-700 rounded-xl text-zinc-300 hover:text-white cursor-pointer border border-zinc-700/60 bg-zinc-900/60"
                       title="Дараагийн анги"
                     >
                       <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1571,6 +1664,33 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     ))}
                   </div>
 
+                  {/* Quick Brightness Booster cycle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const brightnessLevels = [100, 115, 130, 145];
+                      const nextIdx = (brightnessLevels.indexOf(videoBrightness) + 1) % brightnessLevels.length;
+                      const nextLevel = brightnessLevels[nextIdx];
+                      setVideoBrightness(nextLevel);
+                      setQualityNotice(
+                        nextLevel === 100
+                          ? '☀️ Дэлгэцийн гэрэл: Хэвийн (100%)'
+                          : `☀️ Дэлгэц тодруулагч: ${nextLevel}%`
+                      );
+                      setTimeout(() => setQualityNotice(null), 1800);
+                      resetControlsTimer();
+                    }}
+                    className={`text-[11px] font-bold border px-2 py-1 rounded-lg cursor-pointer flex items-center gap-1 transition-all ${
+                      videoBrightness > 100
+                        ? 'bg-amber-500 text-black border-amber-400 shadow-md shadow-amber-500/20'
+                        : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border-zinc-700/80'
+                    }`}
+                    title="Дэлгэц тодруулах (Brightness boost)"
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>{videoBrightness}%</span>
+                  </button>
+
                   {/* Playback speed indicator / quick cycle */}
                   <button
                     type="button"
@@ -1603,8 +1723,52 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
                     {showSettingsMenu && (
                       <div className="absolute right-0 bottom-12 w-80 max-h-[85vh] overflow-y-auto bg-zinc-900/98 border border-zinc-750 rounded-2xl p-4 shadow-2xl space-y-3.5 z-50 text-xs text-zinc-200 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
-                        {/* Orientation & Screen Rotation Setting */}
+                        {/* Brightness Booster Setting */}
                         <div>
+                          <div className="font-bold text-amber-400 mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Sun className="w-4 h-4 text-amber-400" />
+                              <span>Дэлгэцийн гэрэл (Brightness)</span>
+                            </span>
+                            <span className="text-[10px] text-amber-300 font-bold">
+                              {videoBrightness === 100 ? 'Хэвийн (100%)' : `+${videoBrightness - 100}% Тод`}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { lvl: 100, label: '100%', desc: 'Хэвийн' },
+                              { lvl: 115, label: '115%', desc: 'Тод' },
+                              { lvl: 130, label: '130%', desc: 'Маш тод' },
+                              { lvl: 145, label: '145%', desc: 'Дээд' },
+                            ].map((item) => (
+                              <button
+                                key={item.lvl}
+                                type="button"
+                                onClick={() => {
+                                  setVideoBrightness(item.lvl);
+                                  setQualityNotice(
+                                    item.lvl === 100
+                                      ? '☀️ Дэлгэцийн гэрэл: Хэвийн (100%)'
+                                      : `☀️ Дэлгэц тодруулагч: ${item.lvl}%`
+                                  );
+                                  setTimeout(() => setQualityNotice(null), 1800);
+                                  resetControlsTimer();
+                                }}
+                                className={`py-1.5 px-1 rounded-xl text-center cursor-pointer transition-all border ${
+                                  videoBrightness === item.lvl
+                                    ? 'bg-amber-500 text-black border-amber-400 font-black shadow-md shadow-amber-500/20'
+                                    : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
+                                }`}
+                              >
+                                <div className="font-bold text-xs">{item.label}</div>
+                                <div className={`text-[8px] ${videoBrightness === item.lvl ? 'text-black/80' : 'text-zinc-400'}`}>{item.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Orientation & Screen Rotation Setting */}
+                        <div className="border-t border-zinc-800 pt-3">
                           <div className="font-bold text-cyan-400 mb-2 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                               <RotateCw className="w-4 h-4 text-cyan-400" />

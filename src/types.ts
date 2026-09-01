@@ -2,11 +2,10 @@ export type MovieType = 'movie' | 'series' | 'anime';
 
 export type TabType =
   | 'home'
-  | 'movies'
-  | 'series'
   | 'anime'
-  | 'chinese'
-  | 'ai_movies'
+  | 'series'
+  | 'anime_movies'
+  | 'movies'
   | 'ai'
   | 'favorites'
   | 'purchased'
@@ -14,17 +13,19 @@ export type TabType =
 
 export type MovieSubcategory =
   | 'all'
-  | 'mongolian'
-  | 'hollywood'
-  | 'korean'
-  | 'chinese'
-  | 'new'
-  | 'top_rated'
+  | 'shounen'
   | 'action'
-  | 'horror'
-  | 'comedy'
+  | 'isekai'
+  | 'fantasy'
+  | 'romance'
   | 'scifi'
-  | 'vip';
+  | 'supernatural'
+  | 'comedy'
+  | 'sports'
+  | 'mystery'
+  | 'top_rated'
+  | 'vip'
+  | 'new';
 
 export interface Episode {
   episodeNumber: number;

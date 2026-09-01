@@ -46,12 +46,12 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
         )}
       </div>
 
-      {/* Type Toggle: Кино / Цуврал / Бүгд */}
+      {/* Type Toggle: Бүх анимэ / Олон ангит / Кино */}
       <div className="space-y-2">
         <label className="text-[11px] font-bold uppercase text-zinc-400 tracking-wider font-mono">
-          Төрөл сонголт
+          Анимэ төрөл
         </label>
-        <div className="grid grid-cols-4 gap-1 bg-black/50 p-1 rounded-2xl border border-white/[0.06] text-[11px] font-semibold">
+        <div className="grid grid-cols-3 gap-1 bg-black/50 p-1 rounded-2xl border border-white/[0.06] text-[11px] font-semibold">
           <button
             id="type-all-button"
             onClick={() => setSelectedType('all')}
@@ -62,17 +62,6 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
             }`}
           >
             БҮГД
-          </button>
-          <button
-            id="type-movie-button"
-            onClick={() => setSelectedType('movie')}
-            className={`py-1.5 rounded-xl transition-all cursor-pointer ${
-              selectedType === 'movie'
-                ? 'gold-glow-btn text-black font-black'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            КИНО
           </button>
           <button
             id="type-series-button"

@@ -82,10 +82,6 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
 };
 
 export const SAMPLE_MOVIES: Movie[] = [
-  DELHIIN_SUIREL_MOVIE,
-  MY_HERO_ACADEMIA_S1,
-  MY_HERO_ACADEMIA_S2,
-  MEGALO_BOX_S1,
   {
     id: 'm_91_days',
     title: '91 Days',
@@ -193,22 +189,25 @@ export const SAMPLE_MOVIES: Movie[] = [
         videoUrl: 'https://drive.google.com/file/d/1ZuvAt1eMParGnQTD_WivW7D9C1ukNYmE/view?usp=drivesdk'
       }
     ]
-  }
+  },
+  MY_HERO_ACADEMIA_S1,
+  MY_HERO_ACADEMIA_S2,
+  MEGALO_BOX_S1
 ];
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
-  { name: 'Animation', count: 26 },
-  { name: 'Action', count: 27 },
+  { name: 'Animation', count: 51 },
+  { name: 'Shounen', count: 38 },
+  { name: 'Action', count: 51 },
+  { name: 'Superpower', count: 38 },
+  { name: 'Drama', count: 26 },
   { name: 'Crime', count: 13 },
-  { name: 'Drama', count: 13 },
-  { name: 'Thriller', count: 14 },
-  { name: 'Adventure', count: 13 },
-  { name: 'Fantasy', count: 13 },
-  { name: 'Shounen', count: 13 },
-  { name: 'Зомби', count: 1 },
-  { name: 'Дэлхийн сүйрэл', count: 1 },
-  { name: 'Horror', count: 1 },
-  { name: 'Sci-Fi', count: 1 }
+  { name: 'Thriller', count: 13 },
+  { name: 'Sports', count: 13 },
+  { name: 'Adventure', count: 38 },
+  { name: 'Sci-Fi', count: 13 },
+  { name: 'Fantasy', count: 38 },
+  { name: 'Comedy', count: 25 }
 ];
 
 export const RELEASE_YEARS = [
@@ -223,7 +222,7 @@ export const SAMPLE_COMMENTS: Comment[] = [
     movieId: 'm_91_days',
     userName: 'Батболд',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
-    text: '91 Days аниме үнэхээр өшөө авалтын сонгодог бүтээл болсон байна. Монгол дуу оруулга нь маш өндөр түвшинд хийгджээ!',
+    text: '91 Days анимэ үнэхээр өшөө авалтын сонгодог бүтээл болсон байна. Монгол дуу оруулга нь маш өндөр түвшинд хийгджээ!',
     rating: 10,
     date: 'Өнөөдөр 18:30',
     likes: 24
@@ -240,40 +239,30 @@ export const SAMPLE_COMMENTS: Comment[] = [
   },
   {
     id: 'c3',
-    movieId: 'm_91_days',
+    movieId: 'm_mha_s1',
     userName: 'Тэмүүжин',
     avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
-    text: 'Хөгжим, уур амьсгал, 1920-иод оны хориглолтын үеийн дүрслэл нь яг л кино шиг сайн болсон.',
+    text: 'Миний Баатрын Академи 1-р бүлэг бүрэн 13 ангиараа орсонд баярлалаа! Дэкү All Might-тай уулздаг хэсэг үргэлж сэтгэл хөдөлгөдөг.',
     rating: 10,
     date: '3 хоногийн өмнө',
     likes: 35
   },
   {
     id: 'c4',
-    movieId: 'm_mha_s1',
+    movieId: 'm_mha_s2',
     userName: 'Энхжин',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-    text: 'Миний Баатрын Академи 1-р бүлэг бүрэн 13 ангиараа орсонд баярлалаа! Дэкү All Might-тай уулздаг хэсэг үргэлж сэтгэл хөдөлгөдөг.',
+    text: '2-р бүлгийн Спортын наадам ба Тодорокигийн тулаан галзуу болсон. Дуу оруулга нь супер!',
     rating: 10,
     date: 'Өнөөдөр 14:10',
     likes: 42
   },
   {
     id: 'c5',
-    movieId: 'm_delhiin_suirel',
-    userName: 'Ганбаатар',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
-    text: 'Дэлхийн Сүйрэл киноны хиймэл оюун ба роботын тулаантай хэсэг үнэхээр сэтгэл хөдөлгөм болжээ. Дуу оруулга нь ч маш тод байна!',
-    rating: 10,
-    date: 'Өнөөдөр 17:45',
-    likes: 29
-  },
-  {
-    id: 'c6',
     movieId: 'm_megalo_box_s1',
     userName: 'Билгүүн',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&q=80',
-    text: 'Мегало Бокс аниме бол жинхэнэ эр зориг, хөлс хүч, боксын гал цогтой бүтээл! 13 анги бүгд дуу оруулгатай орсонд баярлалаа.',
+    text: 'Мегало Бокс анимэ бол жинхэнэ эр зориг, хөлс хүч, боксын гал цогтой бүтээл! 13 анги бүгд дуу оруулгатай орсонд баярлалаа.',
     rating: 10,
     date: 'Өнөөдөр 19:20',
     likes: 31
