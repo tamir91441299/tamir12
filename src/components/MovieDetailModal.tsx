@@ -50,6 +50,7 @@ interface MovieDetailModalProps {
   isAnimePackage?: boolean;
   isMoviePackage?: boolean;
   onRequestPurchase?: (movie: Movie) => void;
+  onOpenAuthModal?: (mode?: 'phone' | 'pc' | 'login' | 'register') => void;
 }
 
 export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
@@ -65,6 +66,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   isAnimePackage = false,
   isMoviePackage = false,
   onRequestPurchase,
+  onOpenAuthModal,
 }) => {
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
@@ -133,9 +135,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
 
   // Check access permission for specific episode
-  // Rule: 1-р анги үнэгүй, 1-ээс цааш ангиудыг зөвхөн эрх авсан хэрэглэгчид үзнэ
+  // Rule:
+  // 1. Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй (Заавал системд нэвтрэх / бүртгүүлэх шаардлагатай)
+  // 2. Бүртгэлтэй боловч эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг үзэж болно (Үнэгүй)
+  // 3. Эрх авсан (Анимэ багц, VIP, худалдан авсан) хэрэглэгчид бүх ангийг үзнэ
   const userHasAccessToEpisode = (epNumber: number = 1): boolean => {
-    if (epNumber <= 1) return true; // 1-р анги бүх хүнд үнэгүй
+    // Бүртгэлгүй хүн анимэ үзэх боломжгүй
+    if (!currentUser) return false;
     if (isAdmin) return true;
     if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
     if (movie.type === 'anime' && (isAnimePackage || (currentUser as any)?.packageType === 'anime')) {
@@ -145,10 +151,22 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       return true;
     }
     if (isPurchased) return true;
+    // Эрхээ аваагүй бүртгэлтэй хэрэглэгч ЗӨВХӨН 1-р ангийг үзэж болно
+    if (epNumber <= 1) return true;
     return false;
   };
 
   const handleEpisodeSelect = (epNumber: number) => {
+    // Бүртгэлгүй бол шууд нэвтрэх / бүртгүүлэх цонх нээх
+    if (!currentUser) {
+      if (onOpenAuthModal) {
+        onOpenAuthModal('phone');
+      } else {
+        alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+      }
+      return;
+    }
+
     const hasAccess = userHasAccessToEpisode(epNumber);
     if (hasAccess) {
       onPlay(movie, epNumber);
@@ -352,7 +370,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 {/* Big Direct Play Button on Backdrop */}
                 <button
                   id="preview-play-backdrop-button"
-                  onClick={() => onPlay(movie, 1)}
+                  onClick={() => {
+                    if (!currentUser) {
+                      if (onOpenAuthModal) onOpenAuthModal('phone');
+                      else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+                      return;
+                    }
+                    onPlay(movie, 1);
+                  }}
                   className="absolute inset-0 m-auto w-16 h-16 rounded-full gold-glow-btn text-black flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10"
                   title="Шууд үзэх"
                 >
@@ -448,8 +473,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <button
                     id="modal-play-now"
                     onClick={() => {
+                      if (!currentUser) {
+                        if (onOpenAuthModal) onOpenAuthModal('phone');
+                        else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+                        return;
+                      }
                       console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian, 'videoUrl:', movie.videoUrl);
-                      onPlay(movie);
+                      onPlay(movie, 1);
                     }}
                     className="gold-glow-btn text-black font-extrabold text-sm px-7 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 transition-all cursor-pointer"
                   >
@@ -460,7 +490,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   {/* Open in New Protected Window with Passcode Verification */}
                   <button
                     id="modal-open-new-window"
-                    onClick={() => handleOpenProtectedWindow(1)}
+                    onClick={() => {
+                      if (!currentUser) {
+                        if (onOpenAuthModal) onOpenAuthModal('phone');
+                        else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+                        return;
+                      }
+                      handleOpenProtectedWindow(1);
+                    }}
                     className="px-4 py-3.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 hover:text-emerald-100 text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-105"
                     title="Шинэ цонхоор нууц кодоор файл хамгаалалттай үзэх"
                   >
@@ -580,25 +617,54 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </div>
 
                 {/* Access Rule Notification Box */}
-                <div className="text-xs bg-zinc-950/80 border border-cyan-500/30 text-cyan-300 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] border border-emerald-500/30">
-                      1-р анги Үнэгүй
-                    </span>
-                    <span className="text-zinc-300 text-[11px]">
-                      2-р ангиас эхлэн эрх авсан (Анимэ багцтай) хэрэглэгчид үзэх боломжтой.
-                    </span>
+                {!currentUser ? (
+                  <div className="text-xs bg-rose-950/60 border border-rose-500/40 text-rose-200 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-rose-500/30 text-rose-300 font-extrabold text-[10px] border border-rose-500/40 flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Бүртгэл шаардлагатай
+                      </span>
+                      <span className="text-zinc-200 text-[11px]">
+                        Бүртгэлгүй хүмүүс анимэ үзэх боломжгүй. Та нэвтэрсний дараа 1-р ангийг шууд үзэж болно.
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenAuthModal && onOpenAuthModal('phone')}
+                        className="px-2.5 py-1 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[11px] rounded-lg transition-all cursor-pointer shadow"
+                      >
+                        Утсаар нэвтрэх
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenAuthModal && onOpenAuthModal('pc')}
+                        className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] rounded-lg transition-all cursor-pointer shadow"
+                      >
+                        PC нэвтрэх
+                      </button>
+                    </div>
                   </div>
-                  {!userHasAccessToEpisode(2) && onRequestPurchase && (
-                    <button
-                      type="button"
-                      onClick={() => onRequestPurchase(movie)}
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[11px] rounded-lg transition-all cursor-pointer shadow"
-                    >
-                      Багцын эрх авах
-                    </button>
-                  )}
-                </div>
+                ) : (
+                  <div className="text-xs bg-zinc-950/80 border border-cyan-500/30 text-cyan-300 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] border border-emerald-500/30">
+                        1-р анги Үнэгүй
+                      </span>
+                      <span className="text-zinc-300 text-[11px]">
+                        2-р ангиас эхлэн эрх авсан (Анимэ багцтай) хэрэглэгчид үзэх боломжтой.
+                      </span>
+                    </div>
+                    {!userHasAccessToEpisode(2) && onRequestPurchase && (
+                      <button
+                        type="button"
+                        onClick={() => onRequestPurchase(movie)}
+                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[11px] rounded-lg transition-all cursor-pointer shadow"
+                      >
+                        Багцын эрх авах
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Batch Link Connector Form (1 to 13 Episodes) */}
                 {showBatchLinkForm && (
@@ -906,7 +972,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                               <span className="text-[10px] text-zinc-500 font-mono">
                                 {ep.duration}
                               </span>
-                              {isFreeEp ? (
+                              {!currentUser ? (
+                                <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/30 flex items-center gap-0.5">
+                                  <Lock className="w-2.5 h-2.5" /> НЭВТРЭХ
+                                </span>
+                              ) : isFreeEp ? (
                                 <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
                                   ҮНЭГҮЙ
                                 </span>

@@ -88,10 +88,16 @@ export default function App() {
   });
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'login' | 'register' | 'phone' | 'pc'>('login');
   const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+
+  const handleOpenAuthModal = (mode: 'login' | 'register' | 'phone' | 'pc' = 'login') => {
+    setAuthModalInitialMode(mode);
+    setShowAuthModal(true);
+  };
 
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
@@ -496,6 +502,11 @@ export default function App() {
   };
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
+    // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
+    if (!currentUser && movie.type === 'anime') {
+      handleOpenAuthModal('phone');
+      return;
+    }
     console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}, videoUrl: ${movie.videoUrl}`);
     setSelectedMovieForPlayer(movie);
     setPlayerInitialEpisode(episodeNumber);
@@ -608,8 +619,8 @@ export default function App() {
         onOpenVipModal={() => {
           setShowPaymentModal(true);
         }}
-        onOpenAuthModal={() => {
-          setShowAuthModal(true);
+        onOpenAuthModal={(mode) => {
+          handleOpenAuthModal(mode || 'login');
         }}
         onOpenUserManagement={() => {
           setShowUserManagementModal(true);
@@ -980,6 +991,7 @@ export default function App() {
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
+          onOpenAuthModal={handleOpenAuthModal}
           onRequestPurchase={(m) => {
             setSelectedMovieForDetails(null);
             setPaymentMovie(m);
@@ -998,6 +1010,7 @@ export default function App() {
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
           onUpdateWatchProgress={handleUpdateWatchProgress}
+          onOpenAuthModal={handleOpenAuthModal}
           onClose={() => setSelectedMovieForPlayer(null)}
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);
@@ -1039,6 +1052,7 @@ export default function App() {
       {showAuthModal && (
         <AuthModal
           currentUser={currentUser}
+          initialMode={authModalInitialMode}
           onClose={() => setShowAuthModal(false)}
           onLoginSuccess={(user) => {
             setCurrentUser(user);

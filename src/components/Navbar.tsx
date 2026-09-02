@@ -24,7 +24,9 @@ import {
   Cpu,
   Smartphone,
   BookOpen,
-  Film
+  Film,
+  Phone,
+  Monitor
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -47,7 +49,7 @@ interface NavbarProps {
   onOpenWallet: () => void;
   onOpenVipModal: () => void;
   currentUser: UserAccount | null;
-  onOpenAuthModal: () => void;
+  onOpenAuthModal: (mode?: 'phone' | 'pc' | 'login' | 'register') => void;
   onOpenUserManagement?: () => void;
   onOpenInstallModal?: () => void;
 }
@@ -210,11 +212,35 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span className="sm:hidden font-mono text-zinc-400">FlickNime Anime</span>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3 text-zinc-300">
+        <div className="flex items-center gap-2 sm:gap-2.5 text-zinc-300">
+          {/* Quick Access: Утсаар нэвтрэх */}
+          <button
+            id="topbar-phone-login-btn"
+            type="button"
+            onClick={() => onOpenAuthModal('phone')}
+            className="flex items-center gap-1 text-cyan-300 hover:text-cyan-100 bg-cyan-950/60 hover:bg-cyan-900/70 border border-cyan-500/40 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Гар утасны дугаараар шууд нэвтрэх"
+          >
+            <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
+            <span>Утсаар нэвтрэх</span>
+          </button>
+
+          {/* Quick Access: PC */}
+          <button
+            id="topbar-pc-login-btn"
+            type="button"
+            onClick={() => onOpenAuthModal('pc')}
+            className="flex items-center gap-1 text-indigo-300 hover:text-indigo-100 bg-indigo-950/60 hover:bg-indigo-900/70 border border-indigo-500/40 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Компьютер / PC-ээр нэвтрэх"
+          >
+            <Monitor className="w-3 h-3 text-indigo-400 shrink-0" />
+            <span>PC</span>
+          </button>
+
           {onOpenInstallModal && isAdmin && (
             <button
               onClick={onOpenInstallModal}
-              className="flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer"
+              className="hidden md:flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer"
             >
               <Smartphone className="w-3 h-3" />
               <span>Апп суулгах</span>
@@ -223,7 +249,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('ai')}
-            className="flex items-center gap-1 text-amber-300/90 hover:text-amber-200 cursor-pointer transition-colors"
+            className="hidden sm:flex items-center gap-1 text-amber-300/90 hover:text-amber-200 cursor-pointer transition-colors"
           >
             <Sparkles className="w-3 h-3 text-amber-400" />
             <span className="text-[11px]">AI Зөвлөх</span>
@@ -233,7 +259,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             href="https://www.facebook.com/share/r/17wruEiwvA/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+            className="hidden sm:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
           >
             <span>FB Нийгэмлэг</span>
           </a>
@@ -504,28 +530,57 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* User Registration / Login Button */}
-          <button
-            id="auth-modal-trigger-btn"
-            onClick={onOpenAuthModal}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              currentUser
-                ? 'bg-white/[0.08] hover:bg-white/[0.12] text-zinc-100 border border-white/10'
-                : 'gold-glow-btn text-black font-black'
-            }`}
-            title={currentUser ? `${currentUser.name} (Бүртгэлтэй)` : 'Бүртгүүлэх / Нэвтрэх'}
-          >
-            {currentUser ? (
-              <>
-                <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="hidden md:inline max-w-[85px] truncate">{currentUser.name}</span>
-              </>
-            ) : (
-              <>
-                <User className="w-3.5 h-3.5 fill-current shrink-0" />
-                <span className="hidden md:inline">НЭВТРЭХ</span>
-              </>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              id="auth-modal-trigger-btn"
+              onClick={() => onOpenAuthModal('login')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                currentUser
+                  ? 'bg-white/[0.08] hover:bg-white/[0.12] text-zinc-100 border border-white/10'
+                  : 'gold-glow-btn text-black font-black'
+              }`}
+              title={currentUser ? `${currentUser.name} (Бүртгэлтэй)` : 'Бүртгүүлэх / Нэвтрэх'}
+            >
+              {currentUser ? (
+                <>
+                  <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden md:inline max-w-[85px] truncate">{currentUser.name}</span>
+                </>
+              ) : (
+                <>
+                  <User className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span className="hidden md:inline">НЭВТРЭХ</span>
+                </>
+              )}
+            </button>
+
+            {/* Quick Phone & PC Login Shortcuts in header */}
+            {!currentUser && (
+              <div className="hidden lg:flex items-center gap-1 bg-black/50 border border-white/[0.08] p-0.5 rounded-xl">
+                <button
+                  id="main-phone-login-btn"
+                  type="button"
+                  onClick={() => onOpenAuthModal('phone')}
+                  className="flex items-center gap-1 text-cyan-300 hover:text-white px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-cyan-500/20 transition-all cursor-pointer"
+                  title="Гар утасны дугаараар нэвтрэх"
+                >
+                  <Phone className="w-3 h-3 text-cyan-400" />
+                  <span>Утас</span>
+                </button>
+                <span className="text-zinc-700 text-xs select-none">|</span>
+                <button
+                  id="main-pc-login-btn"
+                  type="button"
+                  onClick={() => onOpenAuthModal('pc')}
+                  className="flex items-center gap-1 text-indigo-300 hover:text-white px-2 py-1 rounded-lg text-[11px] font-bold hover:bg-indigo-500/20 transition-all cursor-pointer"
+                  title="PC Компьютерээр нэвтрэх"
+                >
+                  <Monitor className="w-3 h-3 text-indigo-400" />
+                  <span>PC</span>
+                </button>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Desktop Search Box */}
           <div className="relative hidden md:block w-40 lg:w-56 xl:w-64">

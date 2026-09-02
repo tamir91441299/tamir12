@@ -33,7 +33,8 @@ import {
   Lock,
   ShieldCheck,
   Shield,
-  Sun
+  Sun,
+  Smartphone
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -62,6 +63,7 @@ interface VideoPlayerModalProps {
   isMonthlyVip?: boolean;
   isAnimePackage?: boolean;
   isMoviePackage?: boolean;
+  onOpenAuthModal?: (mode?: 'phone' | 'pc' | 'login' | 'register') => void;
 }
 
 type ServerMode = 'embed' | 'direct';
@@ -77,6 +79,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   isMonthlyVip = false,
   isAnimePackage = false,
   isMoviePackage = false,
+  onOpenAuthModal,
 }) => {
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
@@ -86,9 +89,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       : 0
   );
 
-  // Access rule: Episode 1 is completely FREE. Episodes 2+ require purchased movie or active package.
+  // Access rule:
+  // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй (Заавал нэвтрэх шаардлагатай)
+  // 2. Эрхээ аваагүй бүртгэлтэй хүмүүс зөвхөн 1-р ангийг (epIndex === 0) үзэж болно
+  // 3. Эрх авсан (Анимэ багц, VIP, худалдан авсан) хүмүүс бүх ангийг үзнэ
   const checkEpisodeAccess = (epIndex: number): boolean => {
-    if (epIndex <= 0) return true; // 1-р анги үнэгүй
+    // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
+    if (!currentUser) return false;
     if (isAdmin) return true;
     if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
     if (movie?.type === 'anime' && (isAnimePackage || (currentUser as any)?.packageType === 'anime')) {
@@ -98,6 +105,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       return true;
     }
     if (isPurchased) return true;
+    // Эрхээ аваагүй бүртгэлтэй хүмүүс зөвхөн 1-р ангийг үзнэ
+    if (epIndex <= 0) return true;
     return false;
   };
 
@@ -926,28 +935,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             }
       }
     >
-      {/* PERSISTENT TOP-RIGHT 'X' CLOSE BUTTON & LANDSCAPE EXIT BUTTON (Always accessible in Portrait, Forced Landscape, and Fullscreen) */}
+      {/* PERSISTENT TOP-RIGHT 'X' CLOSE BUTTON (Always accessible, never blocks or overlaps episode buttons) */}
       <div className={`fixed top-3 right-3 sm:top-4 sm:right-4 z-40 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
-        {/* Landscape / Rotate Screen Quick Action (Visible clearly when in landscape or controls visible) */}
-        <button
-          type="button"
-          id="top-right-rotate-toggle-btn"
-          onClick={toggleRotateLandscape}
-          className={`h-10 px-3 rounded-full border shadow-2xl backdrop-blur-lg flex items-center gap-1.5 text-xs font-black cursor-pointer transition-all duration-300 active:scale-95 ${
-            isForcedLandscape
-              ? 'bg-cyan-500 text-black border-cyan-400 shadow-cyan-500/30'
-              : 'bg-zinc-900/90 text-cyan-300 hover:bg-zinc-800 border-zinc-700/80'
-          } ${
-            controlsVisible || isForcedLandscape
-              ? 'opacity-100 scale-100 pointer-events-auto'
-              : 'opacity-0 scale-95 pointer-events-none'
-          }`}
-          title="Дэлгэцийг хөндлөн / босоо болгох"
-        >
-          <RotateCw className="w-4 h-4" />
-          <span>{isForcedLandscape ? '📱 Босоо' : '🔄 Хөндлөн'}</span>
-        </button>
-
         {/* Universal Top-Right Close Button */}
         <button
           type="button"
@@ -1010,38 +999,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </div>
           </div>
 
-          {/* Quick actions on mobile top right */}
-          <div className="flex sm:hidden items-center gap-1 shrink-0">
-            {/* Quick Rotate / Landscape on mobile */}
-            <button
-              type="button"
-              id="mobile-quick-rotate-btn"
-              onClick={toggleRotateLandscape}
-              className={`p-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
-                isForcedLandscape
-                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/30'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border-zinc-750'
-              }`}
-              title="Дэлгэцийг хөндлөн / босоо харах горим (Rotate Landscape/Portrait)"
-            >
-              <RotateCw className="w-4 h-4" />
-            </button>
-
-            {episodes.length > 0 && (
+          {/* Quick actions on mobile top right (Only show episodes drawer toggle if series/anime has episodes) */}
+          {episodes.length > 0 && (
+            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
               <button
+                type="button"
                 id="toggle-episodes-mobile-top"
                 onClick={() => setShowEpisodesDrawer(!showEpisodesDrawer)}
-                className={`p-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
+                className={`px-2.5 py-1 rounded-xl border text-xs font-bold cursor-pointer transition-all flex items-center gap-1 shadow-md ${
                   showEpisodesDrawer
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60'
-                    : 'bg-zinc-900 text-zinc-300 border-zinc-800'
+                    ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-cyan-500/30'
+                    : 'bg-zinc-900/95 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80 active:scale-95'
                 }`}
-                title="Ангиуд"
+                title="Ангиуд сонгох"
               >
-                <ListVideo className="w-4 h-4 text-cyan-400" />
+                <ListVideo className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Ангиуд</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Controls and Selectors Bar */}
@@ -1051,22 +1027,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
             <span>⚡ 1080P Full HD</span>
           </div>
-
-          {/* Landscape / Rotate Screen Toggle Button (Explicit for Mobile & Desktop) */}
-          <button
-            type="button"
-            id="header-rotate-landscape-btn"
-            onClick={toggleRotateLandscape}
-            className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
-              isForcedLandscape
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-lg shadow-cyan-500/20 font-black'
-                : 'bg-zinc-800/90 hover:bg-zinc-700 text-cyan-300 border-zinc-700'
-            }`}
-            title="Дэлгэцийг хөндлөн / босоо эргүүлж үзэх (Rotate Landscape)"
-          >
-            <RotateCw className={`w-3.5 h-3.5 ${isForcedLandscape ? 'text-black fill-black' : 'text-cyan-400'}`} />
-            <span className="hidden sm:inline">{isForcedLandscape ? '📱 Босоо' : '🔄 Хөндлөн'}</span>
-          </button>
 
           {/* Video Fit / Zoom Mode Button */}
           <button
@@ -1161,39 +1121,90 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           {/* Episode Access Restricted Overlay */}
           {!hasAccessToCurrentEpisode ? (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none">
-              <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 shadow-2xl shadow-amber-500/20">
+              <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 flex items-center justify-center text-rose-400 shadow-2xl shadow-rose-500/20">
                 <Lock className="w-10 h-10 animate-pulse" />
               </div>
-              <div className="space-y-2 max-w-md">
-                <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-block">
-                  {currentEpisodeIndex + 1}-р анги түгжигдсэн
-                </span>
-                <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                  2-р ангиас эхлэн эрх авсан хэрэглэгчид үзнэ
-                </h3>
-                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                {onRequestPurchase && (
-                  <button
-                    type="button"
-                    onClick={() => onRequestPurchase(movie)}
-                    className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                  >
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>Багцын эрх авах / Төлбөр төлөх</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => selectEpisode(0)}
-                  className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
-                >
-                  <span>1-р анги үнэгүй үзэх</span>
-                </button>
-              </div>
+
+              {!currentUser ? (
+                /* Unregistered User Lock State */
+                <>
+                  <div className="space-y-2 max-w-md">
+                    <span className="text-xs font-black uppercase tracking-widest text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/30 inline-block">
+                      Бүртгэл шаардлагатай
+                    </span>
+                    <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
+                      Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      Энэхүү сайтын анимэг үзэхийн тулд заавал бүртгүүлэх эсвэл нэвтрэх шаардлагатай. Та гар утасны дугаар эсвэл PC горимоор нэвтрэн 1-р ангийг шууд үнэгүй үзэх боломжтой.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenAuthModal) onOpenAuthModal('phone');
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-cyan-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span>Утсаар нэвтрэх</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenAuthModal) onOpenAuthModal('pc');
+                      }}
+                      className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow border border-indigo-500/50 hover:scale-105"
+                    >
+                      <span>PC-ээр нэвтрэх</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenAuthModal) onOpenAuthModal('register');
+                      }}
+                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
+                    >
+                      <span>Шинээр бүртгүүлэх</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Registered but No Package for Ep > 1 */
+                <>
+                  <div className="space-y-2 max-w-md">
+                    <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-block">
+                      {currentEpisodeIndex + 1}-р анги түгжигдсэн
+                    </span>
+                    <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
+                      2-р ангиас эхлэн эрх авсан хэрэглэгчид үзнэ
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    {onRequestPurchase && (
+                      <button
+                        type="button"
+                        onClick={() => onRequestPurchase(movie)}
+                        className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <Zap className="w-4 h-4 fill-current" />
+                        <span>Багцын эрх авах / Төлбөр төлөх</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => selectEpisode(0)}
+                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
+                    >
+                      <span>1-р анги үнэгүй үзэх</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : isEmbed ? (
             <div className="w-full h-full flex items-center justify-center relative bg-black overflow-hidden">
@@ -1595,6 +1606,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     </button>
                   )}
 
+                  {/* Episodes List Drawer Toggle Button (Grouped with Episode controls on left) */}
+                  {episodes.length > 0 && (
+                    <button
+                      id="player-episodes-bottom-toggle"
+                      type="button"
+                      onClick={() => {
+                        setShowEpisodesDrawer(!showEpisodesDrawer);
+                        resetControlsTimer();
+                      }}
+                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 text-xs font-bold ${
+                        showEpisodesDrawer
+                          ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-md shadow-cyan-500/20'
+                          : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
+                      }`}
+                      title="Ангиудын жагсаалт нээх / анги солих"
+                    >
+                      <ListVideo className="w-4 h-4 text-cyan-400" />
+                      <span>Ангиуд ({episodes.length})</span>
+                    </button>
+                  )}
+
                   {/* Volume Control */}
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button
@@ -1950,45 +1982,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-300" />
                   </button>
 
-                  {/* Episodes List Drawer Toggle Button (Mobile & Desktop) */}
-                  {episodes.length > 0 && (
-                    <button
-                      id="player-episodes-bottom-toggle"
-                      type="button"
-                      onClick={() => {
-                        setShowEpisodesDrawer(!showEpisodesDrawer);
-                        resetControlsTimer();
-                      }}
-                      className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border flex items-center gap-1 text-xs font-bold ${
-                        showEpisodesDrawer
-                          ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
-                          : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
-                      }`}
-                      title="Ангиудын жагсаалт нээх / сонгох"
-                    >
-                      <ListVideo className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden sm:inline">Ангиуд</span>
-                    </button>
-                  )}
-
-                  {/* Rotate / Landscape Orientation Toggle Button */}
-                  <button
-                    id="player-rotate-bottom-toggle"
-                    type="button"
-                    onClick={() => {
-                      toggleRotateLandscape();
-                      resetControlsTimer();
-                    }}
-                    className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border ${
-                      isForcedLandscape
-                        ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
-                        : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
-                    }`}
-                    title={isForcedLandscape ? "Босоо харах (Portrait)" : "Дэлгэцийг хөндлөн эргүүлэх (Landscape)"}
-                  >
-                    <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-
                   {/* Protected New Window Button */}
                   <button
                     id="player-new-window-bottom-toggle"
@@ -2001,6 +1994,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     title="Шинэ тусгай цонхоор үзэх (Файл хамгаалалттай)"
                   >
                     <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+                  </button>
+
+                  {/* Rotate / Landscape Orientation Toggle Button (Safely placed beside Fullscreen, away from episode controls) */}
+                  <button
+                    id="player-rotate-bottom-toggle"
+                    type="button"
+                    onClick={() => {
+                      toggleRotateLandscape();
+                      resetControlsTimer();
+                    }}
+                    className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border flex items-center gap-1 ${
+                      isForcedLandscape
+                        ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
+                        : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
+                    }`}
+                    title={isForcedLandscape ? "Босоо харах (Portrait)" : "Дэлгэцийг хөндлөн эргүүлэх (Landscape)"}
+                  >
+                    <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden xl:inline text-xs">{isForcedLandscape ? 'Босоо' : 'Хөндлөн'}</span>
                   </button>
 
                   {/* Fullscreen Toggle */}
@@ -2127,12 +2139,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               ҮЗЭЖ БАЙНА
                             </span>
                           )}
-                          {!isActive && isFreeEp && (
+                          {!isActive && !currentUser && (
+                            <span className="text-[9px] bg-rose-500/20 text-rose-300 font-bold px-1.5 py-0.5 rounded border border-rose-500/30 flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5" /> НЭВТРЭХ
+                            </span>
+                          )}
+                          {!isActive && currentUser && isFreeEp && (
                             <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
                               ҮНЭГҮЙ
                             </span>
                           )}
-                          {!isActive && !isFreeEp && !hasEpAccess && (
+                          {!isActive && currentUser && !isFreeEp && !hasEpAccess && (
                             <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
                               <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
                             </span>
