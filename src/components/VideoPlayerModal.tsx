@@ -1328,7 +1328,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               {/* Smart Non-Dimming Tap & Gesture Surface */}
               <div
                 className="absolute inset-0 z-10 cursor-pointer select-none"
-                style={{ touchAction: 'manipulation' }}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', outline: 'none' }}
                 onClick={(e) => {
                   const now = Date.now();
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -1364,10 +1364,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   lastTapTimeRef.current = now;
                   lastTapPositionRef.current = { x: e.clientX, y: e.clientY };
 
-                  // Single click/tap: Immediately toggle play/pause and show controls
-                  togglePlay();
-                  setControlsVisible(true);
-                  resetControlsTimer();
+                  // Single click/tap: Toggle controls visibility smoothly without stopping or pausing the video
+                  setControlsVisible((prev) => {
+                    const next = !prev;
+                    if (next) {
+                      resetControlsTimer();
+                    }
+                    return next;
+                  });
                 }}
                 onMouseMove={resetControlsTimer}
               />

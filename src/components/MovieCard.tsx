@@ -110,8 +110,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           <Bookmark className="w-3.5 h-3.5 fill-current" />
         </button>
 
-        {/* Cinematic Play Orb Hover Overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-[2px]">
+        {/* Cinematic Play Orb Hover Overlay (Desktop Mouse Hover Only to prevent mobile touch blackout) */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hidden sm:flex items-center justify-center backdrop-blur-[2px] pointer-events-none sm:group-hover:pointer-events-auto">
           <button
             id={`card-play-${movie.id}`}
             onClick={(e) => {

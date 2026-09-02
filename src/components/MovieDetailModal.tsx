@@ -296,7 +296,15 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="relative w-full max-w-4xl cinema-glass-elevated border border-white/[0.08] rounded-3xl overflow-hidden shadow-2xl text-zinc-100 max-h-[92vh] flex flex-col my-auto film-frame-decor">
         {/* Close Button */}
         <button

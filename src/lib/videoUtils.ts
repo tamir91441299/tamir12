@@ -3,7 +3,7 @@
  * High-concurrency streaming cluster with multi-server CDN nodes, multi-quality streams, and fault-tolerant fallbacks.
  */
 
-export type VideoQualityKey = '1080p';
+export type VideoQualityKey = '1080p' | '720p' | '480p' | '360p' | 'auto';
 
 export interface QualityOption {
   key: VideoQualityKey;
