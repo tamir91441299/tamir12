@@ -52,6 +52,11 @@ export default function App() {
   });
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
+    // Only tamir91441299@gmail.com is allowed to update or add video episodes
+    if (currentUser?.email !== 'tamir91441299@gmail.com') {
+      alert('⚠️ Зөвхөн админ (tamir91441299@gmail.com) видео болон ангиудын линк оруулах, засах эрхтэй!');
+      return;
+    }
     setMoviesList((prev) => {
       const updated = prev.map((m) => {
         if (m.id === movieId) {
@@ -88,7 +93,7 @@ export default function App() {
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {

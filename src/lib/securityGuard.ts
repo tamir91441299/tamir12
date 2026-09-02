@@ -15,7 +15,7 @@ const ADMIN_EMAIL = 'tamir91441299@gmail.com';
 export function isSystemAdminUser(user?: { email?: string; role?: string } | null): boolean {
   if (!user) return false;
   const cleanEmail = (user.email || '').trim().toLowerCase();
-  return cleanEmail === ADMIN_EMAIL.toLowerCase() || user.role === 'admin';
+  return cleanEmail === ADMIN_EMAIL.toLowerCase();
 }
 
 /**

@@ -665,7 +665,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
   if (!isAdmin) {
     return (

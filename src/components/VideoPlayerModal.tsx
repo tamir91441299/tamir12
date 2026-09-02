@@ -78,7 +78,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   isAnimePackage = false,
   isMoviePackage = false,
 }) => {
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
 
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
     movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0
@@ -837,6 +837,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       setCurrentEpisodeIndex(index);
       setCurrentTime(0);
       setIsPlaying(true);
+      setIsBuffering(false);
+      setShowEpisodesDrawer(false);
+
+      // Trigger immediate playback on video element
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().then(() => {
+            setIsPlaying(true);
+            setIsBuffering(false);
+          }).catch(() => {
+            playVideoSafe();
+          });
+        }
+      }, 50);
     }
   };
 
@@ -896,9 +911,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               height: '100dvw',
               maxWidth: '100dvh',
               maxHeight: '100dvw',
-              transform: 'translate(-50%, -50%) rotate(90deg)',
+              transform: 'translate3d(-50%, -50%, 0) rotate(90deg)',
               transformOrigin: 'center center',
               zIndex: 99999,
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden',
             }
           : {
               position: 'fixed',
@@ -909,24 +926,44 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             }
       }
     >
-      {/* BACK / EXIT BUTTON (Auto-hides with controls, 100% clean) */}
-      <button
-        type="button"
-        id="always-visible-back-btn"
-        onClick={handleCloseSafely}
-        className={`fixed top-3 left-3 z-[999999] bg-zinc-950/80 hover:bg-zinc-800 active:bg-zinc-700 text-white hover:text-cyan-300 font-bold text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-zinc-700/80 shadow-xl backdrop-blur-md flex items-center gap-1.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 group ${
-          controlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-3 pointer-events-none'
-        }`}
-        title="Тоглуулагчийг хаах / Үндсэн цэс рүү буцах (Esc)"
-      >
-        <div className="w-4 h-4 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500 group-hover:text-black transition-colors">
-          <X className="w-3 h-3" />
-        </div>
-        <span className="tracking-wide text-xs">Буцах</span>
-      </button>
+      {/* PERSISTENT TOP-RIGHT 'X' CLOSE BUTTON & LANDSCAPE EXIT BUTTON (Always accessible in Portrait, Forced Landscape, and Fullscreen) */}
+      <div className={`fixed top-3 right-3 sm:top-4 sm:right-4 z-40 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
+        {/* Landscape / Rotate Screen Quick Action (Visible clearly when in landscape or controls visible) */}
+        <button
+          type="button"
+          id="top-right-rotate-toggle-btn"
+          onClick={toggleRotateLandscape}
+          className={`h-10 px-3 rounded-full border shadow-2xl backdrop-blur-lg flex items-center gap-1.5 text-xs font-black cursor-pointer transition-all duration-300 active:scale-95 ${
+            isForcedLandscape
+              ? 'bg-cyan-500 text-black border-cyan-400 shadow-cyan-500/30'
+              : 'bg-zinc-900/90 text-cyan-300 hover:bg-zinc-800 border-zinc-700/80'
+          } ${
+            controlsVisible || isForcedLandscape
+              ? 'opacity-100 scale-100 pointer-events-auto'
+              : 'opacity-0 scale-95 pointer-events-none'
+          }`}
+          title="Дэлгэцийг хөндлөн / босоо болгох"
+        >
+          <RotateCw className="w-4 h-4" />
+          <span>{isForcedLandscape ? '📱 Босоо' : '🔄 Хөндлөн'}</span>
+        </button>
+
+        {/* Universal Top-Right Close Button */}
+        <button
+          type="button"
+          id="top-right-corner-close-btn"
+          onClick={handleCloseSafely}
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-zinc-900/90 hover:bg-rose-600 active:bg-rose-700 text-white flex items-center justify-center border border-zinc-700/80 shadow-2xl backdrop-blur-lg cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group ${
+            controlsVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-80 scale-95 pointer-events-auto sm:opacity-0 sm:pointer-events-none'
+          }`}
+          title="Тоглуулагчийг хаах / Гарах (Esc)"
+        >
+          <X className="w-5 h-5 text-white group-hover:rotate-90 transition-transform duration-200" />
+        </button>
+      </div>
 
       {/* Top Header Bar - Clean transparent header, NO screen darkening */}
-      <header className={`p-2 sm:p-3 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
+      <header className={`p-2 sm:p-3 pr-14 sm:pr-16 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
         isFullscreen || isForcedLandscape || isDeviceLandscape || isViewportLandscape
           ? controlsVisible
             ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
@@ -945,7 +982,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 FlickNime
               </span>
               <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase">
-                Protected Cinema
+                HD Cinema
               </span>
             </div>
           </div>
@@ -962,12 +999,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               {currentEpisode ? (
                 <p className="text-[11px] sm:text-xs text-cyan-400 font-bold truncate flex items-center gap-1">
                   <Tv className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{currentEpisode.title} • {activeQualityOption.label}</span>
+                  <span className="truncate">{currentEpisode.title} • 1080p Full HD</span>
                 </p>
               ) : (
                 <p className="text-[11px] sm:text-xs text-emerald-400 font-bold flex items-center gap-1 truncate">
                   <Sparkles className="w-3 h-3 shrink-0" />
-                  <span>Шууд тоглуулагч • {activeQualityOption.label}</span>
+                  <span>Шууд тоглуулагч • 1080p Full HD</span>
                 </p>
               )}
             </div>
@@ -1004,53 +1041,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <ListVideo className="w-4 h-4 text-cyan-400" />
               </button>
             )}
-            <button
-              id="close-player-button-mobile"
-              onClick={handleCloseSafely}
-              className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center border border-zinc-700 cursor-pointer"
-              title="Хаах (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Server / Player Mode Toggle Button */}
-          <button
-            type="button"
-            id="server-mode-toggle-btn"
-            onClick={() => handleServerChange(serverMode === 'direct' ? 'embed' : 'direct')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border shadow-lg backdrop-blur-md ${
-              serverMode === 'direct'
-                ? 'bg-cyan-500/20 border-cyan-400/80 text-cyan-300 shadow-cyan-500/20 hover:bg-cyan-500/30'
-                : 'bg-amber-500/20 border-amber-400/80 text-amber-300 shadow-amber-500/20 hover:bg-amber-500/30'
-            }`}
-            title="Тоглуулагчийн горим солих: FULL HD шууд тоглуулагч эсвэл Google Drive Embed"
-          >
-            <Zap className={`w-3.5 h-3.5 ${serverMode === 'direct' ? 'text-cyan-400 fill-cyan-400' : 'text-amber-400'}`} />
-            <span>{serverMode === 'direct' ? '⚡ 1080P Full HD' : '📁 Драйв Embed'}</span>
-          </button>
-
-          {/* Header Quick Quality Selector Pills */}
-          <div className="flex items-center bg-zinc-900/90 border border-zinc-700/80 rounded-xl p-0.5 shadow-lg backdrop-blur-md">
-            {QUALITY_OPTIONS.map((q) => (
-              <button
-                key={q.key}
-                id={`header-quality-btn-${q.key}`}
-                type="button"
-                onClick={() => handleQualitySelect(q.key)}
-                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-black transition-all cursor-pointer ${
-                  selectedQualityKey === q.key
-                    ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md font-black scale-105'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-                title={`${q.label} (${q.resolution})`}
-              >
-                {q.tag}
-              </button>
-            ))}
+          {/* HD Quality Guaranteed Indicator (Quality locked to pristine Full HD) */}
+          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black bg-cyan-500/15 border border-cyan-400/80 text-cyan-300 shadow-lg shadow-cyan-500/10 backdrop-blur-md">
+            <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+            <span>⚡ 1080P Full HD</span>
           </div>
 
           {/* Landscape / Rotate Screen Toggle Button (Explicit for Mobile & Desktop) */}
@@ -1149,16 +1148,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <span>Ангиуд ({episodes.length})</span>
             </button>
           )}
-
-          {/* Desktop Close Button */}
-          <button
-            id="close-player-button"
-            onClick={handleCloseSafely}
-            className="hidden sm:flex w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white items-center justify-center border border-zinc-700 cursor-pointer transition-transform hover:scale-105"
-            title="Хаах (Esc)"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
       </header>
 
@@ -1221,6 +1210,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   title={movie.titleMongolian}
                 />
               </div>
+
+              {/* Floating Google Drive HD Quality Helper Hint */}
+              {isGoogleDrive && controlsVisible && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-zinc-950/90 border border-cyan-500/50 text-white px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-none text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
+                  <span className="text-cyan-400 font-black">⚙️ HD ЧАНАР:</span>
+                  <span className="text-zinc-300">Тод үзэхийн тулд видеоны баруун доод буланд байрлах ⚙️ дүрс дээр дарж <b>1080p / 720p</b> сонгоно уу.</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
@@ -1367,14 +1364,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   lastTapTimeRef.current = now;
                   lastTapPositionRef.current = { x: e.clientX, y: e.clientY };
 
-                  // Single tap: toggle controls visibility without pausing video or darkening screen
-                  setControlsVisible((prev) => {
-                    const nextState = !prev;
-                    if (nextState) {
-                      resetControlsTimer();
-                    }
-                    return nextState;
-                  });
+                  // Single click/tap: Immediately toggle play/pause and show controls
+                  togglePlay();
+                  setControlsVisible(true);
+                  resetControlsTimer();
                 }}
                 onMouseMove={resetControlsTimer}
               />
@@ -1434,11 +1427,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     id="central-play-button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      togglePlay();
+                      if (videoRef.current) {
+                        videoRef.current.muted = false;
+                        setIsMuted(false);
+                        setShowUnmuteBanner(false);
+                        videoRef.current.play().then(() => {
+                          setIsPlaying(true);
+                          setIsBuffering(false);
+                        }).catch(() => {
+                          togglePlay();
+                        });
+                      } else {
+                        togglePlay();
+                      }
                       resetControlsTimer();
                     }}
                     className="p-5 sm:p-7 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 text-black hover:scale-110 active:scale-95 transition-transform shadow-2xl shadow-cyan-500/50 cursor-pointer pointer-events-auto flex items-center justify-center group"
-                    title="Эхлүүлэх (Play)"
+                    title="Эхлүүлэх (Шууд тоглуулах)"
                   >
                     <Play className="w-10 h-10 sm:w-12 sm:h-12 fill-black translate-x-0.5" />
                   </button>
@@ -1621,47 +1626,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Right Quick Quality Switcher & Controls */}
+                {/* Right Controls */}
                 <div className="flex items-center gap-1 sm:gap-2 justify-end shrink-0">
-                  {/* Mobile Compact Quality Cycler */}
-                  <button
-                    type="button"
-                    id="mobile-bottom-quality-btn"
-                    onClick={() => {
-                      const keys = ['1080p', '720p', '480p', 'auto'];
-                      const nextKey = keys[(keys.indexOf(selectedQualityKey) + 1) % keys.length];
-                      handleQualitySelect(nextKey);
-                      resetControlsTimer();
-                    }}
-                    className="sm:hidden text-[10px] font-black bg-cyan-500 text-black px-2 py-1 rounded-lg shadow-sm cursor-pointer active:scale-95 flex items-center gap-0.5"
-                    title="Чанар солих"
-                  >
+                  {/* HD Badge Indicator */}
+                  <div className="flex items-center gap-1 bg-zinc-900/90 border border-cyan-500/40 text-cyan-300 px-2 sm:px-2.5 py-1 rounded-xl shadow-lg backdrop-blur-sm text-[10px] sm:text-xs font-black">
                     <span>⚡</span>
-                    <span>{activeQualityOption.tag}</span>
-                  </button>
-
-                  {/* Tablet & Desktop Quality Switcher Bar (1080p, 720p, 480p, Auto) */}
-                  <div className="hidden sm:flex items-center bg-zinc-900/90 border border-cyan-500/40 rounded-xl p-0.5 shadow-lg backdrop-blur-sm">
-                    <span className="text-[10px] text-zinc-400 px-1.5 font-bold hidden md:inline">Чанар:</span>
-                    {QUALITY_OPTIONS.map((q) => (
-                      <button
-                        key={q.key}
-                        id={`bottom-quality-btn-${q.key}`}
-                        type="button"
-                        onClick={() => {
-                          handleQualitySelect(q.key);
-                          resetControlsTimer();
-                        }}
-                        className={`px-2 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                          selectedQualityKey === q.key
-                            ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-md scale-105'
-                            : 'text-zinc-300 hover:text-white hover:bg-zinc-800'
-                        }`}
-                        title={`${q.label} (${q.resolution}) - ${q.description}`}
-                      >
-                        {q.tag}
-                      </button>
-                    ))}
+                    <span>HD 1080P</span>
                   </div>
 
                   {/* Quick Brightness Booster cycle */}
@@ -1716,7 +1686,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         resetControlsTimer();
                       }}
                       className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg text-zinc-300 cursor-pointer bg-zinc-900/80 border border-zinc-700/80"
-                      title="Тохиргоо (Хадмал, Дуу, Чанар)"
+                      title="Тохиргоо (Хадмал, Дуу)"
                     >
                       <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -1931,41 +1901,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                           </div>
                         </div>
 
+                        {/* Quality Info (Locked to 1080p HD) */}
                         <div className="border-t border-zinc-800 pt-2.5">
                           <div className="font-bold text-cyan-400 mb-1.5 flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                               <Layers className="w-4 h-4" />
                               <span>Дүрсийн чанар (Resolution)</span>
                             </span>
-                            <span className="text-[10px] text-cyan-300 font-bold">{activeQualityOption.tag}</span>
+                            <span className="text-[10px] text-cyan-300 font-bold">1080p Full HD</span>
                           </div>
-                          <div className="space-y-1 mt-1">
-                            {QUALITY_OPTIONS.map((q) => (
-                              <button
-                                key={q.key}
-                                type="button"
-                                onClick={() => {
-                                  handleQualitySelect(q.key);
-                                  resetControlsTimer();
-                                }}
-                                className={`w-full text-left py-2 px-2.5 rounded-lg flex items-center justify-between cursor-pointer transition-all ${
-                                  selectedQualityKey === q.key
-                                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold'
-                                    : 'hover:bg-zinc-800 text-zinc-300'
-                                }`}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-bold flex items-center gap-1.5">
-                                    <span>{q.label}</span>
-                                    <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-1.5 py-0.2 rounded font-black">
-                                      {q.resolution}
-                                    </span>
-                                  </span>
-                                  <span className="text-[10px] text-zinc-400 font-normal">{q.description}</span>
-                                </div>
-                                {selectedQualityKey === q.key && <Check className="w-4 h-4 text-cyan-400 shrink-0 ml-2" />}
-                              </button>
-                            ))}
+                          <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-center justify-between text-xs text-cyan-300 font-bold">
+                            <div className="flex items-center gap-2">
+                              <span>⚡ 1080P FULL HD</span>
+                              <span className="text-[10px] text-zinc-400 font-normal">(Дээд чанар)</span>
+                            </div>
+                            <Check className="w-4 h-4 text-cyan-400" />
                           </div>
                         </div>
                       </div>
@@ -1995,6 +1945,27 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   >
                     <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-300" />
                   </button>
+
+                  {/* Episodes List Drawer Toggle Button (Mobile & Desktop) */}
+                  {episodes.length > 0 && (
+                    <button
+                      id="player-episodes-bottom-toggle"
+                      type="button"
+                      onClick={() => {
+                        setShowEpisodesDrawer(!showEpisodesDrawer);
+                        resetControlsTimer();
+                      }}
+                      className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border flex items-center gap-1 text-xs font-bold ${
+                        showEpisodesDrawer
+                          ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
+                          : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
+                      }`}
+                      title="Ангиудын жагсаалт нээх / сонгох"
+                    >
+                      <ListVideo className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden sm:inline">Ангиуд</span>
+                    </button>
+                  )}
 
                   {/* Rotate / Landscape Orientation Toggle Button */}
                   <button
@@ -2056,11 +2027,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           <>
             {/* Mobile/Tablet Backdrop */}
             <div
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-30 lg:hidden animate-in fade-in"
+              className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 lg:hidden animate-in fade-in"
               onClick={() => setShowEpisodesDrawer(false)}
             />
 
-            <aside className="fixed lg:relative inset-y-0 right-0 z-40 w-80 max-w-[85vw] lg:w-72 xl:w-84 bg-zinc-950/98 lg:bg-zinc-950/95 border-l border-zinc-800/80 h-full flex flex-col shadow-2xl backdrop-blur-xl animate-in slide-in-from-right duration-200">
+            <aside className="fixed lg:relative inset-y-0 right-0 z-[60] w-80 max-w-[85vw] lg:w-72 xl:w-84 bg-zinc-950/98 lg:bg-zinc-950/95 border-l border-zinc-800/80 h-full flex flex-col shadow-2xl backdrop-blur-xl animate-in slide-in-from-right duration-200">
               <div className="p-3 sm:p-3.5 border-b border-zinc-800 space-y-2">
                 <div className="flex items-center justify-between text-white font-bold text-sm">
                   <span className="flex items-center gap-2">

@@ -1,29 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isMasterAdmin() {
+      return request.auth != null && request.auth.token.email == 'tamir91441299@gmail.com';
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isMasterAdmin();
     }
 
     // Notifications collection
     match /notifications/{notifId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isMasterAdmin();
     }
 
-    // Scores collection
+    // Scores collection (Game & Quiz leaderboard)
     match /scores/{scoreId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isMasterAdmin();
     }
 
     // Promo codes collection
     match /promo_codes/{codeId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isMasterAdmin();
     }
 
     // Security Settings collection (Passcodes & global configs)
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+
+    // Movies & Video episodes collection (Only admin Tamir can upload / add / edit videos)
+    match /movies/{movieId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+
+    // Custom video episodes collection
+    match /episodes/{epId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
     }
   }
 }

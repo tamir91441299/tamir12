@@ -3,7 +3,7 @@
  * High-concurrency streaming cluster with multi-server CDN nodes, multi-quality streams, and fault-tolerant fallbacks.
  */
 
-export type VideoQualityKey = '1080p' | '720p' | '480p' | '360p' | 'auto';
+export type VideoQualityKey = '1080p';
 
 export interface QualityOption {
   key: VideoQualityKey;
@@ -18,42 +18,10 @@ export const QUALITY_OPTIONS: QualityOption[] = [
   {
     key: '1080p',
     label: '1080p Full HD',
-    shortLabel: '1080p',
+    shortLabel: 'HD',
     tag: 'Full HD',
     description: 'Хамгийн өндөр нягтаршил, тунгалаг дүрслэл (Max Bitrate, 60fps)',
     resolution: '1920x1080',
-  },
-  {
-    key: '720p',
-    label: '720p HD',
-    shortLabel: '720p',
-    tag: 'HD',
-    description: 'Өндөр чанар, хурдан ачаалалт, жигд тоглуулалт',
-    resolution: '1280x720',
-  },
-  {
-    key: '480p',
-    label: '480p SD',
-    shortLabel: '480p',
-    tag: 'SD',
-    description: 'Стандарт нягтаршил, дата хэмнэлтийн горим',
-    resolution: '854x480',
-  },
-  {
-    key: '360p',
-    label: '360p Data Saver',
-    shortLabel: '360p',
-    tag: '360p',
-    description: 'Бага дата зарцуулалт, сул сүлжээнд зориулсан горим',
-    resolution: '640x360',
-  },
-  {
-    key: 'auto',
-    label: 'Авто (Auto 1080p/720p)',
-    shortLabel: 'Auto',
-    tag: 'Автомат',
-    description: 'Интернэтийн хурднаас хамаарч 1080p, 720p хооронд автоматаар сонгоно',
-    resolution: 'Adaptive',
   },
 ];
 
