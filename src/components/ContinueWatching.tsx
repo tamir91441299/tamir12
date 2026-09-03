@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Trash2, Clock, CheckCircle2, Film, Sparkles } from 'lucide-react';
 import { Movie } from '../types';
+import { DeviceMode } from './DisplaySettingsModal';
 
 export interface WatchHistoryItem {
   movieId: string;
@@ -18,6 +19,7 @@ interface ContinueWatchingProps {
   onOpenDetails: (movie: Movie) => void;
   onRemove: (movieId: string) => void;
   onClearAll?: () => void;
+  deviceMode?: DeviceMode;
 }
 
 export const ContinueWatching: React.FC<ContinueWatchingProps> = ({
@@ -27,6 +29,7 @@ export const ContinueWatching: React.FC<ContinueWatchingProps> = ({
   onOpenDetails,
   onRemove,
   onClearAll,
+  deviceMode = 'auto',
 }) => {
   const itemsWithMovies = history
     .map((hist) => {
@@ -63,7 +66,15 @@ export const ContinueWatching: React.FC<ContinueWatchingProps> = ({
       </div>
 
       {/* Reel grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${
+        deviceMode === 'phone'
+          ? 'grid-cols-1 sm:grid-cols-2'
+          : deviceMode === 'tablet'
+          ? 'grid-cols-2 sm:grid-cols-3'
+          : deviceMode === 'pc'
+          ? 'grid-cols-3 lg:grid-cols-4'
+          : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+      }`}>
         {itemsWithMovies.map(({ hist, movie }) => {
           const currentEp = movie.episodes?.find((e) => e.episodeNumber === hist.episodeNumber);
           const epTitle = currentEp ? `${hist.episodeNumber}-р анги` : movie.type === 'anime' || movie.type === 'series' ? `${hist.episodeNumber}-р анги` : 'Бүрэн кино';

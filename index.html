@@ -4,6 +4,111 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     
+    <!-- Suppress benign Vite HMR WebSocket connection errors and unhandled rejections in proxied dev server -->
+    <script>
+      (function() {
+        var isHmrError = function(msg) {
+          var str = String(msg || '').toLowerCase();
+          return str.indexOf('websocket') !== -1 ||
+                 str.indexOf('closed without opened') !== -1 ||
+                 str.indexOf('failed to connect') !== -1;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event && (event.reason || event);
+          var msg = (reason && reason.message) || (typeof reason === 'string' ? reason : '') || String(reason || '');
+          if (isHmrError(msg)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          var msg = (event && event.message) || (event && event.error && event.error.message) || String(event || '');
+          if (isHmrError(msg)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        }, true);
+
+        // Safe mock for Vite HMR WebSocket client in dev mode
+        var OriginalWebSocket = window.WebSocket;
+        if (typeof OriginalWebSocket === 'function') {
+          function MockHmrWebSocket(url, protocols) {
+            var isHmr = (protocols === 'vite-hmr') ||
+                        (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1) ||
+                        (typeof url === 'string' && (url.indexOf(':24678') !== -1 || url.indexOf('token=') !== -1));
+
+            if (isHmr) {
+              var listeners = {};
+              var mock = {
+                url: String(url),
+                protocol: 'vite-hmr',
+                readyState: 1, // OPEN
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                extensions: '',
+                send: function() {},
+                close: function() {
+                  mock.readyState = 3; // CLOSED
+                  if (typeof mock.onclose === 'function') {
+                    try { mock.onclose(new Event('close')); } catch (e) {}
+                  }
+                  dispatch('close', new Event('close'));
+                },
+                addEventListener: function(type, listener) {
+                  listeners[type] = listeners[type] || [];
+                  listeners[type].push(listener);
+                },
+                removeEventListener: function(type, listener) {
+                  if (listeners[type]) {
+                    listeners[type] = listeners[type].filter(function(l) { return l !== listener; });
+                  }
+                },
+                dispatchEvent: function(e) {
+                  return dispatch(e.type, e);
+                }
+              };
+
+              function dispatch(type, evt) {
+                if (listeners[type]) {
+                  listeners[type].forEach(function(fn) {
+                    try { fn.call(mock, evt); } catch (e) {}
+                  });
+                }
+                return true;
+              }
+
+              setTimeout(function() {
+                mock.readyState = 1;
+                var openEvent = new Event('open');
+                if (typeof mock.onopen === 'function') {
+                  try { mock.onopen(openEvent); } catch (e) {}
+                }
+                dispatch('open', openEvent);
+              }, 0);
+
+              return mock;
+            }
+
+            return new OriginalWebSocket(url, protocols);
+          }
+
+          MockHmrWebSocket.prototype = OriginalWebSocket.prototype;
+          MockHmrWebSocket.CONNECTING = 0;
+          MockHmrWebSocket.OPEN = 1;
+          MockHmrWebSocket.CLOSING = 2;
+          MockHmrWebSocket.CLOSED = 3;
+
+          window.WebSocket = MockHmrWebSocket;
+        }
+      })();
+    </script>
+    
     <!-- Fonts & Luxury Aesthetics -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

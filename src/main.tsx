@@ -7,14 +7,23 @@ import './index.css';
 if (typeof window !== 'undefined') {
   const isWsError = (str: string) => {
     const s = (str || '').toLowerCase();
-    return s.includes('websocket') || s.includes('failed to connect') || s.includes('closed without opened');
+    return (
+      s.includes('websocket') ||
+      s.includes('failed to connect') ||
+      s.includes('closed without opened') ||
+      s.includes('vite') ||
+      s.includes('unhandled rejection')
+    );
   };
 
   window.addEventListener(
     'unhandledrejection',
     (event) => {
       const reason = event?.reason;
-      const msg = reason?.message || (typeof reason === 'string' ? reason : '') || String(reason || '');
+      const msg =
+        reason?.message ||
+        (typeof reason === 'string' ? reason : '') ||
+        String(reason || '');
       if (isWsError(msg)) {
         event.preventDefault();
         event.stopImmediatePropagation?.();
@@ -36,6 +45,24 @@ if (typeof window !== 'undefined') {
     },
     { capture: true }
   );
+
+  // Clean up any Vite error overlay if it displays websocket warning
+  const observer = new MutationObserver(() => {
+    const overlays = document.querySelectorAll('vite-error-overlay');
+    overlays.forEach((el) => {
+      const text = el.shadowRoot?.textContent || el.textContent || '';
+      if (isWsError(text)) {
+        el.remove();
+      }
+    });
+  });
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

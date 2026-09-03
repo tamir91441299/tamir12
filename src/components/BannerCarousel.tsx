@@ -8,6 +8,7 @@ interface BannerCarouselProps {
   onOpenDetails: (movie: Movie) => void;
   onToggleFavorite: (movieId: string) => void;
   isFavorite: (movieId: string) => boolean;
+  deviceMode?: 'auto' | 'phone' | 'tablet' | 'pc';
 }
 
 export const BannerCarousel: React.FC<BannerCarouselProps> = ({
@@ -16,6 +17,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   onOpenDetails,
   onToggleFavorite,
   isFavorite,
+  deviceMode = 'auto',
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -35,7 +37,15 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   return (
     <div className="relative w-full rounded-3xl overflow-hidden cinema-glass-elevated mb-8 group/banner film-frame-decor">
       {/* Background image & Theatrical Lighting */}
-      <div className="relative min-h-[380px] sm:min-h-[440px] md:min-h-[500px] h-[400px] sm:h-[480px] md:h-[540px] w-full overflow-hidden bg-gradient-to-r from-[#07080b] via-[#10121a] to-[#07080b]">
+      <div className={`relative w-full overflow-hidden bg-gradient-to-r from-[#07080b] via-[#10121a] to-[#07080b] ${
+        deviceMode === 'phone'
+          ? 'min-h-[290px] h-[330px]'
+          : deviceMode === 'tablet'
+          ? 'min-h-[380px] h-[430px]'
+          : deviceMode === 'pc'
+          ? 'min-h-[460px] h-[520px]'
+          : 'min-h-[360px] sm:min-h-[440px] md:min-h-[500px] h-[380px] sm:h-[480px] md:h-[540px]'
+      }`}>
         {(currentMovie.backdrop || currentMovie.poster) ? (
           <img
             src={currentMovie.backdrop || currentMovie.poster}
@@ -112,7 +122,15 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
             ))}
           </div>
 
-          <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight sm:leading-none drop-shadow-2xl font-display line-clamp-2">
+          <h1 className={`font-black text-white tracking-tight leading-tight drop-shadow-2xl font-display line-clamp-2 ${
+            deviceMode === 'phone'
+              ? 'text-lg sm:text-xl'
+              : deviceMode === 'tablet'
+              ? 'text-2xl sm:text-4xl'
+              : deviceMode === 'pc'
+              ? 'text-3xl sm:text-5xl lg:text-6xl'
+              : 'text-xl sm:text-3xl md:text-5xl lg:text-6xl'
+          }`}>
             {currentMovie.titleMongolian}
           </h1>
 

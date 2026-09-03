@@ -15,6 +15,7 @@ import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
 import { InstallAppModal } from './components/InstallAppModal';
 import { DisplaySettingsModal, DeviceMode, CardDensity } from './components/DisplaySettingsModal';
+import { DeviceModeToolbar } from './components/DeviceModeToolbar';
 import { PasscodePromptModal } from './components/PasscodePromptModal';
 import { isPasscodeVerifiedInSession } from './lib/passcodeService';
 import { Footer } from './components/Footer';
@@ -121,12 +122,42 @@ export default function App() {
     }
   });
 
+  const [phoneFrameMode, setPhoneFrameMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('flicknime_phone_frame') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleTogglePhoneFrame = () => {
+    setPhoneFrameMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('flicknime_phone_frame', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const handleDeviceModeChange = (mode: DeviceMode) => {
     setDeviceMode(mode);
     try {
       localStorage.setItem('flicknime_device_mode', mode);
-    } catch {
-      // Ignore
+    } catch {}
+
+    if (mode === 'phone') {
+      handleUiScaleChange(95);
+      handleCardDensityChange('compact');
+    } else if (mode === 'tablet') {
+      handleUiScaleChange(100);
+      handleCardDensityChange('normal');
+    } else if (mode === 'pc') {
+      handleUiScaleChange(100);
+      handleCardDensityChange('normal');
+    } else {
+      handleUiScaleChange(100);
+      handleCardDensityChange('normal');
     }
   };
 
@@ -685,23 +716,84 @@ export default function App() {
         onOpenDisplaySettings={() => {
           setShowDisplaySettingsModal(true);
         }}
+        deviceMode={deviceMode}
+        onDeviceModeChange={handleDeviceModeChange}
       />
 
-      {/* Main Container */}
-      <main 
-        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 transition-all duration-200"
-        style={uiScale !== 100 ? { zoom: `${uiScale}%` } : undefined}
-      >
-        {/* Hero Carousel (On Home / All view) */}
-        {activeTab === 'home' && !selectedYear && !selectedGenre && !searchQuery && (
-          <BannerCarousel
-            featuredMovies={featuredMovies}
-            onPlayMovie={(m) => handlePlayMovie(m)}
-            onOpenDetails={(m) => setSelectedMovieForDetails(m)}
-            onToggleFavorite={toggleFavorite}
-            isFavorite={isFavorite}
-          />
-        )}
+      {/* Main Container with Responsive Device Layout Customization */}
+      <div className={`flex-1 w-full flex flex-col items-center ${
+        deviceMode === 'phone' && phoneFrameMode ? 'p-2 sm:p-6 bg-black/40' : ''
+      }`}>
+        <main 
+          className={`flex-1 w-full transition-all duration-200 ${
+            deviceMode === 'phone'
+              ? phoneFrameMode
+                ? 'max-w-[430px] rounded-[48px] border-4 border-zinc-700/80 bg-[#07080b] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] p-4 relative ring-1 ring-white/10 my-4'
+                : 'max-w-md sm:max-w-lg px-3 sm:px-4 py-5 mx-auto'
+              : deviceMode === 'tablet'
+              ? 'max-w-4xl px-4 sm:px-6 py-6 mx-auto'
+              : deviceMode === 'pc'
+              ? 'max-w-7xl px-4 sm:px-6 lg:px-8 py-6 mx-auto'
+              : 'max-w-7xl px-3 sm:px-6 lg:px-8 py-6 mx-auto'
+          }`}
+          style={uiScale !== 100 ? { zoom: `${uiScale}%` } : undefined}
+        >
+          {/* Simulated Phone Top Speaker & Camera Notch (Only in Phone Frame Mode) */}
+          {deviceMode === 'phone' && phoneFrameMode && (
+            <div className="w-full flex items-center justify-center mb-3">
+              <div className="w-24 h-4 bg-zinc-800 rounded-full flex items-center justify-center gap-2 px-2 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-zinc-900 border border-zinc-700" />
+                <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+              </div>
+            </div>
+          )}
+
+          {/* Active Device Mode Banner Notification (Only when non-auto) */}
+          {deviceMode !== 'auto' && (
+            <div className="mb-4 cinema-glass rounded-2xl px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 border border-white/10 text-xs animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${
+                  deviceMode === 'phone' ? 'bg-cyan-400' : deviceMode === 'tablet' ? 'bg-indigo-400' : 'bg-emerald-400'
+                } animate-ping`} />
+                <span className="font-bold text-zinc-200 text-[11px] sm:text-xs">
+                  {deviceMode === 'phone' && '📱 Гар утасны горим сонгогдсон (Phone: 390px - 480px, 2 багана)'}
+                  {deviceMode === 'tablet' && '📟 Таблетын горим сонгогдсон (Tablet / iPad: 768px - 1024px)'}
+                  {deviceMode === 'pc' && '💻 Компьютер горим сонгогдсон (PC Desktop: 1280px+)'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {deviceMode === 'phone' && (
+                  <button
+                    type="button"
+                    onClick={handleTogglePhoneFrame}
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white/[0.06] hover:bg-white/[0.12] text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
+                  >
+                    {phoneFrameMode ? 'Бүхэлд нь харах' : '📱 Утасны жаазтай харах'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDeviceModeChange('auto')}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer"
+                >
+                  ✨ Автомат руу буцах
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Hero Carousel (On Home / All view) */}
+          {activeTab === 'home' && !selectedYear && !selectedGenre && !searchQuery && (
+            <BannerCarousel
+              featuredMovies={featuredMovies}
+              onPlayMovie={(m) => handlePlayMovie(m)}
+              onOpenDetails={(m) => setSelectedMovieForDetails(m)}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              deviceMode={deviceMode}
+            />
+          )}
 
         {/* AI Banner Callout (Shown on Home view) */}
         {activeTab === 'home' && (
@@ -958,6 +1050,7 @@ export default function App() {
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onRemove={handleRemoveFromHistory}
                     onClearAll={handleClearHistory}
+                    deviceMode={deviceMode}
                   />
                 )}
 
@@ -1038,11 +1131,13 @@ export default function App() {
               selectedType={selectedType}
               setSelectedType={setSelectedType}
               onResetFilters={resetFilters}
+              deviceMode={deviceMode}
             />
           </div>
         </div>
         )}
       </main>
+      </div>
 
       {/* Modals */}
       {selectedMovieForDetails && (
@@ -1237,6 +1332,19 @@ export default function App() {
           }
         }}
         isAdmin={isAdmin}
+      />
+
+      {/* Floating Device Mode Toolbar (Утас, Таблет, PC, Авто) */}
+      <DeviceModeToolbar
+        deviceMode={deviceMode}
+        onDeviceModeChange={handleDeviceModeChange}
+        uiScale={uiScale}
+        onUiScaleChange={handleUiScaleChange}
+        cardDensity={cardDensity}
+        onCardDensityChange={handleCardDensityChange}
+        onOpenSettings={() => setShowDisplaySettingsModal(true)}
+        phoneFrameMode={phoneFrameMode}
+        onTogglePhoneFrame={handleTogglePhoneFrame}
       />
 
       {/* Footer */}

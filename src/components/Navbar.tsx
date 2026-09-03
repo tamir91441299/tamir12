@@ -27,10 +27,12 @@ import {
   Film,
   Phone,
   Monitor,
+  Tablet,
   Sliders
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
+import { DeviceMode } from './DisplaySettingsModal';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -54,6 +56,8 @@ interface NavbarProps {
   onOpenUserManagement?: () => void;
   onOpenInstallModal?: () => void;
   onOpenDisplaySettings?: () => void;
+  deviceMode?: DeviceMode;
+  onDeviceModeChange?: (mode: DeviceMode) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -78,6 +82,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenUserManagement,
   onOpenInstallModal,
   onOpenDisplaySettings,
+  deviceMode = 'auto',
+  onDeviceModeChange,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
@@ -674,6 +680,83 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
+          {/* Desktop Device Mode Quick Switcher (Утас / Таблет / PC / Авто) */}
+          {onDeviceModeChange && (
+            <div className="hidden lg:flex items-center bg-black/50 border border-white/[0.08] p-1 rounded-xl gap-0.5 shrink-0 shadow-inner">
+              <button
+                id="header-device-mode-phone"
+                type="button"
+                onClick={() => onDeviceModeChange('phone')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  deviceMode === 'phone'
+                    ? 'bg-cyan-500 text-black font-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                title="Гар утасны харагдац (Phone: 360px - 480px)"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Утас</span>
+              </button>
+
+              <button
+                id="header-device-mode-tablet"
+                type="button"
+                onClick={() => onDeviceModeChange('tablet')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  deviceMode === 'tablet'
+                    ? 'bg-indigo-500 text-white font-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                title="Таблет харагдац (Tablet / iPad: 768px - 1024px)"
+              >
+                <Tablet className="w-3.5 h-3.5" />
+                <span>Таблет</span>
+              </button>
+
+              <button
+                id="header-device-mode-pc"
+                type="button"
+                onClick={() => onDeviceModeChange('pc')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  deviceMode === 'pc'
+                    ? 'bg-emerald-500 text-black font-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                title="Компьютер / PC харагдац (Desktop: 1280px+)"
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>PC</span>
+              </button>
+
+              <button
+                id="header-device-mode-auto"
+                type="button"
+                onClick={() => onDeviceModeChange('auto')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  deviceMode === 'auto'
+                    ? 'bg-amber-400 text-black font-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                title="Автомат систем горим"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Авто</span>
+              </button>
+
+              {onOpenDisplaySettings && (
+                <button
+                  id="header-device-settings-btn"
+                  type="button"
+                  onClick={onOpenDisplaySettings}
+                  className="p-1 text-zinc-400 hover:text-white hover:bg-white/[0.08] rounded-lg transition-colors cursor-pointer ml-0.5"
+                  title="Дэлгэцийн дэлгэрэнгүй тохиргоо (Масштаб, Картын нягтрал)"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Favorites Button */}
           <button
             id="favorites-button"
@@ -926,16 +1009,66 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>AI Зөвлөх</span>
           </button>
 
+          {/* Mobile Direct Device Mode Switcher (Утас, Таблет, PC, Авто) */}
+          {onDeviceModeChange && (
+            <div className="flex items-center bg-black/60 border border-white/[0.1] p-0.5 rounded-xl shrink-0 gap-0.5">
+              <button
+                id="mobile-nav-mode-phone"
+                type="button"
+                onClick={() => onDeviceModeChange('phone')}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deviceMode === 'phone' ? 'bg-cyan-500 text-black font-black shadow-sm' : 'text-zinc-400'
+                }`}
+                title="Гар утасны харагдац"
+              >
+                📱 Утас
+              </button>
+              <button
+                id="mobile-nav-mode-tablet"
+                type="button"
+                onClick={() => onDeviceModeChange('tablet')}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deviceMode === 'tablet' ? 'bg-indigo-500 text-white font-black shadow-sm' : 'text-zinc-400'
+                }`}
+                title="Таблет харагдац"
+              >
+                📟 Таблет
+              </button>
+              <button
+                id="mobile-nav-mode-pc"
+                type="button"
+                onClick={() => onDeviceModeChange('pc')}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deviceMode === 'pc' ? 'bg-emerald-500 text-black font-black shadow-sm' : 'text-zinc-400'
+                }`}
+                title="Компьютер / PC харагдац"
+              >
+                💻 PC
+              </button>
+              <button
+                id="mobile-nav-mode-auto"
+                type="button"
+                onClick={() => onDeviceModeChange('auto')}
+                className={`px-1.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deviceMode === 'auto' ? 'bg-amber-400 text-black font-black shadow-sm' : 'text-zinc-400'
+                }`}
+                title="Автомат систем"
+              >
+                ✨ Авто
+              </button>
+            </div>
+          )}
+
           {onOpenDisplaySettings && (
             <button
               id="mobile-nav-display-settings"
               type="button"
               onClick={onOpenDisplaySettings}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
-              title="Утас, PC, Таблет дэлгэцийн хэмжээний тохиргоо"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border border-white/10"
+              title="Утас, PC, Таблет дэлгэцийн нарийн тохиргоо"
             >
-              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Дэлгэц (Утас / PC)</span>
+              <Sliders className="w-3.5 h-3.5 text-amber-400" />
+              <span>Тохиргоо</span>
             </button>
           )}
         </div>

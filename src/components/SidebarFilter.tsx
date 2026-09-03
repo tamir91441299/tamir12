@@ -10,6 +10,7 @@ interface SidebarFilterProps {
   selectedType: 'movie' | 'series' | 'anime' | 'all';
   setSelectedType: (type: 'movie' | 'series' | 'anime' | 'all') => void;
   onResetFilters: () => void;
+  deviceMode?: 'auto' | 'phone' | 'tablet' | 'pc';
 }
 
 export const SidebarFilter: React.FC<SidebarFilterProps> = ({
@@ -20,33 +21,66 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
   selectedType,
   setSelectedType,
   onResetFilters,
+  deviceMode = 'auto',
 }) => {
-  const [isYearOpen, setIsYearOpen] = useState(true);
-  const [isGenreOpen, setIsGenreOpen] = useState(true);
+  const [isYearOpen, setIsYearOpen] = useState(deviceMode !== 'phone');
+  const [isGenreOpen, setIsGenreOpen] = useState(deviceMode !== 'phone');
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const hasActiveFilters = selectedYear !== null || selectedGenre !== null || selectedType !== 'all';
 
   return (
-    <aside className="w-full lg:w-72 cinema-glass rounded-3xl p-4 sm:p-5 text-zinc-200 shadow-2xl space-y-5 h-fit sticky top-20">
+    <aside className={`w-full ${deviceMode === 'phone' ? 'max-w-full' : 'lg:w-72'} cinema-glass rounded-3xl p-4 sm:p-5 text-zinc-200 shadow-2xl space-y-4 h-fit lg:sticky lg:top-20`}>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2 font-bold text-sm text-zinc-100">
           <Filter className="w-4 h-4 text-amber-400" />
           <span className="font-display tracking-wide uppercase text-xs">Шүүлтүүр</span>
+          {hasActiveFilters && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          )}
         </div>
-        {hasActiveFilters && (
-          <button
-            id="reset-filter-button"
-            onClick={onResetFilters}
-            className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold cursor-pointer transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Арилгах</span>
-          </button>
-        )}
+
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              id="reset-filter-button"
+              onClick={onResetFilters}
+              className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold cursor-pointer transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Арилгах</span>
+            </button>
+          )}
+
+          {deviceMode === 'phone' && (
+            <button
+              type="button"
+              onClick={() => setIsMobileOpen((prev) => !prev)}
+              className="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-white/[0.06] rounded-lg cursor-pointer flex items-center gap-1"
+            >
+              {isMobileOpen ? 'Хаах' : 'Шүүх'}
+              {isMobileOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Type Toggle: Бүх анимэ / Олон ангит / Кино */}
+      {/* When in phone mode, allow collapsing the whole filter body */}
+      {(!isMobileOpen && deviceMode === 'phone' && !hasActiveFilters) ? (
+        <div className="text-center py-1">
+          <button
+            type="button"
+            onClick={() => setIsMobileOpen(true)}
+            className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center justify-center gap-1.5 w-full py-1 cursor-pointer"
+          >
+            <span>Жанр ба оноор шүүх</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Type Toggle: Бүх анимэ / Олон ангит / Кино */}
       <div className="space-y-2">
         <label className="text-[11px] font-bold uppercase text-zinc-400 tracking-wider font-mono">
           Анимэ төрөл
@@ -165,6 +199,8 @@ export const SidebarFilter: React.FC<SidebarFilterProps> = ({
           </div>
         )}
       </div>
+        </div>
+      )}
     </aside>
   );
 };
