@@ -1,13 +1,14 @@
 import React from 'react';
-import { ShieldAlert, Heart, Search, Globe, Smartphone, Sparkles, ExternalLink } from 'lucide-react';
+import { ShieldAlert, Heart, Search, Globe, Smartphone, Sparkles, ExternalLink, Sliders } from 'lucide-react';
 
 interface FooterProps {
   onOpenSeoModal?: () => void;
   onOpenInstallModal?: () => void;
+  onOpenDisplaySettings?: () => void;
   isAdmin?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallModal, isAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallModal, onOpenDisplaySettings, isAdmin }) => {
   return (
     <footer className="bg-[#050608] border-t border-white/[0.06] text-zinc-400 py-12 px-4 sm:px-6 mt-20 text-xs">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -35,6 +36,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
             </p>
 
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {onOpenDisplaySettings && (
+                <button
+                  onClick={onOpenDisplaySettings}
+                  className="inline-flex items-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-sm"
+                  title="Утас, PC, Таблет дэлгэцийн харагдах хэмжээг тохируулах"
+                >
+                  <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Дэлгэцийн хэмжээний тохиргоо (Утас / PC / Таблет)</span>
+                </button>
+              )}
+
               {onOpenInstallModal && isAdmin && (
                 <button
                   onClick={onOpenInstallModal}

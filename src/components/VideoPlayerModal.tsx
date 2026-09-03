@@ -152,6 +152,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [serverMode, setServerMode] = useState<ServerMode>('direct');
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
 
+  // Next Episode prompt dialog state when episode finishes
+  const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState<boolean>(false);
+  const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState<number>(10);
+  const nextEpisodeTimerRef = useRef<any>(null);
+
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
   const [drawerSearch, setDrawerSearch] = useState<string>('');
@@ -842,6 +847,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Switch Episode
   const selectEpisode = (index: number) => {
+    if (nextEpisodeTimerRef.current) {
+      clearInterval(nextEpisodeTimerRef.current);
+      nextEpisodeTimerRef.current = null;
+    }
+    setShowNextEpisodePrompt(false);
+
     if (index >= 0 && index < episodes.length) {
       setCurrentEpisodeIndex(index);
       setCurrentTime(0);
@@ -872,6 +883,53 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  // When an anime/episode ends, trigger "Дараагийн ангийг үзэх үү?" prompt
+  const handleCancelNextEpisode = useCallback(() => {
+    if (nextEpisodeTimerRef.current) {
+      clearInterval(nextEpisodeTimerRef.current);
+      nextEpisodeTimerRef.current = null;
+    }
+    setShowNextEpisodePrompt(false);
+    setIsPlaying(false);
+    setControlsVisible(true);
+  }, []);
+
+  const handleVideoEnded = useCallback(() => {
+    setIsPlaying(false);
+    setControlsVisible(true);
+    appendDebugLog('🏁 Видео дууслаа (Ended event)');
+
+    // If there is a next episode available
+    if (currentEpisodeIndex < episodes.length - 1) {
+      const nextEp = episodes[currentEpisodeIndex + 1];
+      const hasNextAccess = checkEpisodeAccess(currentEpisodeIndex + 1);
+
+      setShowNextEpisodePrompt(true);
+      setNextEpisodeCountdown(10);
+
+      if (nextEpisodeTimerRef.current) {
+        clearInterval(nextEpisodeTimerRef.current);
+      }
+
+      // If user has access to next episode, countdown 10 seconds and auto-play, or let them click
+      if (hasNextAccess) {
+        let count = 10;
+        nextEpisodeTimerRef.current = setInterval(() => {
+          count -= 1;
+          setNextEpisodeCountdown(count);
+          if (count <= 0) {
+            if (nextEpisodeTimerRef.current) {
+              clearInterval(nextEpisodeTimerRef.current);
+              nextEpisodeTimerRef.current = null;
+            }
+            setShowNextEpisodePrompt(false);
+            selectEpisode(currentEpisodeIndex + 1);
+          }
+        }, 1000);
+      }
+    }
+  }, [currentEpisodeIndex, episodes, checkEpisodeAccess, appendDebugLog, selectEpisode]);
+
   // Safe Exit & Close Handler that always cleans up Fullscreen & Orientation Lock
   const handleCloseSafely = useCallback(() => {
     try {
@@ -893,10 +951,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       }
     } catch {}
 
+    if (nextEpisodeTimerRef.current) {
+      clearInterval(nextEpisodeTimerRef.current);
+      nextEpisodeTimerRef.current = null;
+    }
     setIsForcedLandscape(false);
     setIsFullscreen(false);
     onClose();
   }, [onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (nextEpisodeTimerRef.current) {
+        clearInterval(nextEpisodeTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!movie) return null;
 
@@ -1221,14 +1291,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   title={movie.titleMongolian}
                 />
               </div>
-
-              {/* Floating Google Drive HD Quality Helper Hint */}
-              {isGoogleDrive && controlsVisible && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-zinc-950/90 border border-cyan-500/50 text-white px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-none text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
-                  <span className="text-cyan-400 font-black">⚙️ HD ЧАНАР:</span>
-                  <span className="text-zinc-300">Тод үзэхийн тулд видеоны баруун доод буланд байрлах ⚙️ дүрс дээр дарж <b>1080p / 720p</b> сонгоно уу.</span>
-                </div>
-              )}
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
@@ -1316,14 +1378,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   appendDebugLog('⏸️ Видео түр зогслоо (Pause event)');
                 }}
                 onTimeUpdate={handleTimeUpdate}
-                onEnded={() => {
-                  if (currentEpisodeIndex < episodes.length - 1) {
-                    selectEpisode(currentEpisodeIndex + 1);
-                  } else {
-                    setIsPlaying(false);
-                    setControlsVisible(true);
-                  }
-                }}
+                onEnded={handleVideoEnded}
                 className={`w-full h-full transition-all ${
                   videoFitMode === 'cover'
                     ? 'object-cover'
@@ -1475,6 +1530,151 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 border border-cyan-500/60 text-cyan-300 font-extrabold text-xs px-4 py-2 rounded-xl shadow-2xl shadow-cyan-500/20 backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
                   <Layers className="w-4 h-4 text-cyan-400" />
                   <span>{qualityNotice}</span>
+                </div>
+              )}
+
+              {/* Next Episode Prompt Modal Overlay ("Дараагийн ангийг үзэх үү?") */}
+              {showNextEpisodePrompt && currentEpisodeIndex < episodes.length - 1 && (
+                <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+                  <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl shadow-cyan-500/20 text-center relative overflow-hidden">
+                    {/* Background glow accent */}
+                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-40 h-40 bg-cyan-500/15 blur-3xl rounded-full pointer-events-none" />
+
+                    <div className="relative z-10 space-y-4">
+                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-black">
+                        <Check className="w-4 h-4" />
+                        <span>{episodes[currentEpisodeIndex]?.episodeNumber || currentEpisodeIndex + 1}-р анги дууслаа</span>
+                      </div>
+
+                      <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                        Дараагийн ангийг үзэх үү?
+                      </h3>
+
+                      {/* Next episode title & info preview */}
+                      <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 text-left flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center font-black text-lg shrink-0">
+                          {episodes[currentEpisodeIndex + 1]?.episodeNumber || currentEpisodeIndex + 2}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-cyan-400">Дараагийн анги</p>
+                          <p className="text-sm font-black text-white truncate">
+                            {episodes[currentEpisodeIndex + 1]?.title || `${currentEpisodeIndex + 2}-р анги`}
+                          </p>
+                          {episodes[currentEpisodeIndex + 1]?.duration && (
+                            <p className="text-[11px] text-zinc-400">
+                              Үргэлжлэх: {episodes[currentEpisodeIndex + 1]?.duration}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Access Status & Action Buttons */}
+                      {checkEpisodeAccess(currentEpisodeIndex + 1) ? (
+                        <div className="space-y-3 pt-2">
+                          <button
+                            type="button"
+                            id="next-episode-confirm-btn"
+                            onClick={() => {
+                              if (nextEpisodeTimerRef.current) {
+                                clearInterval(nextEpisodeTimerRef.current);
+                                nextEpisodeTimerRef.current = null;
+                              }
+                              setShowNextEpisodePrompt(false);
+                              selectEpisode(currentEpisodeIndex + 1);
+                            }}
+                            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-black font-black text-sm shadow-xl shadow-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-102 active:scale-98"
+                          >
+                            <Play className="w-4 h-4 fill-black" />
+                            <span>Тийм, шууд үзэх ({nextEpisodeCountdown}с)</span>
+                          </button>
+
+                          <div className="flex items-center gap-2 justify-center">
+                            <button
+                              type="button"
+                              onClick={handleCancelNextEpisode}
+                              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold text-xs border border-zinc-800 cursor-pointer transition-colors"
+                            >
+                              Болих (Үзэхгүй)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCancelNextEpisode();
+                                selectEpisode(currentEpisodeIndex);
+                              }}
+                              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold text-xs border border-zinc-800 flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-zinc-400" />
+                              <span>Энэ ангийг дахин үзэх</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : !currentUser ? (
+                        /* Not logged in for next episode */
+                        <div className="space-y-3 pt-2">
+                          <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5 leading-relaxed font-semibold">
+                            ⚠️ Дараагийн ангийг үзэхийн тулд нэвтрэх эсвэл эрхээ авах шаардлагатай.
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCancelNextEpisode();
+                                if (onOpenAuthModal) onOpenAuthModal('phone');
+                              }}
+                              className="py-3 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs cursor-pointer transition-all shadow"
+                            >
+                              Утсаар нэвтрэх
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCancelNextEpisode();
+                                if (onOpenAuthModal) onOpenAuthModal('pc');
+                              }}
+                              className="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs cursor-pointer transition-all shadow"
+                            >
+                              PC нэвтрэх
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCancelNextEpisode}
+                            className="w-full py-2 text-zinc-400 hover:text-zinc-200 text-xs font-bold cursor-pointer"
+                          >
+                            Цонхыг хаах
+                          </button>
+                        </div>
+                      ) : (
+                        /* Logged in but needs package for next episode */
+                        <div className="space-y-3 pt-2">
+                          <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5 leading-relaxed font-semibold">
+                            🔒 2-р ангиас эхлэн эрх авсан хэрэглэгчид үзэх боломжтой.
+                          </p>
+                          {onRequestPurchase && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCancelNextEpisode();
+                                onRequestPurchase(movie);
+                              }}
+                              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-102 active:scale-98"
+                            >
+                              <Zap className="w-4 h-4 fill-black" />
+                              <span>Багцын эрх авах / Төлбөр төлөх</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleCancelNextEpisode}
+                            className="w-full py-2 text-zinc-400 hover:text-zinc-200 text-xs font-bold cursor-pointer"
+                          >
+                            Дараа үзье (Хаах)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

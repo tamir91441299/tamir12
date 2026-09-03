@@ -26,7 +26,8 @@ import {
   BookOpen,
   Film,
   Phone,
-  Monitor
+  Monitor,
+  Sliders
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
@@ -52,6 +53,7 @@ interface NavbarProps {
   onOpenAuthModal: (mode?: 'phone' | 'pc' | 'login' | 'register') => void;
   onOpenUserManagement?: () => void;
   onOpenInstallModal?: () => void;
+  onOpenDisplaySettings?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -75,6 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuthModal,
   onOpenUserManagement,
   onOpenInstallModal,
+  onOpenDisplaySettings,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
@@ -224,6 +227,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
             <span>Утсаар нэвтрэх</span>
           </button>
+
+          {/* Screen / Device Display Setting Trigger */}
+          {onOpenDisplaySettings && (
+            <button
+              id="topbar-display-settings-btn"
+              type="button"
+              onClick={onOpenDisplaySettings}
+              className="flex items-center gap-1 text-emerald-300 hover:text-emerald-100 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              title="Утас, Таблет, PC дэлгэцийн хэмжээний тохиргоо"
+            >
+              <Sliders className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span>Дэлгэц (Утас / PC)</span>
+            </button>
+          )}
 
           {/* Quick Access: PC */}
           <button
@@ -908,6 +925,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-sky-400" />
             <span>AI Зөвлөх</span>
           </button>
+
+          {onOpenDisplaySettings && (
+            <button
+              id="mobile-nav-display-settings"
+              type="button"
+              onClick={onOpenDisplaySettings}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
+              title="Утас, PC, Таблет дэлгэцийн хэмжээний тохиргоо"
+            >
+              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Дэлгэц (Утас / PC)</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

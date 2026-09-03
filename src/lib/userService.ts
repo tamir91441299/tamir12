@@ -2,15 +2,26 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
+  where,
   orderBy,
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserDetail, INITIAL_USERS } from '../components/UserManagementModal';
 import { UserAccount } from '../components/AuthModal';
+
+export interface AuthRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  password?: string;
+  updatedAt: string;
+}
 
 export interface AppNotification {
   id: string;
@@ -309,4 +320,270 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
     console.error('Error fetching users from Firestore:', err);
     return INITIAL_USERS;
   }
+}
+
+/**
+ * Save user credentials to both Firestore and LocalStorage for permanent persistence
+ */
+export async function saveUserAuthRecord(record: {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  password?: string;
+}): Promise<void> {
+  const cleanEmail = (record.email || '').trim().toLowerCase();
+  const cleanPhone = (record.phone || '').trim().replace(/\s+/g, '');
+  const cleanId = record.id || (cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now());
+
+  // 1. Save to localStorage auth records
+  try {
+    const existingStr = localStorage.getItem('ioio_user_auth_records');
+    const credMap = existingStr ? JSON.parse(existingStr) : {};
+    const entryData = {
+      id: cleanId,
+      name: record.name,
+      email: cleanEmail,
+      phone: cleanPhone,
+      password: record.password || '',
+      updatedAt: new Date().toISOString(),
+    };
+    if (cleanEmail) credMap[cleanEmail] = entryData;
+    if (cleanPhone) credMap[cleanPhone] = entryData;
+    localStorage.setItem('ioio_user_auth_records', JSON.stringify(credMap));
+
+    // Save last saved account info for fast-fill / auto-login
+    localStorage.setItem('ioio_last_account_info', JSON.stringify({
+      name: record.name,
+      email: cleanEmail,
+      phone: cleanPhone,
+    }));
+  } catch (e) {
+    console.error('Error saving credentials to localStorage:', e);
+  }
+
+  // 2. Save securely to Firestore `users` document
+  try {
+    const docRef = doc(db, 'users', cleanId);
+    await setDoc(docRef, {
+      id: cleanId,
+      name: record.name,
+      email: cleanEmail,
+      phone: cleanPhone,
+      password: record.password || '',
+      lastLogin: new Date().toLocaleString('mn-MN'),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error saving auth record to Firestore users:', err);
+  }
+}
+
+/**
+ * Authenticate user by Phone or Email from Firestore and LocalStorage
+ */
+export async function authenticateUserCredentials(
+  identifier: string,
+  inputPassword?: string
+): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
+  const clean = identifier.trim();
+  const cleanLower = clean.toLowerCase();
+  const cleanPhone = clean.replace(/\s+/g, '');
+  const isPhone = /^[0-9]{6,12}$/.test(cleanPhone);
+  const password = inputPassword ? inputPassword.trim() : '';
+
+  // Special Admin Shortcut
+  const isAdmin = cleanPhone === '91441299' || cleanLower === 'tamir91441299@gmail.com';
+  if (isAdmin) {
+    const adminUser: UserAccount = {
+      id: 'usr_admin_tamir',
+      name: 'Тамир (Админ)',
+      email: 'tamir91441299@gmail.com',
+      phone: '91441299',
+      registeredAt: '2026-01-01',
+    };
+    persistActiveSession(adminUser, true);
+    return { success: true, user: adminUser };
+  }
+
+  // 1. Check LocalStorage Auth Records first
+  try {
+    const credMapStr = localStorage.getItem('ioio_user_auth_records');
+    if (credMapStr) {
+      const credMap = JSON.parse(credMapStr);
+      let found = credMap[cleanLower] || credMap[cleanPhone];
+      if (!found) {
+        // Search values
+        const entry = Object.values(credMap).find(
+          (v: any) => v && ((v.phone && v.phone === cleanPhone) || (v.email && v.email.toLowerCase() === cleanLower))
+        );
+        if (entry) found = entry;
+      }
+
+      if (found) {
+        if (found.password && password && found.password !== password) {
+          return { success: false, error: '⚠️ Нууц үг буруу байна. Шалгаад дахин оруулна уу.' };
+        }
+        const userAcc: UserAccount = {
+          id: found.id || 'usr_' + Date.now(),
+          name: found.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
+          email: found.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
+          phone: found.phone || (isPhone ? cleanPhone : '99110000'),
+          registeredAt: new Date().toLocaleDateString('mn-MN'),
+        };
+        persistActiveSession(userAcc, true);
+        return { success: true, user: userAcc };
+      }
+    }
+  } catch (e) {
+    console.error('Error checking local auth records:', e);
+  }
+
+  // 2. Query Firestore `users` collection for matching phone or email
+  try {
+    const usersCol = collection(db, 'users');
+    let matchedDoc: any = null;
+
+    if (isPhone) {
+      const qPhone = query(usersCol, where('phone', '==', cleanPhone), limit(1));
+      const snap = await getDocs(qPhone);
+      if (!snap.empty) {
+        matchedDoc = snap.docs[0].data();
+      }
+    }
+
+    if (!matchedDoc && cleanLower.includes('@')) {
+      const qEmail = query(usersCol, where('email', '==', cleanLower), limit(1));
+      const snap = await getDocs(qEmail);
+      if (!snap.empty) {
+        matchedDoc = snap.docs[0].data();
+      }
+    }
+
+    if (matchedDoc) {
+      if (matchedDoc.password && password && matchedDoc.password !== password) {
+        return { success: false, error: '⚠️ Нууц үг буруу байна. Шалгаад дахин оролдоно уу.' };
+      }
+
+      const userAcc: UserAccount = {
+        id: matchedDoc.id || 'usr_' + Date.now(),
+        name: matchedDoc.name || 'Хэрэглэгч',
+        email: matchedDoc.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
+        phone: matchedDoc.phone || (isPhone ? cleanPhone : '99110000'),
+        registeredAt: matchedDoc.registeredAt || new Date().toLocaleDateString('mn-MN'),
+      };
+
+      // Save credentials locally for faster future auth
+      saveUserAuthRecord({
+        id: userAcc.id,
+        name: userAcc.name,
+        email: userAcc.email,
+        phone: userAcc.phone,
+        password: password || matchedDoc.password,
+      });
+
+      persistActiveSession(userAcc, true);
+      return { success: true, user: userAcc };
+    }
+  } catch (err) {
+    console.error('Error querying Firestore for user auth:', err);
+  }
+
+  // 3. Fallback: If not found in DB, allow seamless user experience if credentials provided
+  const fallbackEmail = isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower;
+  const fallbackUser: UserAccount = {
+    id: isPhone ? 'user_phone_' + cleanPhone : 'user_' + Date.now(),
+    name: isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0],
+    email: fallbackEmail,
+    phone: isPhone ? cleanPhone : '99110000',
+    registeredAt: new Date().toLocaleDateString('mn-MN'),
+  };
+
+  saveUserAuthRecord({
+    id: fallbackUser.id,
+    name: fallbackUser.name,
+    email: fallbackUser.email,
+    phone: fallbackUser.phone,
+    password: password,
+  });
+
+  saveUserToFirestore(fallbackUser, {
+    role: isAdmin ? 'admin' : 'user',
+    status: 'active',
+  });
+
+  persistActiveSession(fallbackUser, true);
+  return { success: true, user: fallbackUser };
+}
+
+/**
+ * Get active user session with deep fallback for 100% persistent login
+ */
+export function getPersistedActiveSession(): UserAccount | null {
+  try {
+    // 1. Primary session
+    const primary = localStorage.getItem('ioio_user');
+    if (primary) {
+      const parsed = JSON.parse(primary);
+      if (parsed && (parsed.email || parsed.phone || parsed.id)) {
+        return parsed;
+      }
+    }
+
+    // 2. Backup session key
+    const backup = localStorage.getItem('ioio_active_session');
+    if (backup) {
+      const parsed = JSON.parse(backup);
+      if (parsed && (parsed.email || parsed.phone || parsed.id)) {
+        return parsed;
+      }
+    }
+
+    // 3. Remembered user credentials
+    const remembered = localStorage.getItem('ioio_remember_user');
+    if (remembered) {
+      const parsed = JSON.parse(remembered);
+      if (parsed && (parsed.email || parsed.phone || parsed.id)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Error reading persisted session:', e);
+  }
+  return null;
+}
+
+/**
+ * Persist active session across tabs, refreshes and browser sessions
+ */
+export function persistActiveSession(user: UserAccount | null, rememberMe: boolean = true): void {
+  try {
+    if (user) {
+      const serialized = JSON.stringify(user);
+      localStorage.setItem('ioio_user', serialized);
+      localStorage.setItem('ioio_active_session', serialized);
+      if (rememberMe) {
+        localStorage.setItem('ioio_remember_user', serialized);
+      }
+      localStorage.setItem('ioio_session_persist', 'true');
+      localStorage.setItem('ioio_last_logged_time', String(Date.now()));
+    } else {
+      localStorage.removeItem('ioio_user');
+      localStorage.removeItem('ioio_active_session');
+      localStorage.removeItem('ioio_remember_user');
+      localStorage.removeItem('ioio_session_persist');
+    }
+  } catch (e) {
+    console.error('Error persisting active session:', e);
+  }
+}
+
+/**
+ * Get the last saved account info for fast-login suggestion
+ */
+export function getLastSavedAccount(): { name: string; email: string; phone: string } | null {
+  try {
+    const saved = localStorage.getItem('ioio_last_account_info');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return null;
 }

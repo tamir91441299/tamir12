@@ -14,6 +14,8 @@ interface MovieGridProps {
   isPurchased?: (movieId: string) => boolean;
   onSeeAll?: () => void;
   onResetFilters?: () => void;
+  cardDensity?: 'compact' | 'normal' | 'large';
+  deviceMode?: 'auto' | 'phone' | 'tablet' | 'pc';
 }
 
 export const MovieGrid: React.FC<MovieGridProps> = ({
@@ -27,6 +29,8 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
   isPurchased,
   onSeeAll,
   onResetFilters,
+  cardDensity = 'normal',
+  deviceMode = 'auto',
 }) => {
   if (!movies || movies.length === 0) {
     return (
@@ -90,19 +94,39 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
       </div>
 
       {/* Responsive Architectural Poster Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4.5">
-        {movies.map((movie) => (
-          <MovieCard
-            key={movie.id}
-            movie={movie}
-            onPlay={onPlayMovie}
-            onOpenDetails={onOpenDetails}
-            onToggleFavorite={onToggleFavorite}
-            isFavorite={isFavorite(movie.id)}
-            isPurchased={isPurchased ? isPurchased(movie.id) : false}
-          />
-        ))}
-      </div>
+      {(() => {
+        let gridCols = "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+        if (deviceMode === 'phone') {
+          gridCols = cardDensity === 'compact' ? "grid-cols-3" : cardDensity === 'large' ? "grid-cols-1" : "grid-cols-2";
+        } else if (deviceMode === 'tablet') {
+          gridCols = cardDensity === 'compact' ? "grid-cols-4 sm:grid-cols-5" : cardDensity === 'large' ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-4";
+        } else if (deviceMode === 'pc') {
+          gridCols = cardDensity === 'compact' ? "grid-cols-5 md:grid-cols-6 lg:grid-cols-7" : cardDensity === 'large' ? "grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-4 md:grid-cols-5 lg:grid-cols-6";
+        } else {
+          // Auto
+          if (cardDensity === 'compact') {
+            gridCols = "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7";
+          } else if (cardDensity === 'large') {
+            gridCols = "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+          }
+        }
+
+        return (
+          <div className={`grid ${gridCols} gap-3 sm:gap-4`}>
+            {movies.map((movie) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                onPlay={onPlayMovie}
+                onOpenDetails={onOpenDetails}
+                onToggleFavorite={onToggleFavorite}
+                isFavorite={isFavorite(movie.id)}
+                isPurchased={isPurchased ? isPurchased(movie.id) : false}
+              />
+            ))}
+          </div>
+        );
+      })()}
     </section>
   );
 };

@@ -14,6 +14,7 @@ import { AnimeGuesser } from './components/AnimeGuesser';
 import { AiAssistantView } from './components/AiAssistantView';
 import { AiMoviesView } from './components/AiMoviesView';
 import { InstallAppModal } from './components/InstallAppModal';
+import { DisplaySettingsModal, DeviceMode, CardDensity } from './components/DisplaySettingsModal';
 import { PasscodePromptModal } from './components/PasscodePromptModal';
 import { isPasscodeVerifiedInSession } from './lib/passcodeService';
 import { Footer } from './components/Footer';
@@ -26,6 +27,8 @@ import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
+  getPersistedActiveSession,
+  persistActiveSession,
   AppNotification
 } from './lib/userService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
@@ -77,14 +80,9 @@ export default function App() {
     });
   };
 
-  // User Account state
+  // User Account state - Multi-layer permanent persistent login
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
-    try {
-      const saved = localStorage.getItem('ioio_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+    return getPersistedActiveSession();
   });
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -93,6 +91,62 @@ export default function App() {
   const [showUserManagementModal, setShowUserManagementModal] = useState<boolean>(false);
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+  const [showDisplaySettingsModal, setShowDisplaySettingsModal] = useState<boolean>(false);
+
+  // Device & Screen Layout Responsive Customization (Phone, Tablet, PC)
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>(() => {
+    try {
+      const saved = localStorage.getItem('flicknime_device_mode');
+      return (saved as DeviceMode) || 'auto';
+    } catch {
+      return 'auto';
+    }
+  });
+
+  const [uiScale, setUiScale] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('flicknime_ui_scale');
+      return saved ? Number(saved) : 100;
+    } catch {
+      return 100;
+    }
+  });
+
+  const [cardDensity, setCardDensity] = useState<CardDensity>(() => {
+    try {
+      const saved = localStorage.getItem('flicknime_card_density');
+      return (saved as CardDensity) || 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+
+  const handleDeviceModeChange = (mode: DeviceMode) => {
+    setDeviceMode(mode);
+    try {
+      localStorage.setItem('flicknime_device_mode', mode);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleUiScaleChange = (scale: number) => {
+    setUiScale(scale);
+    try {
+      localStorage.setItem('flicknime_ui_scale', String(scale));
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleCardDensityChange = (density: CardDensity) => {
+    setCardDensity(density);
+    try {
+      localStorage.setItem('flicknime_card_density', density);
+    } catch {
+      // Ignore
+    }
+  };
 
   const handleOpenAuthModal = (mode: 'login' | 'register' | 'phone' | 'pc' = 'login') => {
     setAuthModalInitialMode(mode);
@@ -370,17 +424,17 @@ export default function App() {
     return () => unsubscribe();
   }, [isAdmin]);
 
-  // Track authenticated user session securely
+  // Track authenticated user session securely & permanently
   useEffect(() => {
     try {
       if (currentUser) {
-        localStorage.setItem('ioio_user', JSON.stringify(currentUser));
+        persistActiveSession(currentUser, true);
         saveUserToFirestore(currentUser);
       } else {
-        localStorage.removeItem('ioio_user');
+        persistActiveSession(null);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Session persistence error:', e);
     }
   }, [currentUser]);
 
@@ -628,10 +682,16 @@ export default function App() {
         onOpenInstallModal={() => {
           setShowInstallModal(true);
         }}
+        onOpenDisplaySettings={() => {
+          setShowDisplaySettingsModal(true);
+        }}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+      <main 
+        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 transition-all duration-200"
+        style={uiScale !== 100 ? { zoom: `${uiScale}%` } : undefined}
+      >
         {/* Hero Carousel (On Home / All view) */}
         {activeTab === 'home' && !selectedYear && !selectedGenre && !searchQuery && (
           <BannerCarousel
@@ -883,6 +943,8 @@ export default function App() {
                 isFavorite={isFavorite}
                 isPurchased={isPurchased}
                 onResetFilters={resetFilters}
+                cardDensity={cardDensity}
+                deviceMode={deviceMode}
               />
             ) : (
               /* Default Home Sections */
@@ -911,6 +973,8 @@ export default function App() {
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
                     onSeeAll={() => setActiveTab('series')}
+                    cardDensity={cardDensity}
+                    deviceMode={deviceMode}
                   />
                 )}
 
@@ -925,6 +989,8 @@ export default function App() {
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
                     onSeeAll={() => setActiveTab('anime')}
+                    cardDensity={cardDensity}
+                    deviceMode={deviceMode}
                   />
                 )}
 
@@ -938,6 +1004,8 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
+                    cardDensity={cardDensity}
+                    deviceMode={deviceMode}
                   />
                 )}
 
@@ -952,6 +1020,8 @@ export default function App() {
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
                     onSeeAll={() => setActiveTab('anime')}
+                    cardDensity={cardDensity}
+                    deviceMode={deviceMode}
                   />
                 )}
               </>
@@ -1137,6 +1207,20 @@ export default function App() {
         />
       )}
 
+      {/* Screen & Device Responsive Customization Modal */}
+      {showDisplaySettingsModal && (
+        <DisplaySettingsModal
+          isOpen={showDisplaySettingsModal}
+          onClose={() => setShowDisplaySettingsModal(false)}
+          deviceMode={deviceMode}
+          onDeviceModeChange={handleDeviceModeChange}
+          uiScale={uiScale}
+          onUiScaleChange={handleUiScaleChange}
+          cardDensity={cardDensity}
+          onCardDensityChange={handleCardDensityChange}
+        />
+      )}
+
       {/* Secret Passcode Prompt when opening direct link or new protected window */}
       <PasscodePromptModal
         isOpen={showDirectPasscodeModal}
@@ -1159,6 +1243,7 @@ export default function App() {
       <Footer 
         onOpenSeoModal={() => setShowSeoModal(true)} 
         onOpenInstallModal={() => setShowInstallModal(true)}
+        onOpenDisplaySettings={() => setShowDisplaySettingsModal(true)}
         isAdmin={isAdmin}
       />
     </div>

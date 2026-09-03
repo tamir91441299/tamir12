@@ -15,7 +15,13 @@ import {
   Smartphone,
   Laptop
 } from 'lucide-react';
-import { saveUserToFirestore } from '../lib/userService';
+import { 
+  saveUserToFirestore, 
+  saveUserAuthRecord, 
+  authenticateUserCredentials, 
+  persistActiveSession,
+  getLastSavedAccount 
+} from '../lib/userService';
 
 export interface UserAccount {
   id: string;
@@ -55,13 +61,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const lastAccount = getLastSavedAccount();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleQuickLoginLastAccount = async () => {
+    if (!lastAccount) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const res = await authenticateUserCredentials(lastAccount.phone || lastAccount.email);
+      if (res.success && res.user) {
+        persistActiveSession(res.user, true);
+        setSuccessMessage(`✓ Сайн байна уу, ${res.user.name}! Амжилттай нэвтэрлээ.`);
+        setTimeout(() => {
+          onLoginSuccess(res.user!);
+          onClose();
+        }, 600);
+      } else {
+        setMode('phone');
+        setFormData((prev) => ({
+          ...prev,
+          phone: lastAccount.phone || '',
+          email: lastAccount.email || '',
+          name: lastAccount.name || '',
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError(null);
 
     const cleanEmail = formData.email.trim().toLowerCase();
@@ -70,193 +110,153 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const cleanPassword = formData.password.trim();
     const cleanConfirmPassword = formData.confirmPassword.trim();
 
-    // 1. Phone Login mode
-    if (mode === 'phone') {
-      if (!cleanPhone || cleanPhone.length < 6) {
-        setError('⚠️ Зөв утасны дугаараа оруулна уу (Жишээ нь: 99112233, 88105544).');
-        return;
-      }
+    setIsSubmitting(true);
 
-      if (!cleanPassword || cleanPassword.length < 4) {
-        setError('⚠️ Нууц үг эсвэл PIN кодоо оруулна уу (Хамгийн багадаа 4-6 оронтой).');
-        return;
-      }
-
-      // Check registered credentials
-      try {
-        const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
-        if (credentialsMapStr) {
-          const credMap = JSON.parse(credentialsMapStr);
-          // Look up by phone
-          const foundEntry = Object.entries(credMap).find(
-            ([_, val]: any) => val.phone === cleanPhone
-          );
-          if (foundEntry) {
-            const [savedEmail, val]: any = foundEntry;
-            if (val.password && val.password !== cleanPassword) {
-              setError('⚠️ Нууц үг буруу байна. Шалгаад дахин оролдоно уу.');
-              return;
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error verifying phone credentials:', e);
-      }
-
-      // Special check for Admin phone
-      const isAdminPhone = cleanPhone === '91441299';
-      const resolvedEmail = isAdminPhone ? 'tamir91441299@gmail.com' : `${cleanPhone}@flicknime.mn`;
-      const resolvedName = cleanName || (isAdminPhone ? 'Тамир (Админ)' : `Хэрэглэгч (${cleanPhone})`);
-
-      const loggedInUser: UserAccount = {
-        id: currentUser ? currentUser.id : 'user_phone_' + cleanPhone,
-        name: resolvedName,
-        email: resolvedEmail,
-        phone: cleanPhone,
-        registeredAt: new Date().toLocaleDateString('mn-MN'),
-      };
-
-      // Save credential locally for future
-      try {
-        const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
-        const credMap = credentialsMapStr ? JSON.parse(credentialsMapStr) : {};
-        credMap[resolvedEmail] = {
-          password: cleanPassword,
-          name: resolvedName,
-          phone: cleanPhone,
-        };
-        localStorage.setItem('ioio_user_auth_records', JSON.stringify(credMap));
-      } catch (e) {
-        console.error('Error saving credentials:', e);
-      }
-
-      saveUserToFirestore(loggedInUser, {
-        role: isAdminPhone ? 'admin' : 'user',
-        status: 'active',
-      });
-
-      setSuccessMessage('✓ Утасны дугаараар амжилттай нэвтэрлээ!');
-      setTimeout(() => {
-        onLoginSuccess(loggedInUser);
-        onClose();
-      }, 700);
-      return;
-    }
-
-    // 2. Register mode
-    if (mode === 'register') {
-      if (!cleanName) {
-        setError('⚠️ Заавал өөрийн нэр эсвэл хоч нэрээ оруулна уу.');
-        return;
-      }
-
-      if (!cleanEmail && !cleanPhone) {
-        setError('⚠️ Gmail хаяг эсвэл утасны дугаараа оруулна уу.');
-        return;
-      }
-
-      if (cleanEmail) {
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(cleanEmail)) {
-          setError('⚠️ Зөв Gmail / Э-мэйл хаяг оруулна уу (Жишээ нь: bat@gmail.com).');
+    try {
+      // 1. Phone Login mode
+      if (mode === 'phone') {
+        if (!cleanPhone || cleanPhone.length < 6) {
+          setError('⚠️ Зөв утасны дугаараа оруулна уу (Жишээ нь: 99112233, 88105544).');
+          setIsSubmitting(false);
           return;
         }
-      }
 
-      if (!cleanPassword || cleanPassword.length < 6) {
-        setError('⚠️ Нууц үг заавал хамгийн багадаа 6 тэмдэгттэй байх ёстой.');
+        if (!cleanPassword || cleanPassword.length < 4) {
+          setError('⚠️ Нууц үг эсвэл PIN кодоо оруулна уу (Хамгийн багадаа 4-6 оронтой).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const res = await authenticateUserCredentials(cleanPhone, cleanPassword);
+        if (!res.success || !res.user) {
+          setError(res.error || '⚠️ Нууц үг буруу эсвэл хэрэглэгч олдсонгүй.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const userToLogin = res.user;
+        if (cleanName && (!userToLogin.name || userToLogin.name.includes('Хэрэглэгч'))) {
+          userToLogin.name = cleanName;
+        }
+
+        persistActiveSession(userToLogin, rememberMe);
+        saveUserToFirestore(userToLogin);
+
+        setSuccessMessage('✓ Утасны дугаараар амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
+        setTimeout(() => {
+          onLoginSuccess(userToLogin);
+          onClose();
+        }, 600);
         return;
       }
 
-      if (cleanPassword !== cleanConfirmPassword) {
-        setError('⚠️ Нууц үг тохирохгүй байна. Дахин шалгаж оруулна уу.');
-        return;
-      }
+      // 2. Register mode
+      if (mode === 'register') {
+        if (!cleanName) {
+          setError('⚠️ Заавал өөрийн нэр эсвэл хоч нэрээ оруулна уу.');
+          setIsSubmitting(false);
+          return;
+        }
 
-      const finalEmail = cleanEmail || `${cleanPhone || Date.now()}@flicknime.mn`;
+        if (!cleanEmail && !cleanPhone) {
+          setError('⚠️ Gmail хаяг эсвэл утасны дугаараа оруулна уу.');
+          setIsSubmitting(false);
+          return;
+        }
 
-      // Save user credentials locally for login verification
-      try {
-        const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
-        const credMap = credentialsMapStr ? JSON.parse(credentialsMapStr) : {};
-        credMap[finalEmail] = {
-          password: cleanPassword,
-          name: cleanName,
-          phone: cleanPhone || '99110000',
-        };
-        localStorage.setItem('ioio_user_auth_records', JSON.stringify(credMap));
-      } catch (e) {
-        console.error('Error saving credentials:', e);
-      }
-
-      const newUser: UserAccount = {
-        id: 'user_' + Date.now(),
-        name: cleanName,
-        email: finalEmail,
-        phone: cleanPhone || '99110000',
-        registeredAt: new Date().toLocaleDateString('mn-MN'),
-      };
-
-      saveUserToFirestore(newUser, {
-        role: finalEmail === 'tamir91441299@gmail.com' ? 'admin' : 'user',
-        status: 'active',
-        packageType: 'free',
-        walletBalance: 0,
-      });
-
-      setSuccessMessage('🎉 Амжилттай бүртгэгдлээ! Системд нэвтэрч байна...');
-      setTimeout(() => {
-        onLoginSuccess(newUser);
-        onClose();
-      }, 800);
-      return;
-    }
-
-    // 3. PC / Standard Email Login mode
-    if (!cleanEmail && !cleanPhone) {
-      setError('⚠️ Бүртгүүлсэн Gmail хаяг эсвэл нэвтрэх нэрээ оруулна уу.');
-      return;
-    }
-
-    if (!cleanPassword) {
-      setError('⚠️ Заавал нууц үгээ оруулна уу.');
-      return;
-    }
-
-    const targetLookup = cleanEmail || `${cleanPhone}@flicknime.mn`;
-
-    // Check registered credentials if available
-    try {
-      const credentialsMapStr = localStorage.getItem('ioio_user_auth_records');
-      if (credentialsMapStr) {
-        const credMap = JSON.parse(credentialsMapStr);
-        if (credMap[targetLookup] && credMap[targetLookup].password) {
-          if (credMap[targetLookup].password !== cleanPassword) {
-            setError('⚠️ Нууц үг буруу байна. Шалгаад дахин оролдоно уу.');
+        if (cleanEmail) {
+          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          if (!emailRegex.test(cleanEmail)) {
+            setError('⚠️ Зөв Gmail / Э-мэйл хаяг оруулна уу (Жишээ нь: bat@gmail.com).');
+            setIsSubmitting(false);
             return;
           }
         }
+
+        if (!cleanPassword || cleanPassword.length < 6) {
+          setError('⚠️ Нууц үг заавал хамгийн багадаа 6 тэмдэгттэй байх ёстой.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (cleanPassword !== cleanConfirmPassword) {
+          setError('⚠️ Нууц үг тохирохгүй байна. Дахин шалгаж оруулна уу.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const finalEmail = cleanEmail || `${cleanPhone || Date.now()}@flicknime.mn`;
+        const newUser: UserAccount = {
+          id: 'user_' + Date.now(),
+          name: cleanName,
+          email: finalEmail,
+          phone: cleanPhone || '99110000',
+          registeredAt: new Date().toLocaleDateString('mn-MN'),
+        };
+
+        // Save credentials into both Firestore and LocalStorage
+        await saveUserAuthRecord({
+          id: newUser.id,
+          name: cleanName,
+          email: finalEmail,
+          phone: cleanPhone || '99110000',
+          password: cleanPassword,
+        });
+
+        await saveUserToFirestore(newUser, {
+          role: finalEmail === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+          status: 'active',
+          packageType: 'free',
+          walletBalance: 0,
+        });
+
+        // Persist session securely so user never gets logged out on refresh
+        persistActiveSession(newUser, rememberMe);
+
+        setSuccessMessage('🎉 Бүртгэл амжилттай үүсэж хадгалагдлаа! Шууд нэвтэрч байна...');
+        setTimeout(() => {
+          onLoginSuccess(newUser);
+          onClose();
+        }, 700);
+        return;
       }
-    } catch (e) {
-      console.error('Error verifying credentials:', e);
+
+      // 3. PC / Standard Email Login mode
+      if (!cleanEmail && !cleanPhone) {
+        setError('⚠️ Бүртгүүлсэн Gmail хаяг эсвэл нэвтрэх нэрээ оруулна уу.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!cleanPassword) {
+        setError('⚠️ Заавал нууц үгээ оруулна уу.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const lookupTarget = cleanEmail || cleanPhone;
+      const res = await authenticateUserCredentials(lookupTarget, cleanPassword);
+      if (!res.success || !res.user) {
+        setError(res.error || '⚠️ Нууц үг буруу эсвэл бүртгэл олдсонгүй.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const loggedInUser = res.user;
+      persistActiveSession(loggedInUser, rememberMe);
+      saveUserToFirestore(loggedInUser);
+
+      setSuccessMessage('✓ Амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
+      setTimeout(() => {
+        onLoginSuccess(loggedInUser);
+        onClose();
+      }, 600);
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError('⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const isAdminLogin = targetLookup === 'tamir91441299@gmail.com';
-    const loggedInUser: UserAccount = {
-      id: currentUser ? currentUser.id : 'user_' + Date.now(),
-      name: cleanName || targetLookup.split('@')[0] || (isAdminLogin ? 'Тамир (Админ)' : 'PC Хэрэглэгч'),
-      email: targetLookup,
-      phone: cleanPhone || (isAdminLogin ? '91441299' : '99106883'),
-      registeredAt: new Date().toLocaleDateString('mn-MN'),
-    };
-
-    saveUserToFirestore(loggedInUser);
-
-    setSuccessMessage('✓ Амжилттай нэвтэрлээ!');
-    setTimeout(() => {
-      onLoginSuccess(loggedInUser);
-      onClose();
-    }, 800);
   };
 
   return (
@@ -443,6 +443,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
+            {lastAccount && !currentUser && (
+              <div className="p-3 bg-zinc-900/90 border border-cyan-500/30 rounded-xl flex items-center justify-between gap-3">
+                <div className="min-w-0 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-zinc-400">Сүүлд нэвтэрсэн бүртгэл:</p>
+                    <p className="text-xs font-bold text-white truncate">
+                      {lastAccount.name} <span className="text-zinc-400 font-normal">({lastAccount.phone || lastAccount.email})</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleQuickLoginLastAccount}
+                  disabled={isSubmitting}
+                  className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[11px] rounded-lg shrink-0 transition-colors shadow cursor-pointer disabled:opacity-50"
+                >
+                  Шууд орох
+                </button>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 bg-rose-950/80 border border-rose-800 text-rose-300 text-xs rounded-xl font-medium animate-in fade-in">
                 {error}
@@ -574,10 +598,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               )}
 
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-cyan-500 focus:ring-cyan-500/20"
+                  />
+                  <span className="text-xs text-zinc-300 font-medium">
+                    Бүртгэл хадгалах <span className="text-[10px] text-cyan-400">(Орох болгонд нэвтэрсэн байх)</span>
+                  </span>
+                </label>
+              </div>
+
               <button
                 id="submit-auth-btn"
                 type="submit"
-                className={`w-full mt-2 font-black text-xs py-3.5 rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                disabled={isSubmitting}
+                className={`w-full mt-2 font-black text-xs py-3.5 rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 ${
                   mode === 'phone'
                     ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black hover:opacity-90'
                     : mode === 'pc' || mode === 'login'
@@ -585,7 +625,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     : 'bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:opacity-90'
                 }`}
               >
-                {mode === 'phone' ? (
+                {isSubmitting ? (
+                  <span>БАТАЛГААЖУУЛЖ БАЙНА...</span>
+                ) : mode === 'phone' ? (
                   <>
                     <Phone className="w-4 h-4 fill-current" />
                     <span>УТСААР НЭВТРЭХ</span>
