@@ -19,15 +19,15 @@ export function formatKamiKuzuDriveLink(driveIdOrUrl: string): string {
  */
 export const KAMI_KUZU_IDOL_EPISODE_LINKS: Record<number, string> = {
   1: 'https://drive.google.com/file/d/1EmjiJeQYSsZoZueJhVldZ8zGjlBsYmY-/view?usp=drivesdk&usp=embed_facebook',
-  2: 'https://drive.google.com/file/d/1kamikuzu_ep02_sample_drive/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1kamikuzu_ep03_sample_drive/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1kamikuzu_ep04_sample_drive/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1kamikuzu_ep05_sample_drive/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1kamikuzu_ep06_sample_drive/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1kamikuzu_ep07_sample_drive/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1kamikuzu_ep08_sample_drive/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1kamikuzu_ep09_sample_drive/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1kamikuzu_ep10_sample_drive/view?usp=drivesdk',
+  2: 'https://drive.google.com/file/d/1Y0sSVUMsjrPlqMrdOAUA6GnQryH8aUlq/view?usp=drivesdk&usp=embed_facebook',
+  3: 'https://drive.google.com/file/d/12xSLydSnAImoLj-Peafl7TmBcbEy42DS/view?usp=drivesdk&usp=embed_facebook',
+  4: 'https://drive.google.com/file/d/1e4_aYTTlCdMPQh-UFYKZbrwr0cUQrh71/view?usp=drivesdk&usp=embed_facebook',
+  5: 'https://drive.google.com/file/d/1Cij53-qS6PKECQ_r-bimg3V3HXeHwR81/view?usp=drivesdk&usp=embed_facebook',
+  6: 'https://drive.google.com/file/d/1AzXXH7pvxTMDNeC69KZXQ9-0dVNv5HnM/view?usp=drivesdk&usp=embed_facebook',
+  7: 'https://drive.google.com/file/d/1axi1oVcIfGYZdVuqAUzJ1yL_FmgLBMi8/view?usp=drivesdk&usp=embed_facebook',
+  8: 'https://drive.google.com/file/d/1a_bxUnt3uj98LUaM5UMT6AzvZqQoIfy4/view?usp=drivesdk&usp=embed_facebook',
+  9: 'https://drive.google.com/file/d/1wjhlMnxf67V8lqAkYMNqElAHxG8TbXc6/view?usp=drivesdk&usp=embed_facebook',
+  10: 'https://drive.google.com/file/d/1eFszO2SF_9M6sx1thTZMrpd7O_4PwC6N/view?usp=drivesdk',
 };
 
 export const KAMI_KUZU_IDOL_EPISODES: Episode[] = [

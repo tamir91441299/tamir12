@@ -968,24 +968,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       ref={modalContainerRef}
       className="fixed inset-0 w-full h-full z-50 bg-black flex flex-col justify-between overflow-hidden select-none"
     >
-      {/* PERSISTENT TOP-RIGHT 'X' CLOSE BUTTON (Always accessible, never blocks or overlaps episode buttons) */}
-      <div className={`fixed top-3 right-3 sm:top-4 sm:right-4 z-40 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
-        {/* Universal Top-Right Close Button */}
+      {/* PERSISTENT TOP-RIGHT 'ГАРАХ' (EXIT / CLOSE) BUTTON - Always visible and accessible */}
+      <div className={`fixed top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-50 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
         <button
           type="button"
           id="top-right-corner-close-btn"
           onClick={handleCloseSafely}
-          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-zinc-900/90 hover:bg-rose-600 active:bg-rose-700 text-white flex items-center justify-center border border-zinc-700/80 shadow-2xl backdrop-blur-lg cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group ${
-            controlsVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-70 scale-95 pointer-events-auto sm:opacity-0 sm:pointer-events-none'
-          }`}
-          title="Тоглуулагчийг хаах / Гарах (Esc)"
+          className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 pointer-events-auto group"
+          title="Видеогоос гарах / Хаах (Esc)"
         >
-          <X className="w-5 h-5 text-white group-hover:rotate-90 transition-transform duration-200" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:rotate-90 transition-transform duration-200" />
+          <span>Гарах</span>
         </button>
       </div>
 
       {/* Top Header Bar - Clean transparent header, NO screen darkening */}
-      <header className={`p-2 sm:p-3 pr-14 sm:pr-16 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
+      <header className={`p-2 sm:p-3 pr-28 sm:pr-36 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
         isFullscreen || isDeviceLandscape || isViewportLandscape
           ? controlsVisible
             ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
@@ -1102,18 +1100,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               <span className="hidden sm:inline">Дебаг</span>
             </button>
           )}
-
-          {/* Protected New Window Watch Button */}
-          <button
-            type="button"
-            id="protected-new-window-btn"
-            onClick={handleOpenProtectedNewWindow}
-            className="flex items-center gap-1.5 bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-emerald-100 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-emerald-500/50 shadow-sm active:scale-95"
-            title="Энэ видеог файл болон холбоосыг нь хамгаалж шинэ цонхоор үзэх"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Шинэ цонх</span>
-          </button>
 
           {/* Fullscreen Quick Button */}
           <button
@@ -1253,6 +1239,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   allowFullScreen
                   title={movie.titleMongolian}
                 />
+
+                {/* 🛡️ Drive Popout Blocker & Direct Exit Button */}
+                {/* Covers the entire top-right corner of Google Drive's iframe so Drive's pop-out button can NEVER be clicked */}
+                <div 
+                  className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleCloseSafely();
+                  }}
+                  title="Видеогоос гарах / Хаах (Esc)"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleCloseSafely();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    <span>Гарах</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
