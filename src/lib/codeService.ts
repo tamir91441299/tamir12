@@ -67,6 +67,30 @@ export const INITIAL_PRESET_CODES: PromoCode[] = [
     createdBy: 'Тамир Админ',
     isActive: true,
   },
+  {
+    id: 'promo_kamikuzuidol',
+    code: 'KAMIKUZUIDOL',
+    type: 'anime',
+    durationDays: 30,
+    description: '🎤 Kami Kuzu Idol (Phantom of the Idol) Анимэ үзэх 30 хоногийн эрх',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_kamikuzu',
+    code: 'KAMIKUZU',
+    type: 'anime',
+    durationDays: 30,
+    description: '🎤 Kami Kuzu Idol Анимэ үзэх 30 хоногийн эрх',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
 ];
 
 const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';
@@ -203,6 +227,22 @@ export function redeemCode(inputCode: string): RedeemResult {
     return {
       success: false,
       message: '⚠️ Уг багцын код хүчингүй болсон байна. Багцын эрхээ албан ёсны төлбөрийн цэсээр идэвхжүүлнэ үү.',
+    };
+  }
+
+  // Instant recognition for Kami Kuzu Idol codes (including user spelling variations)
+  if (
+    clean === 'KAMIKUZULDOL' ||
+    clean === 'KAMIKUZUIDOL' ||
+    clean === 'KAMIKUZU' ||
+    clean === 'KAMI-KUZU-IDOL' ||
+    clean === 'PHANTOM_OF_THE_IDOL'
+  ) {
+    return {
+      success: true,
+      type: 'anime',
+      durationDays: 30,
+      message: '🎤 Kami Kuzu Idol (Phantom of the Idol) анимэ үзэх 30 хоногийн багцын эрх амжилттай идэвхжлээ!',
     };
   }
 

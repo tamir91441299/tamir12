@@ -3,6 +3,7 @@ import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
 import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
+import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -194,10 +195,11 @@ export const SAMPLE_MOVIES: Movie[] = [
   MY_HERO_ACADEMIA_S1,
   MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
-  JUJUTSU_KAISEN_S1
+  JUJUTSU_KAISEN_S1,
+  KAMI_KUZU_IDOL
 ];
 
-export { JUJUTSU_KAISEN_S1 };
+export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 51 },
