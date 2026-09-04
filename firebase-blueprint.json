@@ -3,6 +3,7 @@
     "Score": {
       "title": "Score",
       "description": "Game scores and player submission records for Anime Guesser",
+      "type": "object",
       "properties": {
         "playerName": {
           "type": "string",
@@ -31,13 +32,72 @@
         },
         "answers": {
           "type": "array",
-          "items": {
-            "type": "object"
-          },
           "description": "Summary of answers submitted during the game session"
         }
       },
       "required": ["playerName", "score", "gameMode", "createdAt"]
+    },
+    "Movie": {
+      "title": "Movie",
+      "description": "Movie and Anime records. Only admin Tamir (tamir91441299@gmail.com) is permitted to upload, create or modify video content.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Original title"
+        },
+        "titleMongolian": {
+          "type": "string",
+          "description": "Mongolian translated title"
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Streaming video embed URL (admin only)"
+        },
+        "type": {
+          "type": "string",
+          "description": "Content type: anime, movie, or series"
+        }
+      },
+      "required": ["title", "titleMongolian"]
+    },
+    "Episode": {
+      "title": "Episode",
+      "description": "Video episode details for anime/series. Strictly admin-only authoring.",
+      "type": "object",
+      "properties": {
+        "episodeNumber": {
+          "type": "number",
+          "description": "Episode number"
+        },
+        "title": {
+          "type": "string",
+          "description": "Episode title"
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Direct video stream or embed URL"
+        },
+        "duration": {
+          "type": "string",
+          "description": "Episode runtime duration"
+        }
+      },
+      "required": ["episodeNumber", "videoUrl"]
+    }
+  },
+  "firestore": {
+    "/scores/{scoreId}": {
+      "schema": "Score",
+      "description": "Leaderboard game scores"
+    },
+    "/movies/{movieId}": {
+      "schema": "Movie",
+      "description": "Anime and movies collection. Only master admin can create, update, or upload video entries."
+    },
+    "/episodes/{epId}": {
+      "schema": "Episode",
+      "description": "Video episodes collection. Only master admin can create, update, or upload video episodes."
     }
   }
 }

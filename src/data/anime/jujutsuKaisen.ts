@@ -18,7 +18,7 @@ export function formatDriveLink(driveIdOrUrl: string): string {
  * доорх 1-24 дугаарын ард Drive линк эсвэл ID-гаа хуулж тавина уу:
  */
 export const JUJUTSU_KAISEN_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1My4SugsvTAoE4a6GbPVfeqNWqK0N7KBN/view?usp=drivesdk',
+  1: 'https://drive.usercontent.google.com/download?id=1My4SugsvTAoE4a6GbPVfeqNWqK0N7KBN&export=download&authuser=0',
   2: 'https://drive.google.com/file/d/1e3O8u7mMStWWU89gHUcGgUlwUKGlVOKr/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1_UjBycpnTZwHz8a-_JMdcGAPxoaLdjuL/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1Velzu0_OZciTmdCAvh4eK1fbBpUIEiJ5/view?usp=drivesdk',

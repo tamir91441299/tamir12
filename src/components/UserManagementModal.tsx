@@ -81,6 +81,7 @@ interface UserManagementModalProps {
   onUpdateBalance: (newBalance: number) => void;
   movies?: Movie[];
   onUpdateMovieEpisodes?: (movieId: string, episodes: any[]) => void;
+  onAddNewMovie?: (movie: Movie) => void;
 }
 
 export const INITIAL_USERS: UserDetail[] = [
@@ -168,6 +169,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   onUpdateBalance,
   movies,
   onUpdateMovieEpisodes,
+  onAddNewMovie,
 }) => {
   const [users, setUsers] = useState<UserDetail[]>(() => {
     const rawList: UserDetail[] = [];
@@ -251,12 +253,78 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [epUrlInput, setEpUrlInput] = useState<string>('https://youtu.be/VZPAg8iR8sk');
   const [epDurationInput, setEpDurationInput] = useState<string>('24 мин');
 
+  // New Anime/Movie creation state - Only accessible by Admin
+  const [showAddNewMovieForm, setShowAddNewMovieForm] = useState(false);
+  const [newMovieTitle, setNewMovieTitle] = useState('');
+  const [newMovieTitleMongolian, setNewMovieTitleMongolian] = useState('');
+  const [newMovieType, setNewMovieType] = useState<'anime' | 'movie' | 'series'>('anime');
+  const [newMovieVideoUrl, setNewMovieVideoUrl] = useState('');
+  const [newMoviePoster, setNewMoviePoster] = useState('');
+  const [newMovieGenre, setNewMovieGenre] = useState('Shounen, Action');
+  const [newMovieDescription, setNewMovieDescription] = useState('');
+
   const allMoviesList = movies || SAMPLE_MOVIES;
   const currentSelectedMovie = allMoviesList.find((m) => m.id === selectedMovieId) || allMoviesList[0];
   const currentMovieEpisodes = currentSelectedMovie?.episodes || [];
 
+  const handleCreateNewMovie = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      alert('⚠️ Хориглогдсон: Видео болон кино оруулах эрх зөвхөн админ (tamir91441299@gmail.com)-д олгогдсон!');
+      return;
+    }
+    if (!newMovieTitleMongolian.trim()) return;
+
+    const newMovie: Movie = {
+      id: `m_${Date.now()}`,
+      title: newMovieTitle.trim() || newMovieTitleMongolian.trim(),
+      titleMongolian: newMovieTitleMongolian.trim(),
+      description: newMovieDescription.trim() || 'Админы оруулсан шинэ анимэ/кино бүтээл.',
+      poster: newMoviePoster.trim() || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
+      backdrop: newMoviePoster.trim() || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1200&q=80',
+      rating: 9.8,
+      duration: '24 мин / анги',
+      year: new Date().getFullYear(),
+      genres: newMovieGenre.split(',').map((g) => g.trim()).filter(Boolean),
+      director: 'FlickNime Admin',
+      cast: ['Тамир (Админ)'],
+      country: 'Япон',
+      views: 1,
+      trailerUrl: newMovieVideoUrl.trim() || 'https://youtu.be/VZPAg8iR8sk',
+      price: 0,
+      type: newMovieType,
+      featured: true,
+      ageRating: 'ALL',
+      audioTracks: ['Монгол дуу оруулалт'],
+      subtitles: ['Монгол хадмал'],
+      videoUrl: newMovieVideoUrl.trim() || 'https://youtu.be/VZPAg8iR8sk',
+      episodes: [
+        {
+          episodeNumber: 1,
+          title: '1-р анги - Эхлэл',
+          videoUrl: newMovieVideoUrl.trim() || 'https://youtu.be/VZPAg8iR8sk',
+          duration: '24 мин',
+        },
+      ],
+    };
+
+    if (onAddNewMovie) {
+      onAddNewMovie(newMovie);
+    }
+    setSelectedMovieId(newMovie.id);
+    alert(`🎉 Шинэ ${newMovieType === 'anime' ? 'Анимэ' : 'Кино'} ("${newMovie.titleMongolian}") амжилттай нэмэгдлээ! Танд видео ангиудыг удирдах боломжтой.`);
+    setShowAddNewMovieForm(false);
+    setNewMovieTitle('');
+    setNewMovieTitleMongolian('');
+    setNewMovieVideoUrl('');
+  };
+
   const handleAddOrUpdateEpisode = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert('⚠️ Хориглогдсон: Энэ сайтын админаас (tamir91441299@gmail.com) өөр хүн видео хийх, холбоос оруулах боломжгүй!');
+      return;
+    }
     if (!epUrlInput.trim() || !currentSelectedMovie) return;
 
     const title = epTitleInput.trim() || `${epNumInput}-р анги`;
@@ -277,6 +345,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const handleDeleteEpisode = (epNumToDelete: number) => {
+    if (!isAdmin) {
+      alert('⚠️ Хориглогдсон: Зөвхөн админ видео болон анги устгах эрхтэй!');
+      return;
+    }
     if (!currentSelectedMovie) return;
     const updated = currentMovieEpisodes.filter((ep) => ep.episodeNumber !== epNumToDelete);
     if (onUpdateMovieEpisodes) {
@@ -285,6 +357,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const handleResetMovieEpisodes = () => {
+    if (!isAdmin) {
+      alert('⚠️ Хориглогдсон: Зөвхөн админ үйлдлийг гүйцэтгэх эрхтэй!');
+      return;
+    }
     if (!currentSelectedMovie) return;
     const defaultMovie = SAMPLE_MOVIES.find((m) => m.id === currentSelectedMovie.id);
     if (defaultMovie && onUpdateMovieEpisodes) {
@@ -1087,6 +1163,127 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         ) : activeAdminTab === 'episodes' ? (
           /* Episode & Content Management Tab View */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {/* Top Admin Security Notice & Add Content Button */}
+            <div className="bg-amber-950/20 border border-amber-500/30 p-3 sm:p-4 rounded-xl flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+                  <ShieldAlert className="w-5 h-5" />
+                </span>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-300">
+                    Зөвхөн Админ видео оруулах эрхтэй (tamir91441299@gmail.com)
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Энэ сайтад өөр ямар ч хэрэглэгч видео, анги болон кино оруулах эрхгүй. Систем бүрэн хамгаалагдсан.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddNewMovieForm(!showAddNewMovieForm)}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{showAddNewMovieForm ? 'Хаах' : '➕ Шинэ Анимэ / Кино нэмэх'}</span>
+              </button>
+            </div>
+
+            {/* Admin Add New Anime/Movie Form */}
+            {showAddNewMovieForm && (
+              <form onSubmit={handleCreateNewMovie} className="bg-zinc-900/90 border border-amber-500/40 p-4 sm:p-5 rounded-2xl space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <h3 className="text-sm font-black text-amber-400 flex items-center gap-2">
+                    <Film className="w-4 h-4" />
+                    Шинэ Анимэ эсвэл Кино нэмэх (Админ)
+                  </h3>
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    Админы зөвшөөрөлтэй
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-300 block mb-1">Монгол нэр:*</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Жишээ: Наруто, Жүжүцү Кайсэн..."
+                      value={newMovieTitleMongolian}
+                      onChange={(e) => setNewMovieTitleMongolian(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-sm text-white p-2.5 rounded-xl focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-300 block mb-1">Англи / Ромажи нэр:</label>
+                    <input
+                      type="text"
+                      placeholder="Жишээ: Naruto, Jujutsu Kaisen..."
+                      value={newMovieTitle}
+                      onChange={(e) => setNewMovieTitle(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-sm text-white p-2.5 rounded-xl focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-300 block mb-1">Төрөл:*</label>
+                    <select
+                      value={newMovieType}
+                      onChange={(e) => setNewMovieType(e.target.value as any)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-sm text-white p-2.5 rounded-xl focus:outline-none focus:border-amber-400 cursor-pointer"
+                    >
+                      <option value="anime">Анимэ цуврал</option>
+                      <option value="movie">Бүрэн хэмжээний кино</option>
+                      <option value="series">Олон ангит цуврал</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-300 block mb-1">
+                      Эхний 1-р ангийн видео линк (YouTube / Google Drive / MP4):*
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://youtu.be/... эсвэл Google Drive link"
+                      value={newMovieVideoUrl}
+                      onChange={(e) => setNewMovieVideoUrl(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-xs font-mono text-cyan-300 p-2.5 rounded-xl focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-300 block mb-1">
+                      Зургийн постер URL (сонголттой):
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={newMoviePoster}
+                      onChange={(e) => setNewMoviePoster(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-xs text-white p-2.5 rounded-xl focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddNewMovieForm(false)}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Цуцлах
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs rounded-xl cursor-pointer flex items-center gap-1.5 shadow"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Кино / Анимэ үүсгэж хадгалах</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">

@@ -43,21 +43,37 @@ export default function App() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'movie' | 'series' | 'anime' | 'all'>('all');
 
-  // Movies list state: Fresh code definition from SAMPLE_MOVIES
+  // Movies list state: Fresh code definition from SAMPLE_MOVIES + admin added movies
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
+    let base = [...SAMPLE_MOVIES];
     try {
-      // Clear legacy stale cache keys from previous sessions to prevent outdated URLs
-      localStorage.removeItem('movie_episodes_map');
-      localStorage.removeItem('ioio_custom_episodes');
+      const savedCustom = localStorage.getItem('ioio_custom_movies');
+      if (savedCustom) {
+        const parsed = JSON.parse(savedCustom);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          base = [...parsed, ...base];
+        }
+      }
+      const savedEps = localStorage.getItem('ioio_custom_episodes');
+      if (savedEps) {
+        const epMap = JSON.parse(savedEps);
+        base = base.map((m) => {
+          if (epMap[m.id]) {
+            return { ...m, episodes: epMap[m.id] };
+          }
+          return m;
+        });
+      }
     } catch (e) {
       console.error(e);
     }
-    return SAMPLE_MOVIES;
+    return base;
   });
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
     // Only tamir91441299@gmail.com is allowed to update or add video episodes
-    if (currentUser?.email !== 'tamir91441299@gmail.com') {
+    const isAuthorizedAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+    if (!isAuthorizedAdmin) {
       alert('⚠️ Зөвхөн админ (tamir91441299@gmail.com) видео болон ангиудын линк оруулах, засах эрхтэй!');
       return;
     }
@@ -74,6 +90,25 @@ export default function App() {
           if (m.episodes) map[m.id] = m.episodes;
         });
         localStorage.setItem('ioio_custom_episodes', JSON.stringify(map));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handleAddNewMovie = (newMovie: Movie) => {
+    const isAuthorizedAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+    if (!isAuthorizedAdmin) {
+      alert('⚠️ Зөвхөн админ (tamir91441299@gmail.com) шинэ анимэ, видео оруулах эрхтэй!');
+      return;
+    }
+    setMoviesList((prev) => {
+      const updated = [newMovie, ...prev];
+      try {
+        const savedCustom = localStorage.getItem('ioio_custom_movies');
+        const list = savedCustom ? JSON.parse(savedCustom) : [];
+        localStorage.setItem('ioio_custom_movies', JSON.stringify([newMovie, ...list]));
       } catch (e) {
         console.error(e);
       }
@@ -1244,6 +1279,7 @@ export default function App() {
           onUpdateBalance={(newBal) => setUserBalance(newBal)}
           movies={moviesList}
           onUpdateMovieEpisodes={handleUpdateMovieEpisodes}
+          onAddNewMovie={handleAddNewMovie}
         />
       )}
 

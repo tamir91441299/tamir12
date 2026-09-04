@@ -73,6 +73,27 @@ export function getGoogleDriveEmbedUrl(driveId: string): string {
   return `https://drive.google.com/file/d/${driveId}/preview`;
 }
 
+export function formatDirectPlayableUrl(url: string): string {
+  if (!url) return '';
+  const cleanUrl = url.trim();
+
+  // PixelDrain: convert https://pixeldrain.com/u/ID -> https://pixeldrain.com/api/file/ID
+  const pixelDrainMatch = cleanUrl.match(/pixeldrain\.com\/(?:u|api\/file)\/([a-zA-Z0-9_-]+)/i);
+  if (pixelDrainMatch && pixelDrainMatch[1]) {
+    return `https://pixeldrain.com/api/file/${pixelDrainMatch[1]}`;
+  }
+
+  // Dropbox: ensure raw=1 for direct streaming
+  if (cleanUrl.includes('dropbox.com')) {
+    if (cleanUrl.includes('raw=1')) return cleanUrl;
+    if (cleanUrl.includes('dl=0')) return cleanUrl.replace('dl=0', 'raw=1');
+    if (cleanUrl.includes('dl=1')) return cleanUrl.replace('dl=1', 'raw=1');
+    return cleanUrl.includes('?') ? `${cleanUrl}&raw=1` : `${cleanUrl}?raw=1`;
+  }
+
+  return cleanUrl;
+}
+
 export function getEmbedUrl(url: string, playerMode: 'standard' | 'nocookie' = 'standard'): string {
   if (!url) return '';
   const cleanUrl = url.trim();
@@ -87,6 +108,54 @@ export function getEmbedUrl(url: string, playerMode: 'standard' | 'nocookie' = '
     if (ytId) {
       const domain = playerMode === 'nocookie' ? 'www.youtube-nocookie.com' : 'www.youtube.com';
       return `https://${domain}/embed/${ytId}?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&enablejsapi=1&controls=1`;
+    }
+  }
+
+  // Streamtape: https://streamtape.com/v/XXXX -> https://streamtape.com/e/XXXX
+  if (cleanUrl.includes('streamtape.')) {
+    const match = cleanUrl.match(/streamtape\.[a-z]+\/(?:v|e)\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+      return `https://streamtape.com/e/${match[1]}`;
+    }
+  }
+
+  // DoodStream: https://dood.to/d/XXXX -> https://dood.to/e/XXXX
+  if (cleanUrl.includes('dood.') || cleanUrl.includes('doodstream.') || cleanUrl.includes('ds2play.')) {
+    const match = cleanUrl.match(/(?:dood\.[a-z]+|doodstream\.[a-z]+|ds2play\.[a-z]+)\/(?:d|e)\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+      return `https://dood.to/e/${match[1]}`;
+    }
+  }
+
+  // Filemoon: https://filemoon.sx/d/XXXX -> https://filemoon.sx/e/XXXX
+  if (cleanUrl.includes('filemoon.')) {
+    const match = cleanUrl.match(/filemoon\.[a-z]+\/(?:d|e)\/([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+      return `https://filemoon.sx/e/${match[1]}`;
+    }
+  }
+
+  // OK.ru: https://ok.ru/video/XXXX -> //ok.ru/videoembed/XXXX
+  if (cleanUrl.includes('ok.ru')) {
+    const match = cleanUrl.match(/ok\.ru\/(?:video|videoembed)\/(\d+)/i);
+    if (match && match[1]) {
+      return `https://ok.ru/videoembed/${match[1]}`;
+    }
+  }
+
+  // Dailymotion: https://www.dailymotion.com/video/XXXX -> https://www.dailymotion.com/embed/video/XXXX
+  if (cleanUrl.includes('dailymotion.com')) {
+    const match = cleanUrl.match(/dailymotion\.com\/(?:video|embed\/video)\/([a-zA-Z0-9]+)/i);
+    if (match && match[1]) {
+      return `https://www.dailymotion.com/embed/video/${match[1]}?autoplay=1`;
+    }
+  }
+
+  // Voe.sx: https://voe.sx/e/XXXX
+  if (cleanUrl.includes('voe.sx')) {
+    const match = cleanUrl.match(/voe\.sx\/(?:e\/)?([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) {
+      return `https://voe.sx/e/${match[1]}`;
     }
   }
 
@@ -113,9 +182,19 @@ export function isExternalEmbedMedia(url?: string): boolean {
     clean.includes('docs.google.com') ||
     clean.includes('youtube.com') ||
     clean.includes('youtu.be') ||
+    clean.includes('streamtape.') ||
+    clean.includes('dood.') ||
+    clean.includes('doodstream.') ||
+    clean.includes('ds2play.') ||
+    clean.includes('filemoon.') ||
+    clean.includes('ok.ru') ||
+    clean.includes('vk.com/video') ||
     clean.includes('facebook.com') ||
     clean.includes('vimeo.com') ||
-    clean.includes('dailymotion.com')
+    clean.includes('dailymotion.com') ||
+    clean.includes('voe.sx') ||
+    clean.includes('streamwish.') ||
+    clean.includes('vidmoly.')
   );
 }
 
@@ -201,6 +280,12 @@ export function isDirectPlayableMedia(url?: string): boolean {
     clean.startsWith('blob:') ||
     clean.startsWith('/api/stream') ||
     clean.includes('commondatastorage.googleapis.com') ||
+    clean.includes('firebasestorage.googleapis.com') ||
+    clean.includes('pixeldrain.com') ||
+    clean.includes('dropbox.com') ||
+    clean.includes('catbox.moe') ||
+    clean.includes('gofile.io') ||
+    clean.includes('github.com') ||
     clean.includes('.mp4') ||
     clean.includes('.webm') ||
     clean.includes('.m3u8') ||
@@ -231,24 +316,24 @@ export function getDirectPlaybackStream(
     return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
   }
 
-  const clean = videoUrl.trim();
+  const formattedUrl = formatDirectPlayableUrl(videoUrl.trim());
 
   // 1. If Google Drive URL, use our direct streaming proxy with quality resolution
-  const googleDriveId = extractGoogleDriveId(clean);
+  const googleDriveId = extractGoogleDriveId(formattedUrl);
   if (googleDriveId) {
     const q = quality || '1080p';
     return `/api/stream/drive/${googleDriveId}?quality=${q}&server=${serverType}&ep=${epNum}`;
   }
 
-  // 2. If direct media file (mp4, webm, m3u8, etc.)
-  if (isDirectPlayableMedia(clean)) {
-    return clean;
+  // 2. If direct media file (mp4, webm, m3u8, PixelDrain API, Dropbox raw, Firebase Storage, etc.)
+  if (isDirectPlayableMedia(formattedUrl)) {
+    return formattedUrl;
   }
 
-  // 3. If external web URL that is not YouTube
-  if (clean.startsWith('http://') || clean.startsWith('https://')) {
-    if (!clean.includes('youtube.com') && !clean.includes('youtu.be')) {
-      return clean;
+  // 3. If external web URL that is not an embed provider
+  if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
+    if (!isExternalEmbedMedia(formattedUrl)) {
+      return formattedUrl;
     }
   }
 

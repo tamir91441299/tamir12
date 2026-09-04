@@ -285,10 +285,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     e.preventDefault();
     if (!newCommentText.trim()) return;
 
-    // Check if non-admin tries to post a URL/link in comments
-    const containsUrl = /(https?:\/\/|www\.|youtu\.be|drive\.google\.com|\.mp4|\.m3u8)/i.test(newCommentText);
+    // Check if non-admin tries to post a URL/link or video file in comments
+    const containsUrl = /(https?:\/\/|www\.|youtu\.be|youtube\.com|drive\.google\.com|facebook\.com|fb\.watch|vimeo\.com|bilibili|dailymotion|\.mp4|\.m3u8|\.webm|\.avi|\.mov|<iframe|<video)/i.test(newCommentText);
     if (containsUrl && !isAdmin) {
-      alert('⚠️ Хориглогдсон: Сэтгэгдэл дээр видео болон вэб холбоос оруулахыг хориглосон! Видео болон ангийн линк оруулах эрх зөвхөн сайтын эзэмшигч Тамир админд бий.');
+      alert('⚠️ Хориглогдсон: Энэ сайт дээр админаас (tamir91441299@gmail.com) өөр хүн видео болон холбоос оруулах боломжгүй! Видео болон ангийн линк оруулах эрх зөвхөн админд бий.');
       return;
     }
 
@@ -667,7 +667,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 )}
 
                 {/* Batch Link Connector Form (1 to 13 Episodes) */}
-                {showBatchLinkForm && (
+                {isAdmin && showBatchLinkForm && (
                   <form onSubmit={handleBatchLinkConnect} className="bg-zinc-900 border border-amber-500/50 p-4 rounded-xl space-y-3 shadow-xl">
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                       <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
@@ -758,7 +758,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 )}
 
                 {/* Quick Episode Adder Form */}
-                {showAddEpForm && (
+                {isAdmin && showAddEpForm && (
                   <form onSubmit={handleSaveNewEpisode} className="bg-zinc-900 border border-cyan-500/50 p-3 rounded-xl space-y-2.5 shadow-lg">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-amber-300 flex items-center gap-1">

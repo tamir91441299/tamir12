@@ -148,9 +148,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
 
-  // Smart default mode: Default to 1080p direct server for ultra-crisp Full HD playback on all anime
-  const [serverMode, setServerMode] = useState<ServerMode>('direct');
+  // Smart default mode: External embeds (YouTube, Google Drive, Streamtape, DoodStream, etc.) use 'embed'
+  // Direct playable media (MP4, PixelDrain, Dropbox, Firebase Storage, etc.) use 'direct'
+  const [serverMode, setServerMode] = useState<ServerMode>(() => {
+    if (isExternalEmbed || isYouTube || isGoogleDrive) {
+      return 'embed';
+    }
+    return 'direct';
+  });
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
+
+  // Automatically adapt server mode when changing episode or source URL
+  useEffect(() => {
+    if (isExternalEmbed || isYouTube || isGoogleDrive) {
+      setServerMode('embed');
+      serverModeRef.current = 'embed';
+    } else if (isDirectMedia) {
+      setServerMode('direct');
+      serverModeRef.current = 'direct';
+    }
+  }, [rawVideoSrc, isExternalEmbed, isYouTube, isGoogleDrive, isDirectMedia]);
 
   // Next Episode prompt dialog state when episode finishes
   const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState<boolean>(false);
@@ -206,6 +223,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const modalContainerRef = useRef<HTMLDivElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
@@ -227,8 +245,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<'left' | 'right' | null>(null);
   const [showPasscodePrompt, setShowPasscodePrompt] = useState(false);
 
-  // Mobile Orientation & Landscape Rotation Mode State
-  const [isForcedLandscape, setIsForcedLandscape] = useState<boolean>(false);
+  // Mobile Orientation State (Native responsive, no artificial CSS rotate)
   const [videoBrightness, setVideoBrightness] = useState<number>(100); // 100%, 115%, 130%, 145%
   const [isDeviceLandscape, setIsDeviceLandscape] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -561,27 +578,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [hoverSeekTime, setHoverSeekTime] = useState<number | null>(null);
   const [hoverSeekPercent, setHoverSeekPercent] = useState<number>(0);
 
-  const calculateScrubPosition = useCallback((clientX: number, clientY: number) => {
+  const calculateScrubPosition = useCallback((clientX: number) => {
     if (!scrubTrackRef.current || !duration) return 0;
     const rect = scrubTrackRef.current.getBoundingClientRect();
-    let ratio = 0;
-    if (isForcedLandscape && !isDeviceLandscape) {
-      // Rotated 90deg clockwise: visual horizontal corresponds to DOM top-to-bottom
-      ratio = (clientY - rect.top) / rect.height;
-    } else {
-      ratio = (clientX - rect.left) / rect.width;
-    }
+    let ratio = (clientX - rect.left) / rect.width;
     ratio = Math.max(0, Math.min(1, ratio));
     return ratio * duration;
-  }, [duration, isForcedLandscape, isDeviceLandscape]);
+  }, [duration]);
 
   const handleScrubStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsScrubbing(true);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const targetTime = calculateScrubPosition(clientX, clientY);
+    const targetTime = calculateScrubPosition(clientX);
     setCurrentTime(targetTime);
     if (videoRef.current) {
       videoRef.current.currentTime = targetTime;
@@ -591,11 +601,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   const handleScrubMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
     if (isScrubbing) {
       e.preventDefault();
-      const targetTime = calculateScrubPosition(clientX, clientY);
+      const targetTime = calculateScrubPosition(clientX);
       setCurrentTime(targetTime);
       if (videoRef.current) {
         videoRef.current.currentTime = targetTime;
@@ -716,58 +725,44 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     };
   }, [isFullscreen, isPlaying, isMuted, volume, togglePlay]);
 
-  // Dedicated Screen Orientation / Landscape Rotation for Mobile (Handles Portrait Lock & Touch Devices)
+  // Screen Orientation Toggle for Mobile
   const toggleRotateLandscape = async () => {
     const isCurrentlyWide = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
 
-    // If not wide and not forced, toggle to landscape
-    if (!isForcedLandscape && !isCurrentlyWide) {
-      setIsForcedLandscape(true);
-      setQualityNotice('🔄 Хөндлөн (Landscape) горим идэвхжлээ');
-      // Attempt Screen Orientation API lock or fullscreen if supported
-      try {
-        const doc: any = document;
-        const targetElem: any = playerContainerRef.current || videoRef.current || document.documentElement;
-        if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
-          if (targetElem?.requestFullscreen) {
-            await targetElem.requestFullscreen();
-          } else if (targetElem?.webkitRequestFullscreen) {
-            await targetElem.webkitRequestFullscreen();
-          }
-        }
+    try {
+      if (!isCurrentlyWide) {
+        setQualityNotice('🔄 Хөндлөн (Landscape) горим');
         if ((screen?.orientation as any)?.lock) {
-          await (screen.orientation as any).lock('landscape');
-        } else if ((screen as any)?.lockOrientation) {
-          (screen as any).lockOrientation('landscape');
+          try {
+            await (screen.orientation as any).lock('landscape');
+          } catch {}
+        } else {
+          await toggleFullscreen();
         }
-      } catch {
-        // Smoothly handled by forced CSS landscape transform
-      }
-    } else {
-      setIsForcedLandscape(false);
-      setQualityNotice('📱 Босоо (Portrait) горимд шилжлээ');
-      try {
+      } else {
+        setQualityNotice('📱 Босоо (Portrait) горим');
         if (screen?.orientation?.unlock) {
-          screen.orientation.unlock();
-        } else if ((screen as any)?.unlockOrientation) {
-          (screen as any).unlockOrientation();
+          try {
+            screen.orientation.unlock();
+          } catch {}
+        } else if (isFullscreen) {
+          await toggleFullscreen();
         }
-      } catch {}
+      }
+    } catch {
+      await toggleFullscreen();
     }
 
     setTimeout(() => {
       setQualityNotice(null);
-    }, 2200);
+    }, 2000);
   };
 
-  // Cross-browser & Mobile-Safe Fullscreen with Orientation Lock Support
+  // Cross-browser & Mobile-Safe Fullscreen
   const toggleFullscreen = async () => {
     try {
-      const isTouchOrMobile =
-        typeof window !== 'undefined' &&
-        (window.innerWidth < 768 || ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
       const doc: any = document;
-      const targetElem: any = playerContainerRef.current || videoRef.current;
+      const targetElem: any = modalContainerRef.current || playerContainerRef.current || document.documentElement;
 
       const isFS = !!(
         doc.fullscreenElement ||
@@ -779,7 +774,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
       if (!isFS) {
         let entered = false;
-        // 1. Try standard / Android element requestFullscreen
+        // 1. Try standard requestFullscreen on modal element
         if (targetElem?.requestFullscreen) {
           try {
             await targetElem.requestFullscreen();
@@ -797,7 +792,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           } catch {}
         }
 
-        // 2. If mobile and couldn't enter element fullscreen, try iOS video.webkitEnterFullscreen
+        // 2. If mobile and couldn't enter element fullscreen (like iOS Safari), try iOS video.webkitEnterFullscreen
         if (!entered && videoRef.current && (videoRef.current as any).webkitEnterFullscreen) {
           try {
             (videoRef.current as any).webkitEnterFullscreen();
@@ -805,18 +800,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           } catch {}
         }
 
-        // 3. Request landscape orientation lock on mobile
-        if (isTouchOrMobile) {
-          try {
-            if ((screen?.orientation as any)?.lock) {
-              await (screen.orientation as any).lock('landscape');
-            } else if ((screen as any)?.lockOrientation) {
-              (screen as any).lockOrientation('landscape');
-            }
-          } catch {}
-
-          setIsForcedLandscape(true);
-        }
+        // 3. Request landscape orientation lock on mobile if supported
+        try {
+          if ((screen?.orientation as any)?.lock) {
+            await (screen.orientation as any).lock('landscape');
+          } else if ((screen as any)?.lockOrientation) {
+            (screen as any).lockOrientation('landscape');
+          }
+        } catch {}
 
         setIsFullscreen(true);
       } else {
@@ -833,11 +824,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         try {
           if (screen?.orientation?.unlock) {
             screen.orientation.unlock();
+          } else if ((screen as any)?.unlockOrientation) {
+            (screen as any).unlockOrientation();
           }
         } catch {}
 
         setIsFullscreen(false);
-        setIsForcedLandscape(false);
       }
     } catch (err) {
       console.warn('Fullscreen handler:', err);
@@ -955,7 +947,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       clearInterval(nextEpisodeTimerRef.current);
       nextEpisodeTimerRef.current = null;
     }
-    setIsForcedLandscape(false);
     setIsFullscreen(false);
     onClose();
   }, [onClose]);
@@ -971,39 +962,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   if (!movie) return null;
 
   const isViewportLandscape = isDeviceLandscape || (typeof window !== 'undefined' && window.innerWidth > window.innerHeight);
-  const shouldApplyCssRotation = isForcedLandscape && !isViewportLandscape;
 
   return (
     <div
-      className={`fixed bg-black flex flex-col justify-between overflow-hidden transition-all duration-300 ${
-        shouldApplyCssRotation
-          ? 'shadow-2xl'
-          : 'inset-0 w-full h-full z-50'
-      }`}
-      style={
-        shouldApplyCssRotation
-          ? {
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              width: '100dvh',
-              height: '100dvw',
-              maxWidth: '100dvh',
-              maxHeight: '100dvw',
-              transform: 'translate3d(-50%, -50%, 0) rotate(90deg)',
-              transformOrigin: 'center center',
-              zIndex: 99999,
-              WebkitBackfaceVisibility: 'hidden',
-              backfaceVisibility: 'hidden',
-            }
-          : {
-              position: 'fixed',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              zIndex: 50,
-            }
-      }
+      ref={modalContainerRef}
+      className="fixed inset-0 w-full h-full z-50 bg-black flex flex-col justify-between overflow-hidden select-none"
     >
       {/* PERSISTENT TOP-RIGHT 'X' CLOSE BUTTON (Always accessible, never blocks or overlaps episode buttons) */}
       <div className={`fixed top-3 right-3 sm:top-4 sm:right-4 z-40 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
@@ -1013,7 +976,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           id="top-right-corner-close-btn"
           onClick={handleCloseSafely}
           className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-zinc-900/90 hover:bg-rose-600 active:bg-rose-700 text-white flex items-center justify-center border border-zinc-700/80 shadow-2xl backdrop-blur-lg cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group ${
-            controlsVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-80 scale-95 pointer-events-auto sm:opacity-0 sm:pointer-events-none'
+            controlsVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-70 scale-95 pointer-events-auto sm:opacity-0 sm:pointer-events-none'
           }`}
           title="Тоглуулагчийг хаах / Гарах (Esc)"
         >
@@ -1023,7 +986,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
       {/* Top Header Bar - Clean transparent header, NO screen darkening */}
       <header className={`p-2 sm:p-3 pr-14 sm:pr-16 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
-        isFullscreen || isForcedLandscape || isDeviceLandscape || isViewportLandscape
+        isFullscreen || isDeviceLandscape || isViewportLandscape
           ? controlsVisible
             ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
             : 'opacity-0 -translate-y-full pointer-events-none absolute inset-x-0 top-0'
@@ -1299,10 +1262,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 src={videoSrcToPlay}
                 autoPlay
                 playsInline
-                webkit-playsinline="true"
-                x5-playsinline="true"
-                x5-video-player-type="h5"
-                x5-video-player-fullscreen="true"
                 preload="auto"
                 controlsList="nodownload noplaybackrate noremoteplayback"
                 disablePictureInPicture
@@ -1379,7 +1338,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 }}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleVideoEnded}
-                className={`w-full h-full transition-all ${
+                className={`w-full h-full transition-all pointer-events-none ${
                   videoFitMode === 'cover'
                     ? 'object-cover'
                     : videoFitMode === 'fill'
@@ -1388,6 +1347,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 }`}
                 style={{
                   filter: videoBrightness !== 100 ? `brightness(${videoBrightness}%) contrast(105%)` : undefined,
+                  backgroundColor: '#000000',
                 }}
               />
 
@@ -1400,7 +1360,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   const rect = e.currentTarget.getBoundingClientRect();
                   const x = e.clientX - rect.left;
                   const width = rect.width;
-                  const ratio = x / width;
+                  const ratio = width > 0 ? x / width : 0.5;
 
                   // Check for double tap (within 300ms)
                   if (now - lastTapTimeRef.current < 300) {
@@ -1419,8 +1379,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       setDoubleTapFeedback('right');
                       setTimeout(() => setDoubleTapFeedback(null), 600);
                     } else {
-                      // Double tap center: toggle fullscreen safely
-                      toggleFullscreen();
+                      // Double tap center: toggle play/pause safely (NO screen rotation or black screen)
+                      togglePlay();
                     }
                     lastTapTimeRef.current = 0;
                     resetControlsTimer();
@@ -1981,44 +1941,44 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               <span>Дэлгэцийн байрлал (Orientation)</span>
                             </span>
                             <span className="text-[10px] text-cyan-300 font-bold">
-                              {isForcedLandscape || isDeviceLandscape ? 'Хөндлөн' : 'Босоо'}
+                              {isViewportLandscape ? 'Хөндлөн' : 'Босоо'}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
                             <button
                               type="button"
                               onClick={() => {
-                                if (isForcedLandscape) {
+                                if (isViewportLandscape) {
                                   toggleRotateLandscape();
                                 }
                                 resetControlsTimer();
                               }}
                               className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer font-bold transition-all border ${
-                                !isForcedLandscape && !isDeviceLandscape
+                                !isViewportLandscape
                                   ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/20'
                                   : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
                               }`}
                             >
                               <span>📱 Босоо (Portrait)</span>
-                              {!isForcedLandscape && !isDeviceLandscape && <Check className="w-3.5 h-3.5 text-black ml-1" />}
+                              {!isViewportLandscape && <Check className="w-3.5 h-3.5 text-black ml-1" />}
                             </button>
 
                             <button
                               type="button"
                               onClick={() => {
-                                if (!isForcedLandscape) {
+                                if (!isViewportLandscape) {
                                   toggleRotateLandscape();
                                 }
                                 resetControlsTimer();
                               }}
                               className={`py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer font-bold transition-all border ${
-                                isForcedLandscape || isDeviceLandscape
+                                isViewportLandscape
                                   ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/20'
                                   : 'bg-zinc-800/90 text-zinc-300 border-zinc-700 hover:bg-zinc-750'
                               }`}
                             >
                               <span>🔄 Хөндлөн (Landscape)</span>
-                              {(isForcedLandscape || isDeviceLandscape) && <Check className="w-3.5 h-3.5 text-black ml-1" />}
+                              {isViewportLandscape && <Check className="w-3.5 h-3.5 text-black ml-1" />}
                             </button>
                           </div>
                         </div>
@@ -2205,14 +2165,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       resetControlsTimer();
                     }}
                     className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer border flex items-center gap-1 ${
-                      isForcedLandscape
+                      isViewportLandscape
                         ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
                         : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
                     }`}
-                    title={isForcedLandscape ? "Босоо харах (Portrait)" : "Дэлгэцийг хөндлөн эргүүлэх (Landscape)"}
+                    title={isViewportLandscape ? "Босоо харах (Portrait)" : "Дэлгэцийг хөндлөн эргүүлэх (Landscape)"}
                   >
                     <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="hidden xl:inline text-xs">{isForcedLandscape ? 'Босоо' : 'Хөндлөн'}</span>
+                    <span className="hidden xl:inline text-xs">{isViewportLandscape ? 'Босоо' : 'Хөндлөн'}</span>
                   </button>
 
                   {/* Fullscreen Toggle */}
