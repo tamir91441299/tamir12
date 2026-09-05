@@ -641,3 +641,565 @@
 
 
 
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Admin Panel</title>
+  <style>
+    :root{
+      --bg:#0a0e18;
+      --bg2:#121a2d;
+      --panel:rgba(19,27,42,0.8);
+      --primary:#ff4d9d;
+      --secondary:#7c5cff;
+      --accent:#00d7ff;
+      --text:#edf6ff;
+      --muted:#a7b4ca;
+      --line:rgba(255,255,255,0.08);
+      --danger:#ff6b6b;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Segoe UI, Tahoma, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,77,157,0.22), transparent 28%),
+        radial-gradient(circle at top right, rgba(0,215,255,0.2), transparent 24%),
+        linear-gradient(130deg, var(--bg), var(--bg2));
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    button,input,select{
+      font:inherit;
+    }
+
+    .container{
+      width:min(1200px, 92%);
+      margin:0 auto;
+    }
+
+    header{
+      background:rgba(10,14,24,0.65);
+      border-bottom:1px solid var(--line);
+      backdrop-filter:blur(12px);
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+
+    .nav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:18px 0;
+    }
+
+    .logo{
+      display:flex; align-items:center; gap:12px;
+      font-weight:800; letter-spacing:1px;
+    }
+
+    .logo-mark{
+      width:38px;height:38px;border-radius:12px;
+      display:grid;place-items:center;
+      background:linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow:0 0 25px rgba(255,77,157,0.7);
+    }
+
+    .role-switch{
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+
+    .role-btn{
+      background:rgba(255,255,255,0.04);
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:999px;
+      padding:10px 16px;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .role-btn.active{
+      background:linear-gradient(135deg, var(--primary), var(--secondary));
+      border:none;
+      box-shadow:0 10px 25px rgba(124,92,255,0.4);
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:360px 1fr;
+      gap:24px;
+      padding:30px 0 60px;
+    }
+
+    .panel{
+      background:rgba(255,255,255,0.03);
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:0 18px 34px rgba(0,0,0,0.18);
+    }
+
+    .admin-box{
+      padding:22px;
+      position:sticky;
+      top:92px;
+    }
+
+    .admin-title{
+      margin:0 0 18px;
+      font-size:1.5rem;
+    }
+
+    .permission-note{
+      display:none;
+      padding:12px 14px;
+      border-radius:12px;
+      margin-bottom:18px;
+      font-size:0.92rem;
+      background:rgba(255,107,107,0.08);
+      border:1px solid rgba(255,107,107,0.3);
+      color:#ffc2c2;
+    }
+
+    .permission-note.show{
+      display:block;
+    }
+
+    .form-group{
+      margin-bottom:16px;
+    }
+
+    label{
+      display:block;
+      margin-bottom:8px;
+      color:var(--muted);
+      font-size:0.9rem;
+    }
+
+    input, select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      outline:none;
+    }
+
+    input:focus, select:focus{
+      border-color:rgba(0,215,255,0.5);
+      box-shadow:0 0 0 3px rgba(0,215,255,0.12);
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    .btn-submit{
+      width:100%;
+      margin-top:8px;
+      padding:14px 18px;
+      border:none;
+      border-radius:12px;
+      font-weight:700;
+      cursor:pointer;
+      color:white;
+      background:linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow:0 12px 30px rgba(124,92,255,0.4);
+    }
+
+    .content{
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
+
+    .topbar{
+      padding:22px 24px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:16px;
+    }
+
+    .topbar h2{
+      margin:0;
+      font-size:clamp(1.7rem, 2vw, 2.5rem);
+    }
+
+    .count{
+      color:var(--muted);
+      font-size:0.92rem;
+      background:rgba(255,255,255,0.04);
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:8px 12px;
+    }
+
+    .video-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:22px;
+      padding:0 0 10px;
+    }
+
+    .video-card{
+      background:rgba(255,255,255,0.03);
+      border:1px solid var(--line);
+      border-radius:22px;
+      overflow:hidden;
+    }
+
+    .thumb{
+      position:relative;
+      height:220px;
+      background-size:cover;
+      background-position:center;
+    }
+
+    .thumb::after{
+      content:"▶";
+      position:absolute;
+      right:18px; bottom:16px;
+      width:52px;height:52px;
+      display:grid;place-items:center;
+      border-radius:50%;
+      background:rgba(10,14,24,0.7);
+      border:1px solid rgba(255,255,255,0.12);
+      color:white;
+      font-size:1.1rem;
+    }
+
+    .video-body{
+      padding:18px 18px 20px;
+    }
+
+    .video-top{
+      display:flex; justify-content:space-between; gap:12px; align-items:center;
+      margin-bottom:10px;
+    }
+
+    .tag{
+      padding:6px 10px; border-radius:999px;
+      font-size:0.76rem;
+      background:rgba(255,255,255,0.04);
+      border:1px solid var(--line);
+      color:var(--muted);
+    }
+
+    .video-body h3{
+      margin:0 0 8px;
+      font-size:1.25rem;
+    }
+
+    .meta{
+      display:flex; justify-content:space-between;
+      color:var(--muted); font-size:0.88rem;
+      margin-bottom:12px;
+    }
+
+    .video-body p{
+      color:var(--muted);
+      line-height:1.7;
+      font-size:0.96rem;
+      margin:0 0 16px;
+    }
+
+    .video-actions{
+      display:flex; justify-content:space-between; gap:10px;
+    }
+
+    .watch-btn, .delete-btn{
+      border:none; border-radius:12px;
+      cursor:pointer; padding:10px 12px; font-weight:700;
+    }
+
+    .watch-btn{
+      background:linear-gradient(135deg, var(--primary), var(--secondary));
+      color:white;
+      flex:1;
+    }
+
+    .delete-btn{
+      background:rgba(255,255,255,0.04);
+      border:1px solid var(--line);
+      color:var(--text);
+    }
+
+    .empty{
+      padding:26px;
+      border:1px dashed var(--line);
+      border-radius:20px;
+      text-align:center;
+      color:var(--muted);
+      background:rgba(255,255,255,0.02);
+    }
+
+    @media (max-width:980px){
+      .layout{grid-template-columns:1fr}
+      .admin-box{position:static}
+      .video-grid{grid-template-columns:1fr}
+    }
+
+    @media (max-width:560px){
+      .video-actions{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="logo">
+        <div class="logo-mark">N</div>
+        <span>ANIMENEXA</span>
+      </div>
+
+      <div class="role-switch">
+        <button class="role-btn active" data-role="admin">Admin</button>
+        <button class="role-btn" data-role="user">User</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container layout">
+    <aside class="panel admin-box">
+      <h1 class="admin-title">Video manager</h1>
+
+      <div id="permissionNote" class="permission-note">
+        You are a regular user. You cannot add videos.
+      </div>
+
+      <form id="videoForm">
+        <div class="form-group">
+          <label for="title">Video title</label>
+          <input id="title" type="text" placeholder="Shadow Blade" required />
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category">
+            <option value="Action">Action</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="Drama">Drama</option>
+            <option value="Adventure">Adventure</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="image">Image URL</label>
+          <input id="image" type="url" placeholder="https://..." required />
+        </div>
+
+        <div class="form-group">
+          <label for="videoUrl">Video URL</label>
+          <input id="videoUrl" type="url" placeholder="https://..." required />
+        </div>
+
+        <div class="form-group">
+          <label for="duration">Duration</label>
+          <input id="duration" type="text" placeholder="24 min" required />
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <input id="description" type="text" placeholder="Short info..." required />
+        </div>
+
+        <button class="btn-submit" type="submit">Add video</button>
+      </form>
+    </aside>
+
+    <main class="content">
+      <div class="panel topbar">
+        <h2>Uploaded videos</h2>
+        <div id="videoCount" class="count">0 items</div>
+      </div>
+
+      <div id="videoList" class="video-grid"></div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "animeProtectedVideos";
+
+    const defaultVideos = [
+      {
+        id: 1,
+        title: "Moonlight Strike",
+        category: "Action",
+        image: "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80",
+        videoUrl: "https://www.youtube.com/watch?v=ysz5S6PUM-U",
+        duration: "24 min",
+        description: "A mysterious swordsman begins a dangerous battle to protect his city."
+      },
+      {
+        id: 2,
+        title: "Crimson Echo",
+        category: "Drama",
+        image: "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=900&q=80",
+        videoUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
+        duration: "22 min",
+        description: "A forgotten past returns when the sky turns crimson every night."
+      }
+    ];
+
+    let currentRole = "admin";
+
+    const videoForm = document.getElementById("videoForm");
+    const permissionNote = document.getElementById("permissionNote");
+    const videoList = document.getElementById("videoList");
+    const videoCount = document.getElementById("videoCount");
+
+    function loadVideos() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultVideos));
+        return [...defaultVideos];
+      }
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) && parsed.length ? parsed : [...defaultVideos];
+      } catch {
+        return [...defaultVideos];
+      }
+    }
+
+    let videos = loadVideos();
+
+    function saveVideos() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+    }
+
+    function updateRoleUI() {
+      const roleButtons = document.querySelectorAll(".role-btn");
+      roleButtons.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.role === currentRole);
+      });
+
+      const isAdmin = currentRole === "admin";
+      videoForm.classList.toggle("hidden", !isAdmin);
+      permissionNote.classList.toggle("show", !isAdmin);
+
+      if (!isAdmin) {
+        permissionNote.textContent = "You are a regular user. You cannot add videos.";
+      }
+    }
+
+    function renderVideos() {
+      if (!videos.length) {
+        videoList.innerHTML = `
+          <div class="empty">
+            No videos added yet.
+          </div>
+        `;
+        videoCount.textContent = "0 items";
+        return;
+      }
+
+      videoList.innerHTML = videos.map(video => `
+        <article class="video-card">
+          <div class="thumb" style="background-image:url('${video.image}')"></div>
+          <div class="video-body">
+            <div class="video-top">
+              <span class="tag">${video.category}</span>
+              <span class="tag">${video.duration}</span>
+            </div>
+
+            <h3>${video.title}</h3>
+
+            <div class="meta">
+              <span>Anime</span>
+              <span>HD</span>
+            </div>
+
+            <p>${video.description}</p>
+
+            <div class="video-actions">
+              <button class="watch-btn" onclick="window.open('${video.videoUrl}', '_blank')">Watch</button>
+              <button class="delete-btn" data-id="${video.id}">Delete</button>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+      videoCount.textContent = `${videos.length} item${videos.length === 1 ? "" : "s"}`;
+
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = Number(btn.dataset.id);
+          if (currentRole !== "admin") {
+            permissionNote.textContent = "Only admin can delete videos.";
+            permissionNote.classList.add("show");
+            return;
+          }
+
+          videos = videos.filter(v => v.id !== id);
+          saveVideos();
+          renderVideos();
+        });
+      });
+    }
+
+    document.querySelectorAll(".role-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentRole = btn.dataset.role;
+        updateRoleUI();
+      });
+    });
+
+    videoForm.addEventListener("submit", function(e){
+      e.preventDefault();
+
+      if (currentRole !== "admin") {
+        permissionNote.textContent = "Only admin can add videos.";
+        permissionNote.classList.add("show");
+        return;
+      }
+
+      const title = document.getElementById("title").value.trim();
+      const category = document.getElementById("category").value;
+      const image = document.getElementById("image").value.trim();
+      const videoUrl = document.getElementById("videoUrl").value.trim();
+      const duration = document.getElementById("duration").value.trim();
+      const description = document.getElementById("description").value.trim();
+
+      if (!title || !image || !videoUrl || !duration || !description) return;
+
+      videos.unshift({
+        id: Date.now(),
+        title,
+        category,
+        image,
+        videoUrl,
+        duration,
+        description
+      });
+
+      saveVideos();
+      renderVideos();
+      videoForm.reset();
+    });
+
+    updateRoleUI();
+    renderVideos();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
