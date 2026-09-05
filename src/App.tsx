@@ -219,7 +219,7 @@ export default function App() {
     setShowAuthModal(true);
   };
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {

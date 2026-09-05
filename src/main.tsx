@@ -65,6 +65,20 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// Register PWA Service Worker
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('FlickNime PWA Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('PWA Service Worker registration failed:', err);
+      });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

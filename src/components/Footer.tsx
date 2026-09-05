@@ -47,13 +47,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
                 </button>
               )}
 
-              {onOpenInstallModal && isAdmin && (
+              {onOpenInstallModal && (
                 <button
+                  id="footer-install-app-btn"
                   onClick={onOpenInstallModal}
-                  className="inline-flex items-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 text-amber-300 border border-amber-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-sm"
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Утсандаа Апп суулгах</span>
+                  <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>📲 Апп татах / Утсандаа суулгах</span>
                 </button>
               )}
 

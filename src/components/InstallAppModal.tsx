@@ -25,7 +25,16 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [activePlatform, setActivePlatform] = useState<'android' | 'ios' | 'pc'>('android');
 
-  const appUrl = 'https://ais-pre-6j76b42ip5fkf32k4rqyau-634365350981.asia-northeast1.run.app';
+  const [appUrl, setAppUrl] = useState('https://ais-pre-6j76b42ip5fkf32k4rqyau-634365350981.asia-northeast1.run.app');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.origin) {
+      const origin = window.location.origin;
+      if (!origin.includes('localhost:3000')) {
+        setAppUrl(window.location.href.split('#')[0]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -130,14 +139,13 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
               </button>
             </div>
 
-            {deferredPrompt && (
-              <button
-                onClick={handleInstallClick}
-                className="w-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 text-sm transition-all transform hover:scale-[1.02] cursor-pointer"
-              >
-                <Download className="w-4 h-4" /> Төхөөрөмж дээрээ шууд суулгах (1-Click Install)
-              </button>
-            )}
+            <button
+              onClick={handleInstallClick}
+              className="w-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 text-sm transition-all transform hover:scale-[1.02] cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              {deferredPrompt ? 'Төхөөрөмж дээрээ шууд суулгах (1-Click Install)' : 'Линк хуулж хөтөч дээрээ суулгах'}
+            </button>
           </div>
 
           {/* Platform Tab Switcher */}
