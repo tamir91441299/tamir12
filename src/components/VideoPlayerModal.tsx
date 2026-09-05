@@ -81,7 +81,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   isMoviePackage = false,
   onOpenAuthModal,
 }) => {
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
 
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
     movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0

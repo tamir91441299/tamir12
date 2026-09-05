@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileAnimeMenuOpen, setIsMobileAnimeMenuOpen] = useState(false);
   const animeDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com';
+  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
 
   const animeCategories: {
     id: MovieSubcategory;
