@@ -3,4 +3,5 @@ export * from './myHeroAcademiaS2';
 export * from './megaloBox';
 export * from './jujutsuKaisen';
 export * from './kamiKuzuIdol';
+export * from './deathNote';
 

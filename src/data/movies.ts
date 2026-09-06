@@ -4,6 +4,7 @@ import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
+import { DEATH_NOTE } from './anime/deathNote';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -196,10 +197,11 @@ export const SAMPLE_MOVIES: Movie[] = [
   MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
   JUJUTSU_KAISEN_S1,
-  KAMI_KUZU_IDOL
+  KAMI_KUZU_IDOL,
+  DEATH_NOTE
 ];
 
-export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL };
+export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 51 },
@@ -219,7 +221,8 @@ export const GENRE_COUNTS: { name: string; count: number }[] = [
 export const RELEASE_YEARS = [
   2026, 2025, 2024,
   2023, 2022, 2021,
-  2020, 2019, 2018
+  2020, 2019, 2018,
+  2006
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
@@ -232,6 +235,26 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 18:30',
     likes: 24
+  },
+  {
+    id: 'c_dn1',
+    movieId: 'm_death_note',
+    userName: 'Ганбаяр',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    text: 'Үхлийн Тэмдэглэл бол анимэ ертөнцийн бүх цаг үеийн сор бүтээл! Ягами Лайт болон L хоёрын сэтгэл зүйн тулаан ямар ч эргэлзээгүй сод ухаан.',
+    rating: 10,
+    date: 'Өнөөдөр 20:15',
+    likes: 56
+  },
+  {
+    id: 'c_dn2',
+    movieId: 'm_death_note',
+    userName: 'Номин',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
+    text: 'Бүрэн 37 анги орсонд маш их баярлалаа! Кирагийн төлөвлөгөө, Рьюкийн алим идэж буй хэсгүүдийг дуу оруулгатай үзэх үнэхээр таашаалтай байлаа.',
+    rating: 10,
+    date: 'Өчигдөр 22:40',
+    likes: 38
   },
   {
     id: 'c2',
