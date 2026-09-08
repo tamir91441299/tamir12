@@ -5,7 +5,7 @@ export const MY_HERO_ACADEMIA_S1: Movie = {
   title: 'My Hero Academia Season 1',
   titleMongolian: 'Миний Баатрын Сургууль Бүлэг 1',
   type: 'anime',
-  poster: 'https://tse2.mm.bing.net/th/id/OIP.u6OP9gu-9w_f_QQB-EioUQHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
+  poster: 'https://cdn.myanimelist.net/images/anime/10/78745l.jpg',
   backdrop: 'https://tse2.mm.bing.net/th/id/OIP.u6OP9gu-9w_f_QQB-EioUQHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2024,
   duration: '13 анги',

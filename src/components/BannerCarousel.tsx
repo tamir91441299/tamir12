@@ -34,6 +34,16 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const currentMovie = featuredMovies[currentIndex];
   const audioLabel = 'MN SUB / DUB';
 
+  const [bannerImgSrc, setBannerImgSrc] = useState<string | undefined>(
+    currentMovie?.backdrop || currentMovie?.poster
+  );
+  const [bannerHasError, setBannerHasError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setBannerImgSrc(currentMovie?.backdrop || currentMovie?.poster);
+    setBannerHasError(false);
+  }, [currentMovie?.id, currentMovie?.backdrop, currentMovie?.poster]);
+
   return (
     <div className="relative w-full rounded-3xl overflow-hidden cinema-glass-elevated mb-8 group/banner film-frame-decor">
       {/* Background image & Theatrical Lighting */}
@@ -46,14 +56,17 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
           ? 'min-h-[460px] h-[520px]'
           : 'min-h-[360px] sm:min-h-[440px] md:min-h-[500px] h-[380px] sm:h-[480px] md:h-[540px]'
       }`}>
-        {(currentMovie.backdrop || currentMovie.poster) ? (
+        {bannerImgSrc && !bannerHasError ? (
           <img
-            src={currentMovie.backdrop || currentMovie.poster}
+            src={bannerImgSrc}
             alt={currentMovie.titleMongolian}
             referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.currentTarget;
-              target.style.display = 'none';
+            onError={() => {
+              if (bannerImgSrc === currentMovie.backdrop && currentMovie.poster && currentMovie.poster !== currentMovie.backdrop) {
+                setBannerImgSrc(currentMovie.poster);
+              } else {
+                setBannerHasError(true);
+              }
             }}
             className="w-full h-full object-cover object-center transform scale-102 group-hover/banner:scale-105 transition-transform duration-1000 ease-out"
           />

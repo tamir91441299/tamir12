@@ -4,4 +4,5 @@ export * from './megaloBox';
 export * from './jujutsuKaisen';
 export * from './kamiKuzuIdol';
 export * from './deathNote';
+export * from './legendOfKorra';
 

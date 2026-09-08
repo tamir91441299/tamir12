@@ -32,6 +32,9 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/ai", aiRouter);
 app.use(streamRouter);
 
+// Static assets from public folder
+app.use(express.static(path.join(process.cwd(), "public")));
+
 // Vite middleware or static serving
 async function setupServer() {
   if (process.env.NODE_ENV !== "production") {

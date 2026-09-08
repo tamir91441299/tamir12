@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Star, Bookmark, Sparkles, Tv, Film, Clapperboard } from 'lucide-react';
 import { Movie } from '../types';
 
@@ -21,6 +21,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   const typeBadgeLabel = movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'SERIES' : 'CINEMA';
   const audioLabel = movie.country === 'Монгол' ? 'MN ORIGINAL' : movie.type === 'anime' ? 'MN SUB / DUB' : 'MN DUB';
 
+  const [imgSrc, setImgSrc] = useState<string | undefined>(movie.poster || movie.backdrop);
+  const [hasError, setHasError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setImgSrc(movie.poster || movie.backdrop);
+    setHasError(false);
+  }, [movie.poster, movie.backdrop]);
+
   return (
     <div className="group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer">
       {/* Poster Image Container */}
@@ -28,14 +36,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         className="relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-b from-[#181b24] via-[#101218] to-[#0a0b0f] flex items-center justify-center"
         onClick={() => onOpenDetails(movie)}
       >
-        {movie.poster ? (
+        {imgSrc && !hasError ? (
           <img
-            src={movie.poster}
+            src={imgSrc}
             alt={movie.titleMongolian}
             referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.currentTarget;
-              target.style.display = 'none';
+            onError={() => {
+              if (imgSrc === movie.poster && movie.backdrop && movie.backdrop !== movie.poster) {
+                setImgSrc(movie.backdrop);
+              } else {
+                setHasError(true);
+              }
             }}
             draggable={false}
             onContextMenu={(e) => e.preventDefault()}

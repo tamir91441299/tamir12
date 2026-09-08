@@ -65,12 +65,24 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Register PWA Service Worker
+// Register PWA Service Worker and clean legacy caches
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  // Clear any legacy caches that may hold stale syntax error pages
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        if (key === 'flicknime-cache-v1') {
+          caches.delete(key).catch(() => {});
+        }
+      });
+    }).catch(() => {});
+  }
+
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
+        reg.update().catch(() => {});
         console.log('FlickNime PWA Service Worker registered:', reg.scope);
       })
       .catch((err) => {

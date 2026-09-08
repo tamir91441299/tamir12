@@ -91,6 +91,54 @@ export const INITIAL_PRESET_CODES: PromoCode[] = [
     createdBy: 'Тамир Админ',
     isActive: true,
   },
+  {
+    id: 'promo_korra',
+    code: 'KORRA',
+    type: 'anime',
+    durationDays: 30,
+    description: '🌊 The Legend of Korra (Коррагийн Домог) анимэ үзэх 30 хоногийн эрх',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_legendofkorra',
+    code: 'LEGENDOFKORRA',
+    type: 'anime',
+    durationDays: 30,
+    description: '🌊 The Legend of Korra Бүрэн цуврал үзэх 30 хоногийн багц',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_korra2025',
+    code: 'KORRA2025',
+    type: 'anime',
+    durationDays: 30,
+    description: '🌊 The Legend of Korra 2025 онцгой багц (30 хоног)',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
+  {
+    id: 'promo_avatarkorra',
+    code: 'AVATARKORRA',
+    type: 'anime',
+    durationDays: 30,
+    description: '🌊 Аватар Коррагийн Домог 30 хоногийн бүрэн эрх',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2025.01.01',
+    createdBy: 'Тамир Админ',
+    isActive: true,
+  },
 ];
 
 const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';
@@ -243,6 +291,27 @@ export function redeemCode(inputCode: string): RedeemResult {
       type: 'anime',
       durationDays: 30,
       message: '🎤 Kami Kuzu Idol (Phantom of the Idol) анимэ үзэх 30 хоногийн багцын эрх амжилттай идэвхжлээ!',
+    };
+  }
+
+  // Instant recognition for The Legend of Korra codes
+  if (
+    clean === 'KORRA' ||
+    clean === 'LEGENDOFKORRA' ||
+    clean === 'LEGEND_OF_KORRA' ||
+    clean === 'LEGEND-OF-KORRA' ||
+    clean === 'AVATARKORRA' ||
+    clean === 'AVATAR_KORRA' ||
+    clean === 'AVATAR-KORRA' ||
+    clean === 'KORRA2025' ||
+    clean === 'KORRA2026' ||
+    clean === 'KORRA30'
+  ) {
+    return {
+      success: true,
+      type: 'anime',
+      durationDays: 30,
+      message: '🌊 The Legend of Korra (Коррагийн Домог) анимэ цуврал үзэх 30 хоногийн багцын эрх амжилттай идэвхжлээ!',
     };
   }
 

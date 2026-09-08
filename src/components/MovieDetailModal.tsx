@@ -78,6 +78,18 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
 
+  const [backdropSrc, setBackdropSrc] = useState<string | undefined>(movie?.backdrop || movie?.poster);
+  const [backdropError, setBackdropError] = useState(false);
+  const [posterSrc, setPosterSrc] = useState<string | undefined>(movie?.poster || movie?.backdrop);
+  const [posterError, setPosterError] = useState(false);
+
+  useEffect(() => {
+    setBackdropSrc(movie?.backdrop || movie?.poster);
+    setBackdropError(false);
+    setPosterSrc(movie?.poster || movie?.backdrop);
+    setPosterError(false);
+  }, [movie?.id, movie?.backdrop, movie?.poster]);
+
   // Episode state management
   const [episodesList, setEpisodesList] = useState<Movie['episodes']>(movie?.episodes || []);
   const [showAddEpForm, setShowAddEpForm] = useState(false);
@@ -133,6 +145,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
+  const isKorra = movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра');
 
   // Check access permission for specific episode
   // Rule:
@@ -254,13 +267,28 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       13: '13-р анги - Гунигт бөгөөд богинохон (Shoe Sole Bottle - OVA)'
     };
 
+    const defaultKorraTitles: Record<number, string> = {
+      1: '1-р анги - Бүгд Найрамдах Хотод Тавтай Морил (Welcome to Republic City)',
+      2: '2-р анги - Салхин дахь навч (A Leaf in the Wind)',
+      3: '3-р анги - Илчлэлт (The Revelation)',
+      4: '4-р анги - Шөнийн дуу хоолой (The Voice in the Night)',
+      5: '5-р анги - Өрсөлдөөний сүнс (The Spirit of Competition)',
+      6: '6-р анги - Ялагч нь... (And the Winner Is...)',
+      7: '7-р анги - Үр дагавар (The Aftermath)',
+      8: '8-р анги - Хязгаарууд уулзах үед (When Extremes Meet)',
+      9: '9-р анги - Өнгөрснөөс эргэн ирсэн нь (Out of the Past)',
+      10: '10-р анги - Эргэлтийн цэг (Turning the Tides)',
+      11: '11-р анги - Нуугдмал үнэн (Skeletons in the Closet)',
+      12: '12-р анги - Төгсгөлийн тулаан (Endgame - Төгсгөл)'
+    };
+
     const newEpList: Episode[] = [];
 
     for (let i = 1; i <= targetCount; i++) {
       // Find URL: either corresponding line, or first link
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
-      const title = existing?.title || (is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
+      const title = existing?.title || (isKorra ? defaultKorraTitles[i] || `${i}-р анги` : is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
       const duration = existing?.duration || '24 мин';
 
       newEpList.push({
@@ -347,14 +375,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               />
             ) : (
               <>
-                {(movie.backdrop || movie.poster) ? (
+                {backdropSrc && !backdropError ? (
                   <img
-                    src={movie.backdrop || movie.poster}
+                    src={backdropSrc}
                     alt={movie.titleMongolian}
                     referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
+                    onError={() => {
+                      if (backdropSrc === movie.backdrop && movie.poster && movie.poster !== movie.backdrop) {
+                        setBackdropSrc(movie.poster);
+                      } else {
+                        setBackdropError(true);
+                      }
                     }}
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
@@ -402,14 +433,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="p-4 sm:p-6 space-y-6 -mt-12 relative z-10 bg-[#0b0d13]/80 backdrop-blur-md border-t border-white/[0.04]">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               {/* Poster Image */}
-              {movie.poster ? (
+              {posterSrc && !posterError ? (
                 <img
-                  src={movie.poster}
+                  src={posterSrc}
                   alt={movie.titleMongolian}
                   referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
+                  onError={() => {
+                    if (posterSrc === movie.poster && movie.backdrop && movie.backdrop !== movie.poster) {
+                      setPosterSrc(movie.backdrop);
+                    } else {
+                      setPosterError(true);
+                    }
                   }}
                   draggable={false}
                   onContextMenu={(e) => e.preventDefault()}

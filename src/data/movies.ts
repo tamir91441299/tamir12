@@ -5,6 +5,7 @@ import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
+import { LEGEND_OF_KORRA } from './anime/legendOfKorra';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -90,7 +91,7 @@ export const SAMPLE_MOVIES: Movie[] = [
     title: '91 Days',
     titleMongolian: '91 Өдөр',
     type: 'anime',
-    poster: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/2023/10/91-days-anime-cover-art.jpg',
+    poster: 'https://cdn.myanimelist.net/images/anime/13/80515l.jpg',
     backdrop: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/i/99b0b4b2-1ec2-42db-8d72-689653733407/dagx653-ad709f69-bf46-4136-b075-6ae9c48a78e6.png/v1/fill/w_512,h_512,q_80,strp/91_days_folder_icon_by_holiekay_dagx653-fullview.jpg',
     year: 2024,
     duration: '13 анги',
@@ -198,23 +199,24 @@ export const SAMPLE_MOVIES: Movie[] = [
   MEGALO_BOX_S1,
   JUJUTSU_KAISEN_S1,
   KAMI_KUZU_IDOL,
-  DEATH_NOTE
+  DEATH_NOTE,
+  LEGEND_OF_KORRA
 ];
 
-export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE };
+export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
-  { name: 'Animation', count: 51 },
-  { name: 'Shounen', count: 38 },
-  { name: 'Action', count: 51 },
-  { name: 'Superpower', count: 38 },
+  { name: 'Animation', count: 63 },
+  { name: 'Shounen', count: 50 },
+  { name: 'Action', count: 63 },
+  { name: 'Superpower', count: 50 },
+  { name: 'Adventure', count: 50 },
+  { name: 'Fantasy', count: 50 },
   { name: 'Drama', count: 26 },
   { name: 'Crime', count: 13 },
   { name: 'Thriller', count: 13 },
   { name: 'Sports', count: 13 },
-  { name: 'Adventure', count: 38 },
   { name: 'Sci-Fi', count: 13 },
-  { name: 'Fantasy', count: 38 },
   { name: 'Comedy', count: 25 }
 ];
 
@@ -226,6 +228,26 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_korra1',
+    movieId: 'm_legend_of_korra',
+    userName: 'Төгөлдөр',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Коррагийн Домог анимэ цуврал орж ирсэнд үнэхээр баяртай байна! Элементүүдийн тулаан, Republic City хотын уур амьсгал, монгол дуу оруулга нь гайхалтай болжээ.',
+    rating: 10,
+    date: 'Өнөөдөр 21:05',
+    likes: 45
+  },
+  {
+    id: 'c_korra2',
+    movieId: 'm_legend_of_korra',
+    userName: 'Сарнай',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    text: 'Аватар Коррагийн 1-р бүлэг бүх 12 ангиараа чанарын өндөр түвшинд холбогдсон байна. Амоны эсрэг тэмцэл үнэхээр сэтгэл түгшээм гоё!',
+    rating: 10,
+    date: 'Өнөөдөр 19:40',
+    likes: 32
+  },
   {
     id: 'c1',
     movieId: 'm_91_days',
