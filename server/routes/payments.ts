@@ -5,15 +5,23 @@ const router = Router();
 // POST /api/payments/verify - Simulate payment verification (QPay, MonPay, Wallet)
 router.post('/verify', (req: Request, res: Response) => {
   try {
-    const { packageType, method, userBalance } = req.body;
+    const { packageType, method, userBalance, price } = req.body;
 
     const prices: Record<string, number> = {
-      anime: 4000,
-      movie: 4000,
+      anime_15d: 2500,
+      anime_1m: 5000,
+      anime_2m: 8500,
+      movie_15d: 2500,
+      movie_1m: 5000,
+      movie_2m: 8500,
+      anime: 5000,
+      movie: 5000,
       full_vip: 7000,
+      full_vip_1m: 7000,
+      full_vip_2m: 12000,
     };
 
-    const requiredPrice = prices[packageType] || 4000;
+    const requiredPrice = Number(price) || prices[packageType] || 2500;
 
     if (method === 'wallet') {
       if ((userBalance || 0) < requiredPrice) {

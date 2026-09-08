@@ -302,7 +302,7 @@ export default function App() {
     }
   });
 
-  // Package states: Anime (4,000₮), Movie (4,000₮), Full VIP (7,000₮)
+  // Package states: 15 days (2,500₮), 1 month (5,000₮), 2 months (8,500₮)
   const [isAnimePackage, setIsAnimePackage] = useState<boolean>(() => {
     try {
       return localStorage.getItem('ioio_anime_package') === 'true';
@@ -655,14 +655,16 @@ export default function App() {
   const handleSubscribePackage = (
     packageType: 'anime' | 'movie' | 'full_vip',
     deductedAmount: number = 0,
-    durationMonths: number = 1
+    durationMonths: number = 1,
+    durationDays?: number
   ) => {
     if (deductedAmount > 0) {
       setUserBalance((prev) => Math.max(0, prev - deductedAmount));
     }
 
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + durationMonths * 30);
+    const daysToAdd = durationDays ? durationDays : Math.round(durationMonths * 30);
+    expiryDate.setDate(expiryDate.getDate() + daysToAdd);
     const expiryStr = expiryDate.toLocaleDateString('mn-MN');
 
     if (packageType === 'anime') {
@@ -1220,7 +1222,7 @@ export default function App() {
         />
       )}
 
-      {/* Payment Modal (Anime Package 4,000₮, Movie Package 4,000₮, VIP 7,000₮) */}
+      {/* Payment Modal (15 days 2,500₮, 1 month 5,000₮, 2 months 8,500₮) */}
       {(paymentMovie || showPaymentModal) && (
         <PaymentModal
           movie={paymentMovie}

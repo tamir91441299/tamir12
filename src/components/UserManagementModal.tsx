@@ -213,7 +213,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   // Points & Balance Management state
   const [pointsModalUser, setPointsModalUser] = useState<UserDetail | null>(null);
   const [pointsOperation, setPointsOperation] = useState<'add' | 'subtract' | 'set'>('add');
-  const [pointsInputAmount, setPointsInputAmount] = useState<number>(4000);
+  const [pointsInputAmount, setPointsInputAmount] = useState<number>(2500);
   const [selectedGrantPkg, setSelectedGrantPkg] = useState<'none' | 'full_vip' | 'movie' | 'anime'>('none');
 
   // New User Form State
@@ -568,7 +568,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleOpenPointsModal = (
     user: UserDetail,
     defaultOp: 'add' | 'subtract' | 'set' = 'add',
-    defaultAmt: number = 4000
+    defaultAmt: number = 2500
   ) => {
     setPointsModalUser(user);
     setPointsOperation(defaultOp);
@@ -998,40 +998,40 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 4000)}
+                        onClick={() => handleQuickPointsChange(u.id, 2500)}
                         className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+4,000₮ (1 сарын эрх)"
+                        title="+2,500₮ (15 хоногийн эрх)"
                       >
-                        +4k
+                        +2.5k
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 7000)}
+                        onClick={() => handleQuickPointsChange(u.id, 5000)}
+                        className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
+                        title="+5,000₮ (1 сарын эрх)"
+                      >
+                        +5k
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickPointsChange(u.id, 8500)}
                         className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+7,000₮ (2 сарын эрх - 7k)"
+                        title="+8,500₮ (2 сарын эрх - 8.5k)"
                       >
-                        +7k
+                        +8.5k
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 10000)}
-                        className="bg-purple-950/90 hover:bg-purple-900 text-purple-300 border border-purple-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+10,000₮ (3 сарын эрх - 10k)"
-                      >
-                        +10k
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickPointsChange(u.id, -4000)}
-                        disabled={u.walletBalance < 4000}
+                        onClick={() => handleQuickPointsChange(u.id, -2500)}
+                        disabled={u.walletBalance < 2500}
                         className="bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="-4,000₮ (Эрхийн оноо хасах)"
+                        title="-2,500₮ (Эрхийн оноо хасах)"
                       >
-                        -4k
+                        -2.5k
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleOpenPointsModal(u, 'add', 4000)}
+                        onClick={() => handleOpenPointsModal(u, 'add', 2500)}
                         className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 px-2 py-1 rounded text-[10px] font-extrabold flex items-center gap-0.5 transition-all cursor-pointer"
                         title="Оноо нэмэх / хасах дэлгэрэнгүй цонх"
                       >
@@ -2003,11 +2003,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               {pointsOperation === 'add' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { label: '+4,000 ₮ (1 сар эрх)', val: 4000, color: 'border-cyan-500/40 text-cyan-300 font-bold' },
-                    { label: '+7,000 ₮ (2 сар эрх / 7k)', val: 7000, color: 'border-amber-500/40 text-amber-300 font-black' },
-                    { label: '+10,000 ₮ (3 сар эрх / 10k)', val: 10000, color: 'border-purple-500/40 text-purple-300 font-black' },
+                    { label: '+2,500 ₮ (15 хоног / 2.5k)', val: 2500, color: 'border-rose-500/40 text-rose-300 font-bold' },
+                    { label: '+5,000 ₮ (1 сар / 5k)', val: 5000, color: 'border-cyan-500/40 text-cyan-300 font-bold' },
+                    { label: '+8,500 ₮ (2 сар / 8.5k)', val: 8500, color: 'border-amber-500/40 text-amber-300 font-black' },
                     { label: '+1,000 ₮ (Нэг удаа)', val: 1000, color: 'border-zinc-800 text-zinc-300' },
-                    { label: '+15,000 ₮ (VIP 3 сар)', val: 15000, color: 'border-amber-500/40 text-amber-300 font-bold' },
+                    { label: '+12,000 ₮ (VIP 2 сар)', val: 12000, color: 'border-amber-500/40 text-amber-300 font-bold' },
                     { label: '+20,000 ₮ (Хэтэвч)', val: 20000, color: 'border-emerald-500/40 text-emerald-300 font-bold' },
                   ].map((p) => (
                     <button
@@ -2029,10 +2029,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               {pointsOperation === 'subtract' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { label: '-4,000 ₮ (Эрхийн оноо)', val: 4000, color: 'border-rose-500/40 text-rose-300 font-bold' },
-                    { label: '-7,000 ₮ (VIP оноо)', val: 7000, color: 'border-rose-500/40 text-rose-300 font-black' },
+                    { label: '-2,500 ₮ (15 хоног)', val: 2500, color: 'border-rose-500/40 text-rose-300 font-bold' },
+                    { label: '-5,000 ₮ (1 сар эрх)', val: 5000, color: 'border-rose-500/40 text-rose-300 font-bold' },
+                    { label: '-8,500 ₮ (2 сар эрх)', val: 8500, color: 'border-rose-500/40 text-rose-300 font-black' },
                     { label: '-1,000 ₮', val: 1000, color: 'border-zinc-800 text-zinc-300' },
-                    { label: '-5,000 ₮', val: 5000, color: 'border-zinc-800 text-zinc-300' },
                     { label: '-10,000 ₮', val: 10000, color: 'border-rose-500/40 text-rose-300 font-bold' },
                     { label: 'Бүгдийг 0 болгох', val: pointsModalUser.walletBalance, color: 'border-rose-700/60 text-rose-400 font-extrabold' },
                   ].map((p, idx) => (
@@ -2054,7 +2054,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
               {pointsOperation === 'set' && (
                 <div className="grid grid-cols-3 gap-2">
-                  {[0, 4000, 7000, 10000, 20000, 50000].map((val) => (
+                  {[0, 2500, 5000, 8500, 15000, 50000].map((val) => (
                     <button
                       key={val}
                       type="button"
@@ -2388,41 +2388,40 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleQuickPointsChange(selectedUser.id, 4000)}
+                  onClick={() => handleQuickPointsChange(selectedUser.id, 2500)}
+                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="+2,500₮ (15 хоног) нэмэх"
+                >
+                  <Plus className="w-3 h-3" />
+                  +2.5k (15х)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPointsChange(selectedUser.id, 5000)}
                   className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
-                  title="+4,000₮ нэмэх"
+                  title="+5,000₮ (1 сар) нэмэх"
                 >
                   <Plus className="w-3 h-3" />
-                  +4,000 ₮ (Эрх)
+                  +5k (1 сар)
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickPointsChange(selectedUser.id, 7000)}
+                  onClick={() => handleQuickPointsChange(selectedUser.id, 8500)}
                   className="bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/60 p-2 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
-                  title="+7,000₮ VIP оноо нэмэх"
+                  title="+8,500₮ (2 сар) нэмэх"
                 >
                   <Plus className="w-3 h-3" />
-                  +7,000 ₮ (VIP)
+                  +8.5k (2 сар)
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickPointsChange(selectedUser.id, -4000)}
-                  disabled={selectedUser.walletBalance < 4000}
+                  onClick={() => handleQuickPointsChange(selectedUser.id, -2500)}
+                  disabled={selectedUser.walletBalance < 2500}
                   className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 p-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
-                  title="-4,000₮ оноо хасах"
+                  title="-2,500₮ оноо хасах"
                 >
                   <Minus className="w-3 h-3" />
-                  -4,000 ₮
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPointsChange(selectedUser.id, -7000)}
-                  disabled={selectedUser.walletBalance < 7000}
-                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 p-2 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
-                  title="-7,000₮ VIP оноо хасах"
-                >
-                  <Minus className="w-3 h-3" />
-                  -7,000 ₮
+                  -2.5k
                 </button>
               </div>
 
@@ -2431,7 +2430,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 onClick={() => {
                   const targetU = selectedUser;
                   setSelectedUser(null);
-                  handleOpenPointsModal(targetU, 'add', 4000);
+                  handleOpenPointsModal(targetU, 'add', 2500);
                 }}
                 className="w-full bg-zinc-950 hover:bg-zinc-800 text-emerald-300 border border-emerald-500/40 p-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
@@ -2534,7 +2533,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 onClick={() => {
                   const targetU = selectedUser;
                   setSelectedUser(null);
-                  handleOpenPointsModal(targetU, 'add', 4000);
+                  handleOpenPointsModal(targetU, 'add', 2500);
                 }}
                 className="w-1/2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-md transition-all cursor-pointer"
               >

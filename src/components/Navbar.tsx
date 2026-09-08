@@ -539,8 +539,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Анимэ багц идэвхжүүлэх"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">АНИМЭ БАГЦ (4,000 ₮)</span>
-              <span className="sm:hidden">Эрх (4k)</span>
+              <span className="hidden sm:inline">АНИМЭ БАГЦ (2,500 ₮-с)</span>
+              <span className="sm:hidden">Эрх (2.5k+)</span>
             </button>
           )}
 

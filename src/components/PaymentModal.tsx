@@ -11,9 +11,60 @@ interface PaymentModalProps {
   isMoviePackage?: boolean;
   onClose: () => void;
   onPaymentSuccess: (movieId: string, deductedAmount?: number) => void;
-  onSubscribePackage: (packageType: 'anime' | 'movie' | 'full_vip', deductedAmount: number, durationMonths?: number) => void;
+  onSubscribePackage: (
+    packageType: 'anime' | 'movie' | 'full_vip',
+    deductedAmount: number,
+    durationMonths?: number,
+    durationDays?: number
+  ) => void;
   onTopUpBalance: (amount: number) => void;
 }
+
+export type PlanDurationId = '15d' | '1m' | '2m';
+
+export interface PlanConfig {
+  id: PlanDurationId;
+  label: string;
+  subLabel: string;
+  durationDays: number;
+  durationMonths: number;
+  price: number;
+  badge?: string;
+  badgeStyle?: string;
+}
+
+const PLANS: PlanConfig[] = [
+  {
+    id: '15d',
+    label: '15 ХОНОГ',
+    subLabel: '15 Хоног эрх',
+    durationDays: 15,
+    durationMonths: 0.5,
+    price: 2500,
+    badge: '2.5k Эхлэл',
+    badgeStyle: 'bg-rose-600 text-white',
+  },
+  {
+    id: '1m',
+    label: '1 САР',
+    subLabel: '30 Хоног эрх',
+    durationDays: 30,
+    durationMonths: 1,
+    price: 5000,
+    badge: '5k Түгээмэл',
+    badgeStyle: 'bg-emerald-600 text-white',
+  },
+  {
+    id: '2m',
+    label: '2 САР',
+    subLabel: '60 Хоног эрх',
+    durationDays: 60,
+    durationMonths: 2,
+    price: 8500,
+    badge: '8.5k Хэмнэлт',
+    badgeStyle: 'bg-amber-400 text-black font-black',
+  },
+];
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   movie,
@@ -26,17 +77,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onSubscribePackage,
   onTopUpBalance,
 }) => {
-  // Only Anime subscription package
-  const [durationMonths, setDurationMonths] = useState<1 | 2 | 3>(1);
-
-  // Pricing: 1 month = 4,000₮, 2 months = 7,000₮ (7k), 3 months = 10,000₮ (10k)
-  const getPlanPrice = (months: 1 | 2 | 3) => {
-    if (months === 1) return 4000;
-    if (months === 2) return 7000;
-    return 10000;
-  };
-
-  const activePrice = getPlanPrice(durationMonths);
+  // Subscription package duration: 15 days (2,500₮), 1 month (5,000₮), 2 months (8,500₮)
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanDurationId>('15d');
+  const currentPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[0];
+  const activePrice = currentPlan.price;
 
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('code');
   const [selectedBank, setSelectedBank] = useState<string>('monpay');
@@ -117,11 +161,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setIsVerifying(false);
         setIsSuccess(true);
         setSuccessMsgText(
-          `Анимэ Багц (${durationMonths} сар - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`
+          `Анимэ Багц (${currentPlan.label} - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`
         );
 
         setTimeout(() => {
-          onSubscribePackage('anime', activePrice, durationMonths);
+          onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
         }, 1200);
       }, 1000);
     } else {
@@ -147,7 +191,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ
               </h2>
               <p className="text-[11px] text-zinc-400">
-                1 сар (4,000₮) • 2 сар (7,000₮) • 3 сар (10,000₮) хэмнэлттэй багцууд
+                15 хоног (2,500₮) • 1 сар (5,000₮) • 2 сар (8,500₮)
               </p>
             </div>
           </div>
@@ -185,81 +229,55 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           </div>
 
-          {/* Duration Selection: 1 Sar (4k), 2 Sar (7k), 3 Sar (10k) */}
+          {/* Duration Selection: 15 Honog (2.5k), 1 Sar (5k), 2 Sar (8.5k) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
-                Хугацаа сонгох (Хэмнэлттэй):
+                Хугацаа сонгох:
               </label>
-              <span className="text-[10px] text-amber-400 font-bold">2+ сараар авбал хямдралтай</span>
+              <span className="text-[10px] text-amber-400 font-bold">15 хоног 2.5k • 1 сар 5k • 2 сар 8.5k</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              {/* 1 Month */}
-              <button
-                id="select-duration-1m"
-                type="button"
-                onClick={() => setDurationMonths(1)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                  durationMonths === 1
-                    ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
-                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 block uppercase">1 САР</span>
-                  <span className="text-xs font-bold text-zinc-200">30 Хоног</span>
-                </div>
-                <div className="mt-1.5 font-black text-xs font-mono text-white">
-                  {getPlanPrice(1).toLocaleString()} ₮
-                </div>
-              </button>
-
-              {/* 2 Months - 7,000₮ (7k) */}
-              <button
-                id="select-duration-2m"
-                type="button"
-                onClick={() => setDurationMonths(2)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                  durationMonths === 2
-                    ? 'bg-gradient-to-b from-rose-950/70 to-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
-                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <div className="absolute top-1 right-1 bg-rose-600 text-white text-[8px] font-black px-1 py-0.5 rounded shadow">
-                  7k Хямдрал
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-rose-400 block uppercase">2 САР</span>
-                  <span className="text-xs font-bold text-zinc-200">60 Хоног</span>
-                </div>
-                <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
-                  {getPlanPrice(2).toLocaleString()} ₮
-                </div>
-              </button>
-
-              {/* 3 Months - 10,000₮ (10k) */}
-              <button
-                id="select-duration-3m"
-                type="button"
-                onClick={() => setDurationMonths(3)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                  durationMonths === 3
-                    ? 'bg-gradient-to-b from-amber-950/70 to-zinc-800 border-amber-400 text-white ring-1 ring-amber-400 shadow-md'
-                    : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <div className="absolute top-1 right-1 bg-amber-500 text-black text-[8px] font-black px-1 py-0.5 rounded shadow">
-                  10k Супер
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-amber-400 block uppercase">3 САР</span>
-                  <span className="text-xs font-bold text-zinc-200">90 Хоног</span>
-                </div>
-                <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
-                  {getPlanPrice(3).toLocaleString()} ₮
-                </div>
-              </button>
+              {PLANS.map((plan) => {
+                const isSelected = selectedPlanId === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    id={`select-duration-${plan.id}`}
+                    type="button"
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
+                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {plan.badge && (
+                      <div
+                        className={`absolute top-1 right-1 text-[8px] font-black px-1 py-0.5 rounded shadow ${
+                          plan.badgeStyle || 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {plan.badge}
+                      </div>
+                    )}
+                    <div>
+                      <span
+                        className={`text-[10px] font-bold block uppercase ${
+                          isSelected ? 'text-rose-400' : 'text-zinc-400'
+                        }`}
+                      >
+                        {plan.label}
+                      </span>
+                      <span className="text-xs font-bold text-zinc-200">{plan.subLabel}</span>
+                    </div>
+                    <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
+                      {plan.price.toLocaleString()} ₮
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -272,7 +290,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
                 <span>Анимэ Багц</span>
                 <span className="text-amber-400 bg-amber-400/10 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded font-black">
-                  {durationMonths} Сар ({durationMonths * 30} хоног)
+                  {currentPlan.label} ({currentPlan.durationDays} хоног)
                 </span>
               </h3>
               <p className="text-[11px] text-zinc-400 truncate">
@@ -283,7 +301,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <span className="font-mono text-amber-400 text-base font-black block">
                 {activePrice.toLocaleString()} ₮
               </span>
-              {durationMonths > 1 && (
+              {currentPlan.id === '2m' && (
                 <span className="text-[9px] text-emerald-400 font-bold">Хэмнэлттэй</span>
               )}
             </div>
@@ -454,7 +472,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-zinc-400 italic">
-                  * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{`IOIO-ANIME-${durationMonths}M`}</span>
+                  * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{`IOIO-ANIME-${currentPlan.id.toUpperCase()}`}</span>
                 </p>
               </div>
 
@@ -566,7 +584,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
                 {successMsgText ||
-                  `Анимэ Багц (${durationMonths} сар - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`}
+                  `Анимэ Багц (${currentPlan.label} - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`}
               </span>
             </div>
           ) : topUpRequestSent ? (
@@ -595,7 +613,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </>
               ) : paymentMethod === 'wallet' ? (
                 <span>
-                  {`ОНООГООР АНИМЭ БАГЦ (${durationMonths} САР - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
+                  {`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
                 </span>
               ) : (
                 <span>
