@@ -18,7 +18,7 @@ export function formatDeathNoteDriveLink(driveIdOrUrl: string): string {
  * доорх 1-37 дугаарын ард Drive линк эсвэл ID-гаа хуулж тавина уу:
  */
 export const DEATH_NOTE_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1XS-Z_-TtLoNF4dgCgWL60hVQGCdvIhUE/view?usp=drivesdk',
+  1: 'https://filemoon.org/en/RMKGJAXPz1oP/file',
   2: 'https://drive.google.com/file/d/1deathnote_ep02_drive_link/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1deathnote_ep03_drive_link/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1deathnote_ep04_drive_link/view?usp=drivesdk',
