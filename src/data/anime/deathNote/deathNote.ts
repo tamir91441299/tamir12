@@ -19,9 +19,9 @@ export function formatDeathNoteDriveLink(driveIdOrUrl: string): string {
  */
 export const DEATH_NOTE_EPISODE_LINKS: Record<number, string> = {
   1: 'https://filemoon.org/en/RMKGJAXPz1oP/file',
-  2: 'https://drive.google.com/file/d/1deathnote_ep02_drive_link/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1deathnote_ep03_drive_link/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1deathnote_ep04_drive_link/view?usp=drivesdk',
+  2: 'https://drive.google.com/file/d/1r2sSH4vykKoMmHlTWX8-qLyjxqeRz4Nq/view?usp=drivesdk&usp=embed_facebook',
+  3: 'https://drive.google.com/file/d/1ZrWPC0xRiKtJVzWAklVlnV0RpcCOCG-Z/view?usp=drivesdk&usp=embed_facebook',
+  4: 'https://drive.google.com/file/d/1y4fcv5Ej-5XMdP8NOHtGrRpHDeCYrlkO/view?usp=drivesdk&usp=embed_facebook',
   5: 'https://drive.google.com/file/d/1deathnote_ep05_drive_link/view?usp=drivesdk',
   6: 'https://drive.google.com/file/d/1deathnote_ep06_drive_link/view?usp=drivesdk',
   7: 'https://drive.google.com/file/d/1deathnote_ep07_drive_link/view?usp=drivesdk',
@@ -291,7 +291,7 @@ export const DEATH_NOTE: Movie = {
   titleMongolian: 'Үхлийн Тэмдэглэл (Death Note)',
   type: 'anime',
   poster: 'https://cdn.myanimelist.net/images/anime/9/9453l.jpg',
-  backdrop: 'https://image.tmdb.org/t/p/w1280/t5zCBSB5xMDKcDqe91qahCOUYVV.jpg',
+  backdrop: 'https://tse1.mm.bing.net/th/id/OIP.Qv6uw4_awMDHMnGZc1NoRgHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2006,
   duration: '37 анги',
   rating: 9.9,

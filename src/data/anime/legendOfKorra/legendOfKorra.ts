@@ -18,7 +18,7 @@ export function formatLegendOfKorraDriveLink(driveIdOrUrl: string): string {
  * доорх 1-12 дугаарын ард Drive линк эсвэл ID-гаа хуулж тавина уу:
  */
 export const LEGEND_OF_KORRA_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1mZGqHYibZZuK0t_OsKcwNgJXlMsEvTRC/view?usp=drivesdk&usp=embed_facebook',
+  1: 'https://filemoon.org/en/7d5GLnE73xRJ/file',
   2: 'https://drive.google.com/file/d/1JkuW6SKaV65XxfDgmZ9MrQ7k-6Pkt_i8/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1VOmLbJQU9fscXdj147epT0WTnLePG-KL/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1korra_ep04_drive_link/view?usp=drivesdk',
