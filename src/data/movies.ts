@@ -6,6 +6,8 @@ import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
 import { LEGEND_OF_KORRA } from './anime/legendOfKorra';
+import { GRAVITY_FALLS } from './anime/gravityFalls';
+import { MONKART } from './anime/monkart';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -200,10 +202,12 @@ export const SAMPLE_MOVIES: Movie[] = [
   JUJUTSU_KAISEN_S1,
   KAMI_KUZU_IDOL,
   DEATH_NOTE,
-  LEGEND_OF_KORRA
+  LEGEND_OF_KORRA,
+  GRAVITY_FALLS,
+  MONKART
 ];
 
-export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA };
+export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, GRAVITY_FALLS, MONKART };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 63 },
@@ -228,6 +232,26 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_gf1',
+    movieId: 'm_gravity_falls',
+    userName: 'Тэмүүлэн',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Гравити Фоллс хүүхэлдэйн кино орсонд маш их баярлалаа! Диппер, Мэйбэл болон Билл Сайферын нууцууд үнэхээр сонирхолтой. Монгол дуу оруулга нь маш тод, чанартай сонсогдож байна.',
+    rating: 10,
+    date: 'Өнөөдөр 21:30',
+    likes: 58
+  },
+  {
+    id: 'c_monkart1',
+    movieId: 'm_monkart',
+    userName: 'Ариунболд',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
+    text: 'Монкарт хүүхэлдэйн киноны луу Драка ба Жиний уралдаанууд хүүхдүүдийн хамгийн дуртай цуврал! Ангиуд нь дарааллаараа шууд холбогдож тоглож байна.',
+    rating: 10,
+    date: 'Өнөөдөр 20:50',
+    likes: 47
+  },
   {
     id: 'c_korra1',
     movieId: 'm_legend_of_korra',

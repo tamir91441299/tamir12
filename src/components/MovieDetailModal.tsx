@@ -146,6 +146,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorra = movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра');
+  const isGravityFalls = movie.id === 'm_gravity_falls' || movie.title.toLowerCase().includes('gravity falls') || movie.titleMongolian.toLowerCase().includes('гравити');
+  const isMonkart = movie.id === 'm_monkart' || movie.title.toLowerCase().includes('monkart') || movie.titleMongolian.toLowerCase().includes('монкарт');
 
   // Check access permission for specific episode
   // Rule:
@@ -282,14 +284,63 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       12: '12-р анги - Төгсгөлийн тулаан (Endgame - Төгсгөл)'
     };
 
+    const defaultGravityFallsTitles: Record<number, string> = {
+      1: '1-р анги - Жуулчдын урхи (Tourist Trapped)',
+      2: '2-р анги - Гобблвонкерын домог (The Legend of the Gobblewonker)',
+      3: '3-р анги - Лааны баримлын ангуучид (Headhunters)',
+      4: '4-р анги - Мэйбэлийн эрх мэдэл ба Бяцхан Гидеон (The Hand That Rocks the Mabel)',
+      5: '5-р анги - Эвгүй сүнстэй дэлгүүр (The Inconveniencing)',
+      6: '6-р анги - Диппер эр зоригийн эрэлд (Dipper vs. Manliness)',
+      7: '7-р анги - Хоёр Диппер & Хувилсан ихрүүд (Double Dipper)',
+      8: '8-р анги - Цаг хугацааны аялагчийн гахай (Time Traveler\'s Pig)',
+      9: '9-р анги - Тоглоомын тулаанчид амилсан нь (Fight Fighters)',
+      10: '10-р анги - Жижиг Диппер & Кристалын нууц (Little Dipper)',
+      11: '11-р анги - Зуны Халловин (Summerween)',
+      12: '12-р анги - Захирал Мэйбэл & Нууцын овоохой (Boss Mabel)',
+      13: '13-р анги - Ёроолгүй нүхний нууц (Bottomless Pit!)',
+      14: '14-р анги - Гүн усанд шумбагч ба Мерман (The Deep End)',
+      15: '15-р анги - Хивсний цахилгаан нууц (Carpet Diem)',
+      16: '16-р анги - Хөвгүүдийн хамтлаг ба хувилах машин (Boyz Crazy)',
+      17: '17-р анги - Гахайг аврах аварга динозавр (Land Before Swine)',
+      18: '18-р анги - Зүүдний ертөнц ба Билл Сайферын дайралт (Dreamscaperers)',
+      19: '19-р анги - Гидеоны мандалт (Gideon Rises - 1-р бүлгийн төгсгөл)',
+      20: '20-р анги - Нууцын тайлал & Билл Сайферын тусгай анги (Weirdmageddon Special)'
+    };
+
+    const defaultMonkartTitles: Record<number, string> = {
+      1: '1-р анги - Дракатай учирсан нь (Meeting Draka)',
+      2: '2-р анги - Кармон хотын анхны уралдаан (Race in Carmon Town)',
+      3: '3-р анги - Хүлэг баатрын шалгуур (Knight\'s Grand Trial)',
+      4: '4-р анги - Сэна гүнжийн нууц даалгавар (Princess Sena\'s Mission)',
+      5: '5-р анги - Кармон улсын харанхуй аюул (Threat of the Dark Forces)',
+      6: '6-р анги - Галт луугийн сэргэлт ба Драка (Awakening of Fire Dragon)',
+      7: '7-р анги - Майкл Вайт ба Леогийн хурд (Michael White & Leo)',
+      8: '8-р анги - Битүү тойргийн морин зам (The Circuit Track Battle)',
+      9: '9-р анги - Дестрогийн харанхуй заль (Destro\'s Dark Treachery)',
+      10: '10-р анги - Мегарод хувьсал: Луугийн сүр хүч (Megaroid Evolution)',
+      11: '11-р анги - Робины үнэнч нөхөрлөл (Robin\'s Swift Assist)',
+      12: '12-р анги - Хагас шигшээ уралдаан (Semi-Final Championship)',
+      13: '13-р анги - Алтан картын нууц (Secret of the Golden Mon-Card)',
+      14: '14-р анги - Их Аренагийн шийдвэрлэх тулаан (Grand Arena Battle)',
+      15: '15-р анги - Кармон хаант улсыг хамгаалах нь (Defending Carmon Kingdom)',
+      16: '16-р анги - Аварга хүлэг баатар Жин ба Драка (The Champion Knight Jin - Төгсгөл)'
+    };
+
     const newEpList: Episode[] = [];
 
     for (let i = 1; i <= targetCount; i++) {
       // Find URL: either corresponding line, or first link
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
-      const title = existing?.title || (isKorra ? defaultKorraTitles[i] || `${i}-р анги` : is91Days ? default91DaysTitles[i] || `${i}-р анги` : isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` : `${i}-р анги`);
-      const duration = existing?.duration || '24 мин';
+      const title = existing?.title || (
+        isGravityFalls ? defaultGravityFallsTitles[i] || `${i}-р анги` :
+        isMonkart ? defaultMonkartTitles[i] || `${i}-р анги` :
+        isKorra ? defaultKorraTitles[i] || `${i}-р анги` :
+        is91Days ? default91DaysTitles[i] || `${i}-р анги` :
+        isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` :
+        `${i}-р анги`
+      );
+      const duration = existing?.duration || '22 мин';
 
       newEpList.push({
         episodeNumber: i,
