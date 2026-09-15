@@ -84,6 +84,39 @@
         }
       },
       "required": ["episodeNumber", "videoUrl"]
+    },
+    "AnimeView": {
+      "title": "AnimeView",
+      "description": "User viewing records for anime to track view counts and viewer user profiles",
+      "type": "object",
+      "properties": {
+        "movieId": {
+          "type": "string",
+          "description": "ID of the anime movie"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID of the user who watched"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Display name of the watcher"
+        },
+        "userAvatar": {
+          "type": "string",
+          "description": "Avatar URL of the watcher"
+        },
+        "episodeNumber": {
+          "type": "number",
+          "description": "The episode number watched"
+        },
+        "watchedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the user watched"
+        }
+      },
+      "required": ["movieId", "userName", "watchedAt"]
     }
   },
   "firestore": {
@@ -98,6 +131,10 @@
     "/episodes/{epId}": {
       "schema": "Episode",
       "description": "Video episodes collection. Only master admin can create, update, or upload video episodes."
+    },
+    "/anime_views/{viewId}": {
+      "schema": "AnimeView",
+      "description": "Anime viewing records and watcher user list"
     }
   }
 }

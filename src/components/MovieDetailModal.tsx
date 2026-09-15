@@ -27,7 +27,9 @@ import {
   Link as LinkIcon,
   Layers,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  Users
 } from 'lucide-react';
 import { Movie, Comment, Episode } from '../types';
 import { SAMPLE_COMMENTS } from '../data/movies';
@@ -36,6 +38,7 @@ import { redeemCode } from '../lib/codeService';
 import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
+import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -108,6 +111,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [selectedRange, setSelectedRange] = useState<string>('all');
   const [showPasscodeModal, setShowPasscodeModal] = useState<boolean>(false);
   const [pendingWindowEp, setPendingWindowEp] = useState<number>(1);
+
+  // Real-time Watchers & View Tracking state
+  const [watchersList, setWatchersList] = useState<AnimeWatcher[]>([]);
+  const [totalWatchViews, setTotalWatchViews] = useState<number>(movie?.views || 1000);
+  const [activeDetailTab, setActiveDetailTab] = useState<'episodes' | 'watchers' | 'comments'>('episodes');
+  const [watcherSearch, setWatcherSearch] = useState('');
+
+  // Subscribe to real-time viewers for this anime
+  useEffect(() => {
+    if (movie?.id) {
+      const unsubscribe = subscribeAnimeWatchers(movie.id, movie.views || 1000, (watchers, totalViews) => {
+        setWatchersList(watchers);
+        setTotalWatchViews(totalViews);
+      });
+      return () => unsubscribe();
+    }
+  }, [movie?.id, movie?.views]);
 
   const openWindowDirect = (epNum: number = 1) => {
     const baseUrl = window.location.href.split('?')[0].split('#')[0];
@@ -550,6 +570,19 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     {movie.rating} / 10
                   </span>
+                  <span className="bg-cyan-500/20 text-cyan-300 font-bold px-2.5 py-0.5 rounded-md border border-cyan-500/30 flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                    {totalWatchViews.toLocaleString()} үзэлт
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDetailTab('watchers')}
+                    className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold px-2.5 py-0.5 rounded-md border border-purple-500/30 flex items-center gap-1 transition-all cursor-pointer hover:scale-105"
+                    title="Энэ анимэг үзсэн хэрэглэгчдийг харах"
+                  >
+                    <Users className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{watchersList.length} хүн үзсэн</span>
+                  </button>
                 </div>
 
                 <h1 className="text-2xl sm:text-3xl font-black text-white font-display">
@@ -560,7 +593,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   {movie.title}
                 </p>
 
-                {/* Genre Badges */}
+                {/* Genre Badges & Watchers Preview */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
                   {movie.genres.map((g) => (
                     <span
@@ -571,6 +604,31 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     </span>
                   ))}
                 </div>
+
+                {/* Watchers Stack Preview */}
+                {watchersList.length > 0 && (
+                  <div
+                    onClick={() => setActiveDetailTab('watchers')}
+                    className="flex items-center justify-center sm:justify-start gap-2 pt-1 cursor-pointer group select-none"
+                    title="Энэ анимэг үзсэн бүх хэрэглэгчдийг харах"
+                  >
+                    <div className="flex -space-x-2 overflow-hidden">
+                      {watchersList.slice(0, 4).map((w, idx) => (
+                        <img
+                          key={w.id || idx}
+                          src={w.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}
+                          alt={w.userName}
+                          className="inline-block h-6 w-6 rounded-full ring-2 ring-zinc-900 object-cover"
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-zinc-400 group-hover:text-cyan-300 transition-colors">
+                      <b className="text-zinc-200">{watchersList[0]?.userName}</b> болон{' '}
+                      <b className="text-cyan-400 font-bold">{watchersList.length}</b> хэрэглэгч үзсэн
+                      <span className="text-[11px] text-amber-400 ml-1.5 font-bold hover:underline">Бүгдийг харах →</span>
+                    </span>
+                  </div>
+                )}
 
                 {/* Main Action Buttons */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-3">
@@ -776,9 +834,54 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             )}
 
-            {/* Episode List (For Series / Anime) */}
-            {episodesList && episodesList.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-zinc-800">
+            {/* Main Tabs Navigation: Episodes, Watchers, Comments */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 pb-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setActiveDetailTab('episodes')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                  activeDetailTab === 'episodes'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-lg shadow-cyan-500/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <Video className="w-4 h-4" />
+                <span>Ангиуд ({episodesList?.length || 0})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveDetailTab('watchers')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                  activeDetailTab === 'watchers'
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black shadow-lg shadow-amber-500/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Үзсэн хэрэглэгчид ({watchersList.length})</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Шинэ
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveDetailTab('comments')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                  activeDetailTab === 'comments'
+                    ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white font-black shadow-lg shadow-rose-500/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Сэтгэгдэл ({comments.length})</span>
+              </button>
+            </div>
+
+            {/* TAB 1: Episode List (For Series / Anime) */}
+            {activeDetailTab === 'episodes' && episodesList && episodesList.length > 0 && (
+              <div className="space-y-3 pt-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
                     <Video className="w-4 h-4 text-cyan-400" />
@@ -1216,90 +1319,227 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             )}
 
-            {/* User Rating Section */}
-            <div className="bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 space-y-2">
-              <div className="text-xs font-bold text-zinc-300 flex items-center justify-between">
-                <span>Энэ кинонд үнэлгээ өгөх:</span>
-                {userRating && (
-                  <span className="text-amber-400 font-mono font-bold">
-                    Таны үнэлгээ: {userRating}/10
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((score) => (
-                  <button
-                    key={score}
-                    id={`rate-star-${score}`}
-                    onClick={() => setUserRating(score)}
-                    className={`p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      userRating && userRating >= score
-                        ? 'bg-amber-500 text-black border-amber-400'
-                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
-                    }`}
-                  >
-                    {score}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Comments Section */}
-            <div className="space-y-4 pt-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Сэтгэгдэл ({comments.length})
-              </h3>
-
-              {/* Add comment box */}
-              <form onSubmit={handleAddComment} className="flex gap-2">
-                <input
-                  id="new-comment-input"
-                  type="text"
-                  placeholder="Сэтгэгдэл бичих..."
-                  value={newCommentText}
-                  onChange={(e) => setNewCommentText(e.target.value)}
-                  className="flex-1 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 rounded-xl px-4 py-2.5 border border-zinc-700/80 focus:outline-none focus:border-cyan-500"
-                />
-                <button
-                  id="submit-comment"
-                  type="submit"
-                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                  Илгээх
-                </button>
-              </form>
-
-              {/* Comments List */}
-              <div className="space-y-3">
-                {comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80 flex gap-3 text-xs"
-                  >
-                    <img
-                      src={comment.avatar}
-                      alt={comment.userName}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
-                    />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-zinc-200">
-                          {comment.userName}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 font-mono">
-                          {comment.date}
-                        </span>
-                      </div>
-                      <p className="text-zinc-300 leading-relaxed">
-                        {comment.text}
-                      </p>
+            {/* TAB 2: Watchers & View Analytics */}
+            {activeDetailTab === 'watchers' && (
+              <div className="space-y-4 pt-2">
+                {/* Summary Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                      <Eye className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-zinc-400 block font-medium">Нийт үзэлтийн тоо</span>
+                      <span className="text-lg font-black text-white font-mono">
+                        {totalWatchViews.toLocaleString()} удаа
+                      </span>
                     </div>
                   </div>
-                ))}
+
+                  <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-zinc-400 block font-medium">Үзсэн нийт хэрэглэгч</span>
+                      <span className="text-lg font-black text-cyan-300 font-mono">
+                        {watchersList.length} хүн
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] text-zinc-400 block font-medium">Сүүлд үзсэн</span>
+                      <span className="text-xs font-bold text-emerald-400 truncate block">
+                        {watchersList[0]?.userName || 'Хэрэглэгч'}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 block">
+                        {watchersList[0]?.formattedTime || 'Сүүлд'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter and search */}
+                <div className="flex items-center justify-between gap-3 bg-zinc-950/60 p-2.5 rounded-xl border border-white/[0.06]">
+                  <input
+                    type="text"
+                    placeholder="Хэрэглэгчийн нэр, утсаар хайх..."
+                    value={watcherSearch}
+                    onChange={(e) => setWatcherSearch(e.target.value)}
+                    className="w-full bg-zinc-900 text-xs text-white placeholder-zinc-500 rounded-lg px-3 py-2 border border-zinc-800 focus:outline-none focus:border-amber-400"
+                  />
+                  {watcherSearch && (
+                    <button
+                      onClick={() => setWatcherSearch('')}
+                      className="text-xs text-zinc-400 hover:text-white px-2 py-1 bg-zinc-800 rounded-lg cursor-pointer shrink-0"
+                    >
+                      Цэвэрлэх
+                    </button>
+                  )}
+                </div>
+
+                {/* List of watchers */}
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {watchersList
+                    .filter((w) => {
+                      if (!watcherSearch.trim()) return true;
+                      const q = watcherSearch.toLowerCase();
+                      return (
+                        w.userName.toLowerCase().includes(q) ||
+                        (w.userPhone && w.userPhone.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((watcher, idx) => (
+                      <div
+                        key={watcher.id || idx}
+                        className="p-3 bg-zinc-900/80 hover:bg-zinc-850 rounded-xl border border-white/[0.06] flex items-center justify-between gap-3 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={watcher.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}
+                            alt={watcher.userName}
+                            className="w-9 h-9 rounded-full object-cover ring-1 ring-white/10 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs sm:text-sm text-zinc-200 truncate">
+                                {watcher.userName}
+                              </span>
+                              {watcher.userRole === 'admin' ? (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-black shrink-0">
+                                  АДМИН
+                                </span>
+                              ) : watcher.packageType === 'full_vip' ? (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                                  VIP ЭРХТЭЙ
+                                </span>
+                              ) : watcher.packageType === 'anime' ? (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+                                  АНИМЭ БАГЦТАЙ
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 shrink-0">
+                                  1-р анги үзэгч
+                                </span>
+                              )}
+                            </div>
+                            {watcher.userPhone && (
+                              <span className="text-[10px] text-zinc-500 font-mono block">
+                                Утас: {watcher.userPhone}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-0.5">
+                            {watcher.episodeNumber}-р анги үзсэн
+                          </span>
+                          <div className="flex items-center justify-end gap-1 text-[10px] text-zinc-400 font-mono">
+                            <Clock className="w-3 h-3 text-zinc-500" />
+                            <span>{watcher.formattedTime}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* TAB 3: User Rating & Comments Section */}
+            {activeDetailTab === 'comments' && (
+              <div className="space-y-4 pt-2">
+                {/* User Rating Section */}
+                <div className="bg-zinc-900/80 p-4 rounded-xl border border-zinc-800 space-y-2">
+                  <div className="text-xs font-bold text-zinc-300 flex items-center justify-between">
+                    <span>Энэ кинонд үнэлгээ өгөх:</span>
+                    {userRating && (
+                      <span className="text-amber-400 font-mono font-bold">
+                        Таны үнэлгээ: {userRating}/10
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((score) => (
+                      <button
+                        key={score}
+                        id={`rate-star-${score}`}
+                        onClick={() => setUserRating(score)}
+                        className={`p-2 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          userRating && userRating >= score
+                            ? 'bg-amber-500 text-black border-amber-400'
+                            : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                        }`}
+                      >
+                        {score}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Comments Section */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Сэтгэгдэл ({comments.length})
+                  </h3>
+
+                  {/* Add comment box */}
+                  <form onSubmit={handleAddComment} className="flex gap-2">
+                    <input
+                      id="new-comment-input"
+                      type="text"
+                      placeholder="Сэтгэгдэл бичих..."
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      className="flex-1 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 rounded-xl px-4 py-2.5 border border-zinc-700/80 focus:outline-none focus:border-cyan-500"
+                    />
+                    <button
+                      id="submit-comment"
+                      type="submit"
+                      className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Send className="w-4 h-4" />
+                      Илгээх
+                    </button>
+                  </form>
+
+                  {/* Comments List */}
+                  <div className="space-y-3">
+                    {comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80 flex gap-3 text-xs"
+                      >
+                        <img
+                          src={comment.avatar}
+                          alt={comment.userName}
+                          className="w-8 h-8 rounded-full object-cover shrink-0"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-zinc-200">
+                              {comment.userName}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              {comment.date}
+                            </span>
+                          </div>
+                          <p className="text-zinc-300 leading-relaxed">
+                            {comment.text}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

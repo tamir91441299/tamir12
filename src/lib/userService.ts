@@ -25,13 +25,69 @@ export interface AuthRecord {
 
 export interface AppNotification {
   id: string;
-  type: 'NEW_USER' | 'TOP_UP_REQUEST' | 'PACKAGE_PURCHASE';
+  type: 'NEW_USER' | 'TOP_UP_REQUEST' | 'PACKAGE_PURCHASE' | 'NEW_ANIME';
   title: string;
   message: string;
+  movieId?: string;
+  movieTitle?: string;
+  poster?: string;
   userName?: string;
   userEmail?: string;
   userPhone?: string;
   createdAt: string;
+}
+
+// Initial anime announcements for all users
+export const INITIAL_ANIME_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif_init_deathnote',
+    type: 'NEW_ANIME',
+    title: 'Сонгодог Анимэ Нэмэгдлээ! 📓',
+    message: '«Үхлийн тэмдэглэл (Death Note)» бүх 37 анги бэлэн боллоо. 1-р ангийг шууд үзээрэй!',
+    movieId: 'm_death_note',
+    movieTitle: 'Үхлийн тэмдэглэл',
+    poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
+    createdAt: '2 өдрийн өмнө',
+  },
+];
+
+/**
+ * Broadcast notification when a new anime is added to the system
+ */
+export async function sendNewAnimeNotification(movie: {
+  id: string;
+  title: string;
+  titleMongolian: string;
+  poster?: string;
+}) {
+  try {
+    const notifId = 'notif_anime_' + Date.now();
+    const docRef = doc(db, 'notifications', notifId);
+    const payload: AppNotification = {
+      id: notifId,
+      type: 'NEW_ANIME',
+      title: 'Шинэ Анимэ Нэмэгдлээ! 🎉',
+      message: `«${movie.titleMongolian || movie.title}» анимэ амжилттай нэмэгдлээ. 1-р ангийг одоо шууд үнэгүй үзэх боломжтой!`,
+      movieId: movie.id,
+      movieTitle: movie.titleMongolian || movie.title,
+      poster: movie.poster,
+      createdAt: new Date().toLocaleString('mn-MN'),
+    };
+
+    // 1. Cache to local storage
+    try {
+      const saved = localStorage.getItem('flicknime_anime_notifs');
+      const list = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('flicknime_anime_notifs', JSON.stringify([payload, ...list.slice(0, 20)]));
+    } catch {}
+
+    // 2. Persist to Firestore
+    await setDoc(docRef, payload);
+    return payload;
+  } catch (err) {
+    console.error('Error sending new anime notification:', err);
+    return null;
+  }
 }
 
 /**
@@ -53,20 +109,39 @@ export async function sendAdminNotification(notif: Omit<AppNotification, 'id' | 
 }
 
 /**
- * Subscribe to real-time notifications from Firestore
+ * Subscribe to real-time notifications from Firestore (with seed fallback)
  */
 export function subscribeNotificationsFromFirestore(callback: (notifications: AppNotification[]) => void) {
   try {
+    // Initial load with local storage + seeds
+    let localAnimeNotifs: AppNotification[] = [];
+    try {
+      const saved = localStorage.getItem('flicknime_anime_notifs');
+      if (saved) localAnimeNotifs = JSON.parse(saved);
+    } catch {}
+
+    const initialCombined = [...localAnimeNotifs, ...INITIAL_ANIME_NOTIFICATIONS];
+    callback(initialCombined);
+
     const notifCol = collection(db, 'notifications');
     const q = query(notifCol, limit(50));
     return onSnapshot(
       q,
       (snapshot) => {
-        const notifs: AppNotification[] = [];
+        const firestoreNotifs: AppNotification[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as AppNotification;
-          if (data) notifs.push(data);
+          if (data) firestoreNotifs.push(data);
         });
+
+        const map = new Map<string, AppNotification>();
+        [...firestoreNotifs, ...localAnimeNotifs, ...INITIAL_ANIME_NOTIFICATIONS].forEach((n) => {
+          if (!map.has(n.id)) {
+            map.set(n.id, n);
+          }
+        });
+
+        const notifs = Array.from(map.values());
         // Sort newest first
         notifs.sort((a, b) => (b.id > a.id ? 1 : -1));
         callback(notifs);

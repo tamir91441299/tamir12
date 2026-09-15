@@ -28,11 +28,13 @@ import {
   Phone,
   Monitor,
   Tablet,
-  Sliders
+  Sliders,
+  Bell
 } from 'lucide-react';
 import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
 import { DeviceMode } from './DisplaySettingsModal';
+import { AppNotification } from '../lib/userService';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -58,6 +60,7 @@ interface NavbarProps {
   onOpenDisplaySettings?: () => void;
   deviceMode?: DeviceMode;
   onDeviceModeChange?: (mode: DeviceMode) => void;
+  notifications?: AppNotification[];
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -84,10 +87,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDisplaySettings,
   deviceMode = 'auto',
   onDeviceModeChange,
+  notifications = [],
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
   const [isMobileAnimeMenuOpen, setIsMobileAnimeMenuOpen] = useState(false);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const animeDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
@@ -778,6 +783,134 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </button>
+
+          {/* Notification Bell Button with Real-time Dropdown */}
+          <div className="relative shrink-0">
+            <button
+              id="notifications-dropdown-btn"
+              type="button"
+              onClick={() => setIsNotifDropdownOpen((prev) => !prev)}
+              className={`relative p-2 rounded-xl border transition-all cursor-pointer ${
+                isNotifDropdownOpen
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md shadow-amber-500/10'
+                  : 'bg-black/50 border-white/[0.08] text-zinc-400 hover:bg-white/[0.08] hover:text-white'
+              }`}
+              title="Мэдэгдэл & Шинэ анимэ"
+            >
+              <Bell className="w-4 h-4" />
+              {notifications && notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-black font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse shadow">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown Menu */}
+            {isNotifDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] cinema-glass-elevated rounded-2xl p-3 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 border border-white/10">
+                <div className="px-1 py-1.5 border-b border-white/[0.06] flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span className="font-extrabold text-xs text-white">Шинэ анимэ & Мэдэгдэл</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-mono bg-white/[0.06] px-2 py-0.5 rounded-full">
+                    {notifications?.length || 0} мэдэгдэл
+                  </span>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                  {notifications && notifications.length > 0 ? (
+                    notifications.map((notif) => {
+                      const isNewAnime = notif.type === 'NEW_ANIME';
+                      const targetMovie = isNewAnime && notif.movieId
+                        ? movies.find((m) => m.id === notif.movieId)
+                        : null;
+
+                      return (
+                        <div
+                          key={notif.id}
+                          className={`p-2.5 rounded-xl border transition-all ${
+                            isNewAnime
+                              ? 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/15'
+                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {notif.poster ? (
+                              <img
+                                src={notif.poster}
+                                alt={notif.movieTitle || 'Anime'}
+                                className="w-11 h-14 object-cover rounded-lg shrink-0 border border-white/10"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
+                                <Sparkles className="w-4 h-4" />
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={`text-[11px] font-black truncate ${isNewAnime ? 'text-amber-300' : 'text-zinc-200'}`}>
+                                  {notif.title}
+                                </span>
+                                <span className="text-[9px] text-zinc-500 font-mono shrink-0">
+                                  {notif.createdAt}
+                                </span>
+                              </div>
+
+                              <p className="text-[11px] text-zinc-300 leading-snug mt-1">
+                                {notif.message}
+                              </p>
+
+                              {isNewAnime && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsNotifDropdownOpen(false);
+                                      if (targetMovie) {
+                                        onSelectMovie(targetMovie);
+                                      } else if (notif.movieId) {
+                                        const found = movies.find((m) => m.id === notif.movieId);
+                                        if (found) onSelectMovie(found);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold text-[10px] shadow transition-transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Clapperboard className="w-3 h-3" />
+                                    <span>Шууд үзэх (1-р анги үнэгүй)</span>
+                                  </button>
+                                </div>
+                              )}
+
+                              {!isNewAnime && isAdmin && onOpenUserManagement && (
+                                <div className="mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsNotifDropdownOpen(false);
+                                      onOpenUserManagement();
+                                    }}
+                                    className="px-2 py-0.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[10px] cursor-pointer"
+                                  >
+                                    Хэрэглэгчийн удирдлага
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-6 text-center text-xs text-zinc-400">
+                      Одоогоор шинэ мэдэгдэл алга байна.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

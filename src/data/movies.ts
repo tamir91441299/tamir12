@@ -5,9 +5,6 @@ import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
 import { LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 } from './anime/legendOfKorra';
-import { CHAINSAW_MAN } from './anime/chainsawMan';
-import { SOUL_EATER } from './anime/soulEater';
-import { DANDADAN } from './anime/dandadan';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -199,16 +196,13 @@ export const SAMPLE_MOVIES: Movie[] = [
   MY_HERO_ACADEMIA_S1,
   MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
-  CHAINSAW_MAN,
-  SOUL_EATER,
-  DANDADAN,
   KAMI_KUZU_IDOL,
   DEATH_NOTE,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2
 ];
 
-export { CHAINSAW_MAN, SOUL_EATER, DANDADAN, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 };
+export { KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 95 },
@@ -234,66 +228,6 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
-  {
-    id: 'c_ddd1',
-    movieId: 'm_dandadan',
-    userName: 'Тэмүүлэн',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
-    text: 'Дандадан ямар галзуу анимэ вэ! Science SARU-ийн найруулга, Creepy Nuts-ийн Отонөүкэ дуу үнэхээр донтуулж байна. Момо Окарун хоёрын хими ч гайхалтай!',
-    rating: 10,
-    date: 'Өнөөдөр 23:40',
-    likes: 68
-  },
-  {
-    id: 'c_ddd2',
-    movieId: 'm_dandadan',
-    userName: 'Анударь',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    text: 'Турбо эмгэн болон харийнхны тулаан бүр инээдтэй бас маш хурдтай. 1-р бүлгийг бүрэн 12 ангиар нь өндөр чанартайгаар шууд үзэхэд үнэхээр сэтгэл ханамжтай байлаа.',
-    rating: 10,
-    date: 'Өнөөдөр 21:05',
-    likes: 45
-  },
-  {
-    id: 'c_se1',
-    movieId: 'm_soul_eater',
-    userName: 'Энхтөр',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
-    text: 'Соул Ийтэр бүрэн 51 ангиараа орж ирсэнд баярлалаа! Мака, Соул хоёрын сүнсний резонанс болон Black☆Star, Death the Kid-ийн тулаанууд бүх цаг үеийн шилдэг нь. Дуу оруулга маш сайн болжээ.',
-    rating: 10,
-    date: 'Өнөөдөр 22:15',
-    likes: 52
-  },
-  {
-    id: 'c_se2',
-    movieId: 'm_soul_eater',
-    userName: 'Мишээл',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
-    text: 'Bones студийн анимаци болон инээдтэй, сэтгэл түгшээм хэсгүүд гайхалтай зохицсон! 51 ангийг бүгдийг нь дуустал нь үзэхэд үнэхээр урамтай байлаа.',
-    rating: 10,
-    date: 'Өнөөдөр 20:30',
-    likes: 41
-  },
-  {
-    id: 'c_csm1',
-    movieId: 'm_chainsaw_man',
-    userName: 'Билгүүн',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
-    text: 'Чэйнсо Мэн 1-р бүлэг бүх 12 ангиараа монгол дуу оруулгатай орсонд маш их баярлалаа! MAPPA студийн тулааны зураглал, Дэнжи ба Пауэр хоёрын үйлдлүүд үнэхээр галзуу гоё. 10/10!',
-    rating: 10,
-    date: 'Өнөөдөр 21:45',
-    likes: 64
-  },
-  {
-    id: 'c_csm2',
-    movieId: 'm_chainsaw_man',
-    userName: 'Хонгорзул',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    text: 'Почита үнэхээр өхөөрдөм! Акигийн сэлмийн ур чадвар, Макимагийн нууцлаг уур амьсгал үнэхээр татаж байна. Бүх 12 ангийг тасралтгүй үзээд дуусгалаа.',
-    rating: 10,
-    date: 'Өнөөдөр 20:10',
-    likes: 49
-  },
   {
     id: 'c_korra1',
     movieId: 'm_legend_of_korra',

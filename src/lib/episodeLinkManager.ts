@@ -16,24 +16,6 @@ import {
   batchSetDeathNoteEpisodeLinks,
 } from '../data/anime/deathNote/deathNote';
 import {
-  CHAINSAW_MAN,
-  CHAINSAW_MAN_EPISODE_LINKS,
-  setChainsawManEpisodeLink,
-  batchSetChainsawManEpisodeLinks,
-} from '../data/anime/chainsawMan';
-import {
-  SOUL_EATER,
-  SOUL_EATER_EPISODE_LINKS,
-  setSoulEaterEpisodeLink,
-  batchSetSoulEaterEpisodeLinks,
-} from '../data/anime/soulEater';
-import {
-  DANDADAN,
-  DANDADAN_EPISODE_LINKS,
-  setDandadanEpisodeLink,
-  batchSetDandadanEpisodeLinks,
-} from '../data/anime/dandadan';
-import {
   LEGEND_OF_KORRA,
   batchSetLegendOfKorraEpisodeLinks,
 } from '../data/anime/legendOfKorra/legendOfKorra';
@@ -128,12 +110,6 @@ export function batchConnectEpisodes(
 ): Episode[] {
   if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл')) {
     batchSetDeathNoteEpisodeLinks(linksMap);
-  } else if (movie.id === CHAINSAW_MAN.id || movie.title.toLowerCase().includes('chainsaw man')) {
-    batchSetChainsawManEpisodeLinks(linksMap);
-  } else if (movie.id === SOUL_EATER.id || movie.title.toLowerCase().includes('soul eater')) {
-    batchSetSoulEaterEpisodeLinks(linksMap);
-  } else if (movie.id === DANDADAN.id || movie.title.toLowerCase().includes('dandadan')) {
-    batchSetDandadanEpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA_S2.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) {
     batchSetLegendOfKorraS2EpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA.id || movie.title.toLowerCase().includes('korra')) {
@@ -169,16 +145,12 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'DeathNote' | 'ChainsawMan' | 'SoulEater' | 'Dandadan',
+  seriesName: 'DeathNote' | 'LegendOfKorra',
   links: Record<number, string>
 ): string {
   const varName = seriesName === 'DeathNote'
     ? 'DEATH_NOTE_EPISODE_LINKS'
-    : seriesName === 'ChainsawMan'
-    ? 'CHAINSAW_MAN_EPISODE_LINKS'
-    : seriesName === 'SoulEater'
-    ? 'SOUL_EATER_EPISODE_LINKS'
-    : 'DANDADAN_EPISODE_LINKS';
+    : 'LEGEND_OF_KORRA_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([num, url]) => `  ${num}: '${url}',`)

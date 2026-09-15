@@ -42,6 +42,7 @@ import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
 import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
+import { recordAnimeView } from '../lib/animeViewService';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -127,13 +128,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     onUpdateWatchProgressRef.current = onUpdateWatchProgress;
   }, [onUpdateWatchProgress]);
 
-  // Notify watch progress on mount & episode change
+  // Notify watch progress on mount & episode change and record anime view
   useEffect(() => {
-    if (movie?.id) {
+    if (movie?.id && checkEpisodeAccess(currentEpisodeIndex)) {
       const epNum = movie.episodes?.[currentEpisodeIndex]?.episodeNumber || currentEpisodeIndex + 1;
       onUpdateWatchProgressRef.current?.(movie.id, epNum, 0, 0);
+      // Record anime view for viewer tracking (who watched, total views)
+      recordAnimeView(movie.id, currentUser || null, epNum);
     }
-  }, [movie?.id, currentEpisodeIndex]);
+  }, [movie?.id, currentEpisodeIndex, currentUser]);
 
   const episodes = movie?.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];

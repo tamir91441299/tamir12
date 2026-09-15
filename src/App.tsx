@@ -28,6 +28,7 @@ import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
+  sendNewAnimeNotification,
   getPersistedActiveSession,
   persistActiveSession,
   AppNotification
@@ -45,13 +46,15 @@ export default function App() {
 
   // Movies list state: Fresh code definition from SAMPLE_MOVIES + admin added movies
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
+    const DELETED_IDS = new Set(['m_dandadan', 'm_soul_eater', 'm_chainsaw_man']);
     let base = [...SAMPLE_MOVIES];
     try {
       const savedCustom = localStorage.getItem('ioio_custom_movies');
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          base = [...parsed, ...base];
+          const validCustom = parsed.filter((m) => m && !DELETED_IDS.has(m.id));
+          base = [...validCustom, ...base];
         }
       }
       const savedEps = localStorage.getItem('ioio_custom_episodes');
@@ -67,7 +70,7 @@ export default function App() {
     } catch (e) {
       console.error(e);
     }
-    return base;
+    return base.filter((m) => !DELETED_IDS.has(m.id));
   });
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
@@ -113,6 +116,14 @@ export default function App() {
         console.error(e);
       }
       return updated;
+    });
+
+    // Broadcast new anime notification to all users in real-time
+    sendNewAnimeNotification({
+      id: newMovie.id,
+      title: newMovie.title,
+      titleMongolian: newMovie.titleMongolian,
+      poster: newMovie.poster,
     });
   };
 
@@ -469,20 +480,32 @@ export default function App() {
     }
   }, [userBalance]);
 
+  const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showNotifToast, setShowNotifToast] = useState(false);
 
-  // Real-time listener for notifications - ONLY FOR ADMIN (Tamir)
-  useEffect(() => {
-    if (!isAdmin) {
-      setLatestNotification(null);
-      setShowNotifToast(false);
-      return;
-    }
+  // Visible notifications:
+  // All users see 'NEW_ANIME' broadcasts.
+  // Admin (Tamir) also sees user registrations, top-up requests, etc.
+  const visibleNotifications = useMemo(() => {
+    return allNotifications.filter((n) => {
+      if (n.type === 'NEW_ANIME') return true;
+      return isAdmin;
+    });
+  }, [allNotifications, isAdmin]);
 
+  // Real-time listener for notifications
+  useEffect(() => {
     const unsubscribe = subscribeNotificationsFromFirestore((notifs) => {
-      if (notifs.length > 0) {
-        const topNotif = notifs[0];
+      setAllNotifications(notifs);
+
+      const relevantNotifs = notifs.filter((n) => {
+        if (n.type === 'NEW_ANIME') return true;
+        return isAdmin;
+      });
+
+      if (relevantNotifs.length > 0) {
+        const topNotif = relevantNotifs[0];
         setLatestNotification(topNotif);
         setShowNotifToast(true);
       }
@@ -726,7 +749,8 @@ export default function App() {
         onSelectMovieCategory={setSelectedMovieCategory}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        movies={SAMPLE_MOVIES}
+        movies={moviesList}
+        notifications={visibleNotifications}
         onSelectMovie={(m) => setSelectedMovieForDetails(m)}
         favoritesCount={favorites.length}
         purchasedCount={purchasedMovies.length}
@@ -1302,34 +1326,62 @@ export default function App() {
       {/* Real-time Notification Toast Alert */}
       {showNotifToast && latestNotification && (
         <div className="fixed top-20 right-4 z-50 max-w-sm bg-zinc-900 border-2 border-amber-500/80 text-white p-4 rounded-2xl shadow-2xl animate-in slide-in-from-top-5 duration-300 flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
-            <Bell className="w-5 h-5 animate-bounce" />
-          </div>
-          <div className="space-y-1 flex-1">
-            <div className="flex items-center justify-between">
-              <h4 className="font-extrabold text-xs text-amber-400">
+          {latestNotification.poster ? (
+            <img
+              src={latestNotification.poster}
+              alt="Anime"
+              className="w-12 h-16 object-cover rounded-xl shrink-0 border border-white/10 shadow"
+            />
+          ) : (
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+          )}
+          <div className="space-y-1 flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <h4 className="font-extrabold text-xs text-amber-400 truncate">
                 {latestNotification.title}
               </h4>
               <button
                 onClick={() => setShowNotifToast(false)}
-                className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer"
+                className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+            <p className="text-xs text-zinc-300 font-medium leading-relaxed line-clamp-3">
               {latestNotification.message}
             </p>
             <div className="pt-2 flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setShowNotifToast(false);
-                  setShowUserManagementModal(true);
-                }}
-                className="text-[11px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md"
-              >
-                Удирдах & Хэрэглэгч Харах
-              </button>
+              {latestNotification.type === 'NEW_ANIME' ? (
+                <button
+                  onClick={() => {
+                    setShowNotifToast(false);
+                    const movieToOpen = moviesList.find(
+                      (m) => m.id === latestNotification.movieId
+                    );
+                    if (movieToOpen) {
+                      setSelectedMovieForDetails(movieToOpen);
+                    }
+                  }}
+                  className="text-[11px] bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md flex items-center gap-1.5 active:scale-95"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Шууд үзэх (1-р анги үнэгүй)</span>
+                </button>
+              ) : (
+                isAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowNotifToast(false);
+                      setShowUserManagementModal(true);
+                    }}
+                    className="text-[11px] bg-amber-500 hover:bg-amber-400 text-black font-extrabold px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md"
+                  >
+                    Удирдах & Хэрэглэгч Харах
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>
