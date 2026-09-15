@@ -34,6 +34,7 @@ export interface Episode {
   videoUrl: string;
   thumbnail?: string;
   releaseDate?: string;
+  isNew?: boolean;
 }
 
 export interface Comment {

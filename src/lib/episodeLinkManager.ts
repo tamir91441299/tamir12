@@ -16,11 +16,37 @@ import {
   batchSetGravityFallsEpisodeLinks,
 } from '../data/anime/gravityFalls';
 import {
-  MONKART,
-  MONKART_EPISODE_LINKS,
-  setMonkartEpisodeLink,
-  batchSetMonkartEpisodeLinks,
-} from '../data/anime/monkart';
+  DEATH_NOTE,
+  DEATH_NOTE_EPISODE_LINKS,
+  setDeathNoteEpisodeLink,
+  batchSetDeathNoteEpisodeLinks,
+} from '../data/anime/deathNote/deathNote';
+import {
+  CHAINSAW_MAN,
+  CHAINSAW_MAN_EPISODE_LINKS,
+  setChainsawManEpisodeLink,
+  batchSetChainsawManEpisodeLinks,
+} from '../data/anime/chainsawMan';
+import {
+  SOUL_EATER,
+  SOUL_EATER_EPISODE_LINKS,
+  setSoulEaterEpisodeLink,
+  batchSetSoulEaterEpisodeLinks,
+} from '../data/anime/soulEater';
+import {
+  DANDADAN,
+  DANDADAN_EPISODE_LINKS,
+  setDandadanEpisodeLink,
+  batchSetDandadanEpisodeLinks,
+} from '../data/anime/dandadan';
+import {
+  LEGEND_OF_KORRA,
+  batchSetLegendOfKorraEpisodeLinks,
+} from '../data/anime/legendOfKorra/legendOfKorra';
+import {
+  LEGEND_OF_KORRA_S2,
+  batchSetLegendOfKorraS2EpisodeLinks,
+} from '../data/anime/legendOfKorra/legendOfKorraS2';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -67,25 +93,25 @@ export function connectGravityFallsEpisode(episodeNumber: number, videoUrl: stri
 }
 
 /**
- * 🏎️ Монкарт-ын ангийг холбох (Monkart Episode Linker)
- * @param episodeNumber Ангийн дугаар (1-16)
+ * 📓 Үхлийн Тэмдэглэл (Death Note)-ийн ангийг холбох (Death Note Episode Linker)
+ * @param episodeNumber Ангийн дугаар (1-37)
  * @param videoUrl Google Drive линк, ID эсвэл видеоны хаяг
  */
-export function connectMonkartEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+export function connectDeathNoteEpisode(episodeNumber: number, videoUrl: string): Episode | null {
   const formatted = formatEpisodeVideoUrl(videoUrl);
-  setMonkartEpisodeLink(episodeNumber, formatted);
+  setDeathNoteEpisodeLink(episodeNumber, formatted);
   
   // LocalStorage-д хадгалах
   try {
     const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
     const epMap = JSON.parse(saved);
-    epMap[MONKART.id] = MONKART.episodes;
+    epMap[DEATH_NOTE.id] = DEATH_NOTE.episodes;
     localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
   } catch (e) {
-    console.error('Failed to persist Monkart episode link:', e);
+    console.error('Failed to persist Death Note episode link:', e);
   }
 
-  return MONKART.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+  return DEATH_NOTE.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
 }
 
 /**
@@ -130,8 +156,18 @@ export function batchConnectEpisodes(
 ): Episode[] {
   if (movie.id === GRAVITY_FALLS.id || movie.title.toLowerCase().includes('gravity falls')) {
     batchSetGravityFallsEpisodeLinks(linksMap);
-  } else if (movie.id === MONKART.id || movie.title.toLowerCase().includes('monkart')) {
-    batchSetMonkartEpisodeLinks(linksMap);
+  } else if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл')) {
+    batchSetDeathNoteEpisodeLinks(linksMap);
+  } else if (movie.id === CHAINSAW_MAN.id || movie.title.toLowerCase().includes('chainsaw man')) {
+    batchSetChainsawManEpisodeLinks(linksMap);
+  } else if (movie.id === SOUL_EATER.id || movie.title.toLowerCase().includes('soul eater')) {
+    batchSetSoulEaterEpisodeLinks(linksMap);
+  } else if (movie.id === DANDADAN.id || movie.title.toLowerCase().includes('dandadan')) {
+    batchSetDandadanEpisodeLinks(linksMap);
+  } else if (movie.id === LEGEND_OF_KORRA_S2.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) {
+    batchSetLegendOfKorraS2EpisodeLinks(linksMap);
+  } else if (movie.id === LEGEND_OF_KORRA.id || movie.title.toLowerCase().includes('korra')) {
+    batchSetLegendOfKorraEpisodeLinks(linksMap);
   }
 
   const currentEpisodes = movie.episodes || [];
@@ -163,10 +199,18 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'GravityFalls' | 'Monkart',
+  seriesName: 'GravityFalls' | 'DeathNote' | 'ChainsawMan' | 'SoulEater' | 'Dandadan',
   links: Record<number, string>
 ): string {
-  const varName = seriesName === 'GravityFalls' ? 'GRAVITY_FALLS_EPISODE_LINKS' : 'MONKART_EPISODE_LINKS';
+  const varName = seriesName === 'GravityFalls' 
+    ? 'GRAVITY_FALLS_EPISODE_LINKS' 
+    : seriesName === 'DeathNote'
+    ? 'DEATH_NOTE_EPISODE_LINKS'
+    : seriesName === 'ChainsawMan'
+    ? 'CHAINSAW_MAN_EPISODE_LINKS'
+    : seriesName === 'SoulEater'
+    ? 'SOUL_EATER_EPISODE_LINKS'
+    : 'DANDADAN_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([num, url]) => `  ${num}: '${url}',`)

@@ -78,5 +78,29 @@
     "options": "Light Yagami | L Lawliet | Ryuk | Misa Amane",
     "image": "https://upload.wikimedia.org/wikipedia/en/6/6f/Death_Note_Vol_1_Japanese_cover.jpg",
     "meta": { "mode": "character", "point": 20 }
+  },
+  {
+    "id": 11,
+    "emojies": "🪚 🩸 🐶 🧡 🦷 ⚡",
+    "answer": "Denji",
+    "options": "Denji | Aki Hayakawa | Power | Makima",
+    "image": "/images/chainsaw_man_poster.jpg",
+    "meta": { "mode": "character", "point": 20 }
+  },
+  {
+    "id": 12,
+    "emojies": "🌙 💀 📖 🧥 🗡️ 🧡",
+    "answer": "Maka Albarn",
+    "options": "Maka Albarn | Soul Evans | Death the Kid | Black☆Star",
+    "image": "/images/soul_eater_poster.jpg",
+    "meta": { "mode": "character", "point": 20 }
+  },
+  {
+    "id": 13,
+    "emojies": "👽 🛸 💥 👊 👵 🎀",
+    "answer": "Momo Ayase",
+    "options": "Momo Ayase | Okarun | Aira Shiratori | Seiko Ayase",
+    "image": "/images/dandadan_poster.jpg",
+    "meta": { "mode": "character", "point": 20 }
   }
 ]

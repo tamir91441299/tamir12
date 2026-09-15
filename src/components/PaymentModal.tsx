@@ -418,6 +418,48 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     {codeError}
                   </p>
                 )}
+
+                {/* Quick Presets for Death Note, Korra, VIP */}
+                <div className="pt-1.5">
+                  <span className="text-[10px] text-zinc-400 font-bold block mb-1.5">
+                    💡 Танд зориулсан эрхийн кодууд (Дарж шууд оруулах):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputActivationCode('DEATHNOTE');
+                        setCodeError(null);
+                      }}
+                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 cursor-pointer transition-all flex items-center gap-1 shadow"
+                    >
+                      <span>📓 DEATHNOTE</span>
+                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Death Note 30 хоног)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputActivationCode('KORRA');
+                        setCodeError(null);
+                      }}
+                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 cursor-pointer transition-all flex items-center gap-1"
+                    >
+                      <span>🌊 KORRA</span>
+                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Корра 30 хоног)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputActivationCode('VIP2025');
+                        setCodeError(null);
+                      }}
+                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 cursor-pointer transition-all flex items-center gap-1"
+                    >
+                      <span>👑 VIP2025</span>
+                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Бүтэн 1 жил)</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-400">

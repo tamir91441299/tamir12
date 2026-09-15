@@ -21,16 +21,36 @@ export const LEGEND_OF_KORRA_EPISODE_LINKS: Record<number, string> = {
   1: 'https://filemoon.org/en/7d5GLnE73xRJ/file',
   2: 'https://drive.google.com/file/d/1JkuW6SKaV65XxfDgmZ9MrQ7k-6Pkt_i8/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1VOmLbJQU9fscXdj147epT0WTnLePG-KL/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1korra_ep04_drive_link/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1korra_ep05_drive_link/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1korra_ep06_drive_link/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1korra_ep07_drive_link/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1korra_ep08_drive_link/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1korra_ep09_drive_link/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1korra_ep10_drive_link/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1korra_ep11_drive_link/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1korra_ep12_drive_link/view?usp=drivesdk',
+  4: 'https://drive.google.com/file/d/1u2tsMQtvfbd3lgKmIMVLJ6_8op77KqRT/view?usp=drivesdk&usp=embed_facebook',
+  5: 'https://drive.google.com/file/d/1ZHXJ42X2LmZdVfvaCq0j0Bi4wUTHDOrw/view?usp=drivesdk&usp=embed_facebook',
+  6: 'https://drive.google.com/file/d/104h-La7pSxtIpTOg2Lsi0cqskHhmOZQn/view?usp=drivesdk&usp=embed_facebook',
+  7: 'https://drive.google.com/file/d/1XeZ9tLxZxPYLRm9DEAWNYH_QMGuKPxO0/view?usp=drivesdk&usp=embed_facebook',
+  8: 'https://drive.google.com/file/d/1I4P6kTw0hY4_VW5lR-KR3kOPOO8DEUyf/view?usp=drivesdk',
+  9: 'https://drive.google.com/file/d/1wDlul3IzdmC81MvCbHISBkjyixDeJy4G/view?usp=drivesdk&usp=embed_facebook',
+  10: 'https://drive.google.com/file/d/1SvnzhXnU2bqni3DRy6sJvoC_YJ8QhQdg/view?usp=drivesdk&usp=embed_facebook',
+  11: 'https://drive.google.com/file/d/1OOGydwzvuGvaN2qCUJ12uGqSZGuudL8t/view?usp=drivesdk&usp=embed_facebook',
+  12: 'https://drive.google.com/file/d/1BRD0TERSLKeEcEYudv0qmvDCR7tDWhmn/view?usp=drivesdk&usp=embed_facebook',
 };
+
+export function setLegendOfKorraEpisodeLink(episodeNumber: number, link: string) {
+  if (LEGEND_OF_KORRA_EPISODE_LINKS[episodeNumber] !== undefined) {
+    const formatted = formatLegendOfKorraDriveLink(link) || link;
+    LEGEND_OF_KORRA_EPISODE_LINKS[episodeNumber] = formatted;
+    const ep = LEGEND_OF_KORRA_EPISODES.find((e) => e.episodeNumber === episodeNumber);
+    if (ep) {
+      ep.videoUrl = formatted;
+    }
+    if (episodeNumber === 1) {
+      LEGEND_OF_KORRA.videoUrl = formatted;
+    }
+  }
+}
+
+export function batchSetLegendOfKorraEpisodeLinks(links: Record<number, string>) {
+  Object.entries(links).forEach(([epNum, link]) => {
+    setLegendOfKorraEpisodeLink(Number(epNum), link);
+  });
+}
 
 export const LEGEND_OF_KORRA_EPISODES: Episode[] = [
   {

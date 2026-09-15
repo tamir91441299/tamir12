@@ -1579,25 +1579,57 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     type="button"
                     onClick={() => {
                       setNewCodeForm({
-                        code: 'MEGALOBOX',
+                        code: 'DEATHNOTE',
                         type: 'anime',
                         value: 0,
                         durationDays: 30,
-                        description: '🥊 Мегалобокс (Megalo Box) болон бүх анимэ үзэх 30 хоногийн эрх',
-                        maxUses: 100,
+                        description: '📓 Death Note (Үхлийн Тэмдэглэл) бүрэн 37 анги үзэх 30 хоногийн эрх',
+                        maxUses: 1000,
                       });
                     }}
-                    className="text-[11px] text-rose-300 hover:text-white font-bold bg-rose-950/60 hover:bg-rose-900/60 px-2.5 py-1 rounded-lg border border-rose-800/80 transition-all cursor-pointer"
+                    className="text-[11px] text-amber-300 hover:text-white font-bold bg-amber-950/60 hover:bg-amber-900/60 px-2.5 py-1 rounded-lg border border-amber-700/80 transition-all cursor-pointer flex items-center gap-1 shadow"
                   >
-                    🥊 Megalo Box Код
+                    <span>📓 Death Note Код</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCodeForm({
+                        code: 'KORRA',
+                        type: 'anime',
+                        value: 0,
+                        durationDays: 30,
+                        description: '🌊 The Legend of Korra (Коррагийн Домог) анимэ үзэх 30 хоногийн эрх',
+                        maxUses: 1000,
+                      });
+                    }}
+                    className="text-[11px] text-cyan-300 hover:text-white font-bold bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-700/80 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🌊 Korra Код</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCodeForm({
+                        code: 'VIP2025',
+                        type: 'full_vip',
+                        value: 0,
+                        durationDays: 365,
+                        description: '👑 Бүх кино, анимэ үзэх Бүтэн VIP 1 жилийн эрх',
+                        maxUses: 500,
+                      });
+                    }}
+                    className="text-[11px] text-yellow-300 hover:text-white font-bold bg-yellow-950/60 hover:bg-yellow-900/60 px-2.5 py-1 rounded-lg border border-yellow-700/80 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>👑 VIP Код</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleGenerateRandomCode}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 bg-cyan-950/60 hover:bg-cyan-900/60 px-2.5 py-1 rounded-lg border border-cyan-800/80 transition-all cursor-pointer"
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 bg-emerald-950/60 hover:bg-emerald-900/60 px-2.5 py-1 rounded-lg border border-emerald-800/80 transition-all cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>🎲 Санамсаргүй Код</span>
+                    <span>🎲 Санамсаргүй</span>
                   </button>
                 </div>
               </div>

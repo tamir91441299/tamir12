@@ -216,7 +216,7 @@ export const GRAVITY_FALLS: Movie = {
   titleMongolian: 'Гравити Фоллс (Gravity Falls)',
   type: 'anime',
   poster: '/images/gravity_falls_poster.jpg',
-  backdrop: '/images/gravity_falls_backdrop.jpg',
+  backdrop: 'https://tse1.mm.bing.net/th/id/OIP.Fq2sh3JbbTj_t6BL4NvdBAHaLd?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2024,
   duration: '20 анги (Бүлэг 1)',
   rating: 9.9,

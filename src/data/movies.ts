@@ -2,12 +2,13 @@ import { Movie, Comment, Episode } from '../types';
 import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
 import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
-import { JUJUTSU_KAISEN_S1 } from './anime/jujutsuKaisen';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
-import { LEGEND_OF_KORRA } from './anime/legendOfKorra';
+import { LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 } from './anime/legendOfKorra';
 import { GRAVITY_FALLS } from './anime/gravityFalls';
-import { MONKART } from './anime/monkart';
+import { CHAINSAW_MAN } from './anime/chainsawMan';
+import { SOUL_EATER } from './anime/soulEater';
+import { DANDADAN } from './anime/dandadan';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -199,39 +200,102 @@ export const SAMPLE_MOVIES: Movie[] = [
   MY_HERO_ACADEMIA_S1,
   MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
-  JUJUTSU_KAISEN_S1,
+  CHAINSAW_MAN,
+  SOUL_EATER,
+  DANDADAN,
   KAMI_KUZU_IDOL,
   DEATH_NOTE,
   LEGEND_OF_KORRA,
-  GRAVITY_FALLS,
-  MONKART
+  LEGEND_OF_KORRA_S2,
+  GRAVITY_FALLS
 ];
 
-export { JUJUTSU_KAISEN_S1, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, GRAVITY_FALLS, MONKART };
+export { CHAINSAW_MAN, SOUL_EATER, DANDADAN, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2, GRAVITY_FALLS };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
-  { name: 'Animation', count: 63 },
-  { name: 'Shounen', count: 50 },
-  { name: 'Action', count: 63 },
-  { name: 'Superpower', count: 50 },
-  { name: 'Adventure', count: 50 },
-  { name: 'Fantasy', count: 50 },
+  { name: 'Animation', count: 95 },
+  { name: 'Shounen', count: 85 },
+  { name: 'Action', count: 95 },
+  { name: 'Superpower', count: 60 },
+  { name: 'Adventure', count: 55 },
+  { name: 'Fantasy', count: 80 },
+  { name: 'Dark Fantasy', count: 48 },
   { name: 'Drama', count: 26 },
   { name: 'Crime', count: 13 },
   { name: 'Thriller', count: 13 },
   { name: 'Sports', count: 13 },
-  { name: 'Sci-Fi', count: 13 },
-  { name: 'Comedy', count: 25 }
+  { name: 'Sci-Fi', count: 25 },
+  { name: 'Comedy', count: 48 }
 ];
 
 export const RELEASE_YEARS = [
   2026, 2025, 2024,
   2023, 2022, 2021,
   2020, 2019, 2018,
-  2006
+  2008, 2006
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_ddd1',
+    movieId: 'm_dandadan',
+    userName: 'Тэмүүлэн',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
+    text: 'Дандадан ямар галзуу анимэ вэ! Science SARU-ийн найруулга, Creepy Nuts-ийн Отонөүкэ дуу үнэхээр донтуулж байна. Момо Окарун хоёрын хими ч гайхалтай!',
+    rating: 10,
+    date: 'Өнөөдөр 23:40',
+    likes: 68
+  },
+  {
+    id: 'c_ddd2',
+    movieId: 'm_dandadan',
+    userName: 'Анударь',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    text: 'Турбо эмгэн болон харийнхны тулаан бүр инээдтэй бас маш хурдтай. 1-р бүлгийг бүрэн 12 ангиар нь өндөр чанартайгаар шууд үзэхэд үнэхээр сэтгэл ханамжтай байлаа.',
+    rating: 10,
+    date: 'Өнөөдөр 21:05',
+    likes: 45
+  },
+  {
+    id: 'c_se1',
+    movieId: 'm_soul_eater',
+    userName: 'Энхтөр',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Соул Ийтэр бүрэн 51 ангиараа орж ирсэнд баярлалаа! Мака, Соул хоёрын сүнсний резонанс болон Black☆Star, Death the Kid-ийн тулаанууд бүх цаг үеийн шилдэг нь. Дуу оруулга маш сайн болжээ.',
+    rating: 10,
+    date: 'Өнөөдөр 22:15',
+    likes: 52
+  },
+  {
+    id: 'c_se2',
+    movieId: 'm_soul_eater',
+    userName: 'Мишээл',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
+    text: 'Bones студийн анимаци болон инээдтэй, сэтгэл түгшээм хэсгүүд гайхалтай зохицсон! 51 ангийг бүгдийг нь дуустал нь үзэхэд үнэхээр урамтай байлаа.',
+    rating: 10,
+    date: 'Өнөөдөр 20:30',
+    likes: 41
+  },
+  {
+    id: 'c_csm1',
+    movieId: 'm_chainsaw_man',
+    userName: 'Билгүүн',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Чэйнсо Мэн 1-р бүлэг бүх 12 ангиараа монгол дуу оруулгатай орсонд маш их баярлалаа! MAPPA студийн тулааны зураглал, Дэнжи ба Пауэр хоёрын үйлдлүүд үнэхээр галзуу гоё. 10/10!',
+    rating: 10,
+    date: 'Өнөөдөр 21:45',
+    likes: 64
+  },
+  {
+    id: 'c_csm2',
+    movieId: 'm_chainsaw_man',
+    userName: 'Хонгорзул',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    text: 'Почита үнэхээр өхөөрдөм! Акигийн сэлмийн ур чадвар, Макимагийн нууцлаг уур амьсгал үнэхээр татаж байна. Бүх 12 ангийг тасралтгүй үзээд дуусгалаа.',
+    rating: 10,
+    date: 'Өнөөдөр 20:10',
+    likes: 49
+  },
   {
     id: 'c_gf1',
     movieId: 'm_gravity_falls',
@@ -241,16 +305,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 21:30',
     likes: 58
-  },
-  {
-    id: 'c_monkart1',
-    movieId: 'm_monkart',
-    userName: 'Ариунболд',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
-    text: 'Монкарт хүүхэлдэйн киноны луу Драка ба Жиний уралдаанууд хүүхдүүдийн хамгийн дуртай цуврал! Ангиуд нь дарааллаараа шууд холбогдож тоглож байна.',
-    rating: 10,
-    date: 'Өнөөдөр 20:50',
-    likes: 47
   },
   {
     id: 'c_korra1',
@@ -271,6 +325,26 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 19:40',
     likes: 32
+  },
+  {
+    id: 'c_korra_s2_1',
+    movieId: 'm_legend_of_korra_s2',
+    userName: 'Амарбаясгалан',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
+    text: '2-р бүлэг Сүнснүүдийн ертөнц (Book Two: Spirits) нэмэгдсэнд маш их баярлалаа! Анхны Аватар Ваны түүх, Раава ба Ваатугийн тулаан бол Аватарын ертөнцийн хамгийн шилдэг хэсэг шүү. Дүрсний чанар үнэхээр тунгалаг байна.',
+    rating: 10,
+    date: 'Саяхан',
+    likes: 58
+  },
+  {
+    id: 'c_korra_s2_2',
+    movieId: 'm_legend_of_korra_s2',
+    userName: 'Номинцэцэг',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+    text: 'Бүх 14 анги бүрэн орсон, тоглуулагчийн дуу дүрсний чанар анхных шигээ маш тод, хурдан гацалтгүй тоглож байна. Баярлалаа FlickNime хамт олонд!',
+    rating: 10,
+    date: 'Өнөөдөр 22:15',
+    likes: 41
   },
   {
     id: 'c1',

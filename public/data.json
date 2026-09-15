@@ -18,7 +18,7 @@
     "emojies": "🎣 ⚡ 🐜 🕷️ 🎴",
     "answer": "Hunter x Hunter",
     "options": "Jujutsu Kaisen | Hunter x Hunter | One Punch Man | Yu Yu Hakusho",
-    "image": "https://tse3.mm.bing.net/th/id/OIP.SxUcCRvnt27xaetotp7R4AHaNK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+    "image": "https://upload.wikimedia.org/wikipedia/en/0/0f/Hunter_x_Hunter_cover_-_vol1.jpg"
   },
   {
     "id": 4,
@@ -103,5 +103,26 @@
     "answer": "91 Days",
     "options": "91 Days | Megalo Box | Banana Fish | Baccano!",
     "image": "https://m.media-amazon.com/images/M/MV5BMGU5MTQwM2UtYTgzYS00ODhkLWE3ZDItZmZjNTlmOTYyNzU0XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg"
+  },
+  {
+    "id": 16,
+    "emojies": "🪚 🩸 🐶 🏙️ 😈",
+    "answer": "Chainsaw Man",
+    "options": "Chainsaw Man | Jujutsu Kaisen | Demon Slayer | Bleach",
+    "image": "/images/chainsaw_man_poster.jpg"
+  },
+  {
+    "id": 17,
+    "emojies": "🌙 💀 🗡️ 🧙‍♀️ 👻",
+    "answer": "Soul Eater",
+    "options": "Soul Eater | Death Note | Bleach | Fullmetal Alchemist",
+    "image": "/images/soul_eater_poster.jpg"
+  },
+  {
+    "id": 18,
+    "emojies": "👽 🛸 👻 👵 💥",
+    "answer": "Dandadan",
+    "options": "Dandadan | Mob Psycho 100 | Jujutsu Kaisen | Chainsaw Man",
+    "image": "/images/dandadan_poster.jpg"
   }
 ]

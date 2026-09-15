@@ -1194,6 +1194,8 @@ export default function App() {
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
           onOpenAuthModal={handleOpenAuthModal}
+          onSelectMovie={(m) => setSelectedMovieForDetails(m)}
+          allMovies={moviesList}
           onRequestPurchase={(m) => {
             setSelectedMovieForDetails(null);
             setPaymentMovie(m);

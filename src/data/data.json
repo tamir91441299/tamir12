@@ -103,5 +103,26 @@
     "answer": "91 Days",
     "options": "91 Days | Megalo Box | Banana Fish | Baccano!",
     "image": "https://m.media-amazon.com/images/M/MV5BMGU5MTQwM2UtYTgzYS00ODhkLWE3ZDItZmZjNTlmOTYyNzU0XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg"
+  },
+  {
+    "id": 16,
+    "emojies": "🪚 🩸 🐶 🏙️ 😈",
+    "answer": "Chainsaw Man",
+    "options": "Chainsaw Man | Jujutsu Kaisen | Demon Slayer | Bleach",
+    "image": "/images/chainsaw_man_poster.jpg"
+  },
+  {
+    "id": 17,
+    "emojies": "🌙 💀 🗡️ 🧙‍♀️ 👻",
+    "answer": "Soul Eater",
+    "options": "Soul Eater | Death Note | Bleach | Fullmetal Alchemist",
+    "image": "/images/soul_eater_poster.jpg"
+  },
+  {
+    "id": 18,
+    "emojies": "👽 🛸 👻 👵 💥",
+    "answer": "Dandadan",
+    "options": "Dandadan | Mob Psycho 100 | Jujutsu Kaisen | Chainsaw Man",
+    "image": "/images/dandadan_poster.jpg"
   }
 ]

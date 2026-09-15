@@ -57,6 +57,26 @@ export const DEATH_NOTE_EPISODE_LINKS: Record<number, string> = {
   37: 'https://drive.google.com/file/d/1deathnote_ep37_drive_link/view?usp=drivesdk',
 };
 
+export function setDeathNoteEpisodeLink(episodeNumber: number, link: string): void {
+  if (DEATH_NOTE_EPISODE_LINKS[episodeNumber] !== undefined || episodeNumber >= 1) {
+    const formatted = formatDeathNoteDriveLink(link) || link;
+    DEATH_NOTE_EPISODE_LINKS[episodeNumber] = formatted;
+    const ep = DEATH_NOTE_EPISODES.find((e) => e.episodeNumber === episodeNumber);
+    if (ep) {
+      ep.videoUrl = formatted;
+    }
+    if (episodeNumber === 1) {
+      DEATH_NOTE.videoUrl = formatted;
+    }
+  }
+}
+
+export function batchSetDeathNoteEpisodeLinks(links: Record<number, string>): void {
+  Object.entries(links).forEach(([epNum, link]) => {
+    setDeathNoteEpisodeLink(Number(epNum), link);
+  });
+}
+
 export const DEATH_NOTE_EPISODES: Episode[] = [
   {
     episodeNumber: 1,

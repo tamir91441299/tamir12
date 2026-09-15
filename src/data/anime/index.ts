@@ -1,10 +1,11 @@
 export * from './myHeroAcademia';
 export * from './myHeroAcademiaS2';
 export * from './megaloBox';
-export * from './jujutsuKaisen';
 export * from './kamiKuzuIdol';
 export * from './deathNote';
 export * from './legendOfKorra';
 export * from './gravityFalls';
-export * from './monkart';
+export * from './chainsawMan';
+export * from './soulEater';
+export * from './dandadan';
 

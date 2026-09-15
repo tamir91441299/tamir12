@@ -51,6 +51,8 @@ interface MovieDetailModalProps {
   isMoviePackage?: boolean;
   onRequestPurchase?: (movie: Movie) => void;
   onOpenAuthModal?: (mode?: 'phone' | 'pc' | 'login' | 'register') => void;
+  onSelectMovie?: (movie: Movie) => void;
+  allMovies?: Movie[];
 }
 
 export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
@@ -67,6 +69,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   isMoviePackage = false,
   onRequestPurchase,
   onOpenAuthModal,
+  onSelectMovie,
+  allMovies,
 }) => {
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
 
@@ -145,9 +149,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
-  const isKorra = movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра');
+  const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
+  const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
   const isGravityFalls = movie.id === 'm_gravity_falls' || movie.title.toLowerCase().includes('gravity falls') || movie.titleMongolian.toLowerCase().includes('гравити');
-  const isMonkart = movie.id === 'm_monkart' || movie.title.toLowerCase().includes('monkart') || movie.titleMongolian.toLowerCase().includes('монкарт');
+  const isDeathNote = movie.id === 'm_death_note' || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл');
 
   // Check access permission for specific episode
   // Rule:
@@ -284,6 +289,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       12: '12-р анги - Төгсгөлийн тулаан (Endgame - Төгсгөл)'
     };
 
+    const defaultKorraS2Titles: Record<number, string> = {
+      1: '1-р анги (13) - Босогч сүнс (Rebel Spirit)',
+      2: '2-р анги (14) - Өмнөдийн туйлын туяа (The Southern Lights)',
+      3: '3-р анги (15) - Иргэний дайн: 1-р хэсэг (Civil Wars: Part 1)',
+      4: '4-р анги (16) - Иргэний дайн: 2-р хэсэг (Civil Wars: Part 2)',
+      5: '5-р анги (17) - Энхийг сахиулагчид (Peacekeepers)',
+      6: '6-р анги (18) - Мэхлэлт (The Sting)',
+      7: '7-р анги (19) - Эхлэл: 1-р хэсэг - Анхны Аватар Ван (Beginnings: Part 1)',
+      8: '8-р анги (20) - Эхлэл: 2-р хэсэг - Раава ба Ваату (Beginnings: Part 2)',
+      9: '9-р анги (21) - Хөтөч (The Guide)',
+      10: '10-р анги (22) - Шинэ сүнслэг эрин (A New Spiritual Age)',
+      11: '11-р анги (23) - Мянган оддын шөнө (Night of a Thousand Stars)',
+      12: '12-р анги (24) - Эв зохицлын нийлэмж (Harmonic Convergence)',
+      13: '13-р анги (25) - Харанхуй нөмрөх үед (Darkness Falls)',
+      14: '14-р анги (26) - Харанхуй дахь гэрэл (Light in the Dark - Төгсгөл)'
+    };
+
     const defaultGravityFallsTitles: Record<number, string> = {
       1: '1-р анги - Жуулчдын урхи (Tourist Trapped)',
       2: '2-р анги - Гобблвонкерын домог (The Legend of the Gobblewonker)',
@@ -307,23 +329,44 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       20: '20-р анги - Нууцын тайлал & Билл Сайферын тусгай анги (Weirdmageddon Special)'
     };
 
-    const defaultMonkartTitles: Record<number, string> = {
-      1: '1-р анги - Дракатай учирсан нь (Meeting Draka)',
-      2: '2-р анги - Кармон хотын анхны уралдаан (Race in Carmon Town)',
-      3: '3-р анги - Хүлэг баатрын шалгуур (Knight\'s Grand Trial)',
-      4: '4-р анги - Сэна гүнжийн нууц даалгавар (Princess Sena\'s Mission)',
-      5: '5-р анги - Кармон улсын харанхуй аюул (Threat of the Dark Forces)',
-      6: '6-р анги - Галт луугийн сэргэлт ба Драка (Awakening of Fire Dragon)',
-      7: '7-р анги - Майкл Вайт ба Леогийн хурд (Michael White & Leo)',
-      8: '8-р анги - Битүү тойргийн морин зам (The Circuit Track Battle)',
-      9: '9-р анги - Дестрогийн харанхуй заль (Destro\'s Dark Treachery)',
-      10: '10-р анги - Мегарод хувьсал: Луугийн сүр хүч (Megaroid Evolution)',
-      11: '11-р анги - Робины үнэнч нөхөрлөл (Robin\'s Swift Assist)',
-      12: '12-р анги - Хагас шигшээ уралдаан (Semi-Final Championship)',
-      13: '13-р анги - Алтан картын нууц (Secret of the Golden Mon-Card)',
-      14: '14-р анги - Их Аренагийн шийдвэрлэх тулаан (Grand Arena Battle)',
-      15: '15-р анги - Кармон хаант улсыг хамгаалах нь (Defending Carmon Kingdom)',
-      16: '16-р анги - Аварга хүлэг баатар Жин ба Драка (The Champion Knight Jin - Төгсгөл)'
+    const defaultDeathNoteTitles: Record<number, string> = {
+      1: '1-р анги - Сэргэлт / Төрөлт (Rebirth)',
+      2: '2-р анги - Сөргөлдөөн (Confrontation)',
+      3: '3-р анги - Гүйлгээ (Dealings)',
+      4: '4-р анги - Мөрдөлт (Pursuit)',
+      5: '5-р анги - Тактик (Tactics)',
+      6: '6-р анги - Нээлттэй шарх (Unraveling)',
+      7: '7-р анги - Үүлэрхэг тэнгэр (Overcast)',
+      8: '8-р анги - Харц (Glare)',
+      9: '9-р анги - Уулзалт (Encounter)',
+      10: '10-р анги - Эргэлзээ (Doubt)',
+      11: '11-р анги - Довтолгоо (Assault)',
+      12: '12-р анги - Хайр (Love)',
+      13: '13-р анги - Итгэлцэл (Confession)',
+      14: '14-р анги - Найз (Friend)',
+      15: '15-р анги - Мөрий (Wager)',
+      16: '16-р анги - Шийдвэр (Decision)',
+      17: '17-р анги - Цаазаар авах ял (Execution)',
+      18: '18-р анги - Холбоотон (Ally)',
+      19: '19-р анги - Мацүда (Matsuda)',
+      20: '20-р анги - Түр зогсолт (Makeshift)',
+      21: '21-р анги - Гүйцэтгэл (Performance)',
+      22: '22-р анги - Удирдамж (Guidance)',
+      23: '23-р анги - Улангаслал (Frenzy)',
+      24: '24-р анги - Сэргэлт (Revival)',
+      25: '25-р анги - Чимээгүй байдал (Silence)',
+      26: '26-р анги - Хойд дүр (Renewal)',
+      27: '27-р анги - Хуваарилалт (Abduction)',
+      28: '28-р анги - Тэвчээр (Impatience)',
+      29: '29-р анги - Эцэг (Father)',
+      30: '30-р анги - Шударга ёс (Justice)',
+      31: '31-р анги - Шилжүүлэлт (Transfer)',
+      32: '32-р анги - Сонголт (Selection)',
+      33: '33-р анги - Доромжлол (Scorn)',
+      34: '34-р анги - Сэжиг (Vigilance)',
+      35: '35-р анги - Аллага (Malice)',
+      36: '36-р анги - 1.28 (1.28)',
+      37: '37-р анги - Шинэ ертөнц (New World - Төгсгөл)'
     };
 
     const newEpList: Episode[] = [];
@@ -334,7 +377,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
         isGravityFalls ? defaultGravityFallsTitles[i] || `${i}-р анги` :
-        isMonkart ? defaultMonkartTitles[i] || `${i}-р анги` :
+        isDeathNote ? defaultDeathNoteTitles[i] || `${i}-р анги` :
+        isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
         isKorra ? defaultKorraTitles[i] || `${i}-р анги` :
         is91Days ? default91DaysTitles[i] || `${i}-р анги` :
         isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` :
@@ -624,6 +668,38 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             </div>
 
+            {/* Death Note Promo Code Special Banner */}
+            {isDeathNote && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-red-950/20 to-zinc-900 border border-amber-500/40 text-xs shadow-lg flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <Ticket className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-zinc-100 font-bold flex flex-wrap items-center gap-2">
+                      <span>📓 Death Note (Үхлийн Тэмдэглэл) Үзэх Эрхийн Код:</span>
+                      <span className="font-mono text-amber-400 font-black text-sm bg-black/60 px-2.5 py-0.5 rounded-lg border border-amber-500/40 tracking-wider">
+                        DEATHNOTE
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Төлбөрийн цонхонд уг кодыг оруулж 30 хоногийн эрхээ шууд идэвхжүүлэх боломжтой.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onRequestPurchase) onRequestPurchase(movie);
+                  }}
+                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-extrabold text-xs rounded-xl cursor-pointer transition-all shadow shrink-0 flex items-center gap-1.5"
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>Кодоор Идэвхжүүлэх</span>
+                </button>
+              </div>
+            )}
+
             {/* Description & Details */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400">
@@ -660,6 +736,70 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Season Switcher for Multi-Season Anime (Legend of Korra & My Hero Academia) */}
+            {(isKorra || isKorraS2) && (
+              <div className="pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    Бүлгүүд (Seasons):
+                  </span>
+                  <span className="text-[11px] text-zinc-400">Нийт 2 бүлэг, 26 анги</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isKorraS2 && onSelectMovie && allMovies) {
+                        const s1 = allMovies.find((m) => m.id === 'm_legend_of_korra');
+                        if (s1) onSelectMovie(s1);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isKorra
+                        ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-lg shadow-cyan-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>🌪️</span>
+                      <span>1-р Бүлэг: Салхи</span>
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      isKorra ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-zinc-400'
+                    }`}>
+                      12 анги
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isKorraS2 && onSelectMovie && allMovies) {
+                        const s2 = allMovies.find((m) => m.id === 'm_legend_of_korra_s2');
+                        if (s2) onSelectMovie(s2);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isKorraS2
+                        ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black border-cyan-400 font-black shadow-lg shadow-cyan-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>2-р Бүлэг: Сүнснүүд</span>
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      isKorraS2 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-cyan-400'
+                    }`}>
+                      14 анги
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Episode List (For Series / Anime) */}
             {episodesList && episodesList.length > 0 && (
@@ -757,7 +897,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                       <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
                         <LinkIcon className="w-4 h-4 text-amber-400" />
-                        1-ээс 13 хүртэлх ангиудын линк холбох код:
+                        1-ээс {batchTotalEpCount} хүртэлх ангиудын линк холбох:
                       </span>
                       <span className="text-[11px] text-zinc-400 font-mono">
                         {movie.titleMongolian} ({movie.title})

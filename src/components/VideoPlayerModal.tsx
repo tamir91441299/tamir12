@@ -149,27 +149,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isGoogleDrive = !!googleDriveId;
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
-  const isStrictEmbedOnly = isYouTube || (isExternalEmbed && !isGoogleDrive);
+  const isStrictEmbedOnly = isYouTube || isExternalEmbed || isGoogleDrive;
 
-  // High-Quality Default: Direct 1080p Full HD mode with proxy for crystal clear playback
-  // Only strict third-party embeds (like YouTube) default to 'embed'
+  // High-Quality Default:
+  // Direct playable media (.mp4, .webm, .m3u8) plays in direct HTML5 player.
+  // Google Drive, Filemoon, YouTube and external embeds play in high-definition embed player for authentic original master quality without proxy degradation.
   const [serverMode, setServerMode] = useState<ServerMode>(() => {
-    if (isStrictEmbedOnly) {
-      return 'embed';
+    if (isDirectMedia) {
+      return 'direct';
     }
-    return 'direct';
+    return 'embed';
   });
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
   const [showQualityQuickMenu, setShowQualityQuickMenu] = useState<boolean>(false);
-  const [colorProfile, setColorProfile] = useState<'vibrant_hdr' | 'sharp_cinema' | 'standard'>('vibrant_hdr');
+  const [colorProfile, setColorProfile] = useState<'vibrant_hdr' | 'sharp_cinema' | 'standard'>('standard');
 
-  // Adapt server mode only for strict external embeds (e.g. YouTube)
+  // Adapt server mode when source changes: ensure embeds play directly in authentic HD embed mode
   useEffect(() => {
     if (isStrictEmbedOnly) {
       setServerMode('embed');
       serverModeRef.current = 'embed';
+    } else if (isDirectMedia) {
+      setServerMode('direct');
+      serverModeRef.current = 'direct';
     }
-  }, [rawVideoSrc, isStrictEmbedOnly]);
+  }, [rawVideoSrc, isStrictEmbedOnly, isDirectMedia]);
 
   // Next Episode prompt dialog state when episode finishes
   const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState<boolean>(false);
@@ -1055,8 +1059,21 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Server Mode Toggle: Direct Full HD vs Google Drive Embed */}
+          {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
           <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
+            <button
+              type="button"
+              onClick={() => handleServerChange('embed')}
+              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                serverMode === 'embed'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
+            >
+              <HardDrive className="w-3 h-3" />
+              <span>Drive (Үндсэн)</span>
+            </button>
             <button
               type="button"
               onClick={() => handleServerChange('direct')}
@@ -1065,23 +1082,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Шууд тоглуулагч: 1080p Full HD тунгалаг дүрслэл, тоглуулагчийн бүрэн удирдлага"
+              title="Шууд тоглуулагч: HTML5 тоглуулагч"
             >
               <Zap className="w-3 h-3" />
               <span>Шууд HD</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleServerChange('embed')}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                serverMode === 'embed'
-                  ? 'bg-zinc-800 text-cyan-300 font-black border border-zinc-600 shadow'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Google Drive нөөц тоглуулагч"
-            >
-              <HardDrive className="w-3 h-3" />
-              <span>Drive</span>
             </button>
           </div>
 
@@ -1319,19 +1323,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   title={movie.titleMongolian}
                 />
 
-                {/* ⚡ 1080p Full HD Direct Mode Switch Banner */}
-                <div className="absolute top-3 left-3 sm:left-4 z-40 flex items-center gap-2 bg-black/85 backdrop-blur-md border border-cyan-500/50 rounded-xl px-3 py-1.5 shadow-2xl animate-in fade-in duration-300">
-                  <span className="text-[11px] font-medium text-zinc-300 hidden md:inline">
-                    💡 Драйв чанарыг 360p хүртэл бууруулдаг.
+                {/* ✨ Authentic High-Definition Master Quality Status Badge */}
+                <div className="absolute top-3 left-3 sm:left-4 z-40 flex items-center gap-2 bg-black/85 backdrop-blur-md border border-cyan-500/40 rounded-xl px-3 py-1.5 shadow-2xl animate-in fade-in duration-300">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                  </span>
+                  <span className="text-[11px] font-bold text-cyan-300">
+                    ✨ Анхны эх чанар • Full HD (1080p/720p)
                   </span>
                   <button
                     type="button"
                     onClick={() => handleServerChange('direct')}
-                    className="px-3 py-1 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs rounded-lg shadow-lg shadow-cyan-500/20 cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
-                    title="1080p Full HD Шууд тоглуулагч руу шилжих"
+                    className="px-2.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold text-[10px] rounded-lg border border-zinc-600 transition-all flex items-center gap-1 active:scale-95 cursor-pointer ml-1"
+                    title="Шууд HTML5 тоглуулагч руу шилжих"
                   >
-                    <Zap className="w-3.5 h-3.5 fill-black" />
-                    <span>⚡ 1080p Full HD Шууд үзэх</span>
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span>Шууд HD</span>
                   </button>
                 </div>
 
@@ -1454,13 +1462,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 style={{
                   filter:
                     colorProfile === 'vibrant_hdr'
-                      ? `brightness(${videoBrightness}%) contrast(108%) saturate(118%)`
+                      ? `brightness(${videoBrightness}%) contrast(106%) saturate(112%)`
                       : colorProfile === 'sharp_cinema'
-                      ? `brightness(${videoBrightness}%) contrast(112%) saturate(106%)`
+                      ? `brightness(${videoBrightness}%) contrast(108%) saturate(104%)`
                       : videoBrightness !== 100
                       ? `brightness(${videoBrightness}%)`
                       : undefined,
                   backgroundColor: '#000000',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  imageRendering: 'auto',
                 }}
               />
 
