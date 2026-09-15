@@ -102,5 +102,13 @@
     "options": "Momo Ayase | Okarun | Aira Shiratori | Seiko Ayase",
     "image": "/images/dandadan_poster.jpg",
     "meta": { "mode": "character", "point": 20 }
+  },
+  {
+    "id": 14,
+    "emojies": "👧 🥜 🧠 🧸 🦄 🎀",
+    "answer": "Anya Forger",
+    "options": "Anya Forger | Yor Forger | Loid Forger | Becky Blackbell",
+    "image": "https://images.justwatch.com/poster/300438183/s718/spy-x-family.jpg",
+    "meta": { "mode": "character", "point": 20 }
   }
 ]

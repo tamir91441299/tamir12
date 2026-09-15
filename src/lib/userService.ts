@@ -40,6 +40,26 @@ export interface AppNotification {
 // Initial anime announcements for all users
 export const INITIAL_ANIME_NOTIFICATIONS: AppNotification[] = [
   {
+    id: 'notif_init_korra_s3',
+    type: 'NEW_ANIME',
+    title: 'Шинэ Цуврал Нэмэгдлээ! 🌪️',
+    message: '«Коррагийн Домог Бүлэг 3: Өөрчлөлт (Book 3: Change)» бүх 13 анги амжилттай нэмэгдлээ. 1-р ангийг шууд үзэх боломжтой!',
+    movieId: 'm_legend_of_korra_s3',
+    movieTitle: 'Коррагийн Домог Бүлэг 3',
+    poster: 'https://m.media-amazon.com/images/M/MV5BMjA5MTY2ODk4MV5BMl5BanBnXkFtZTgwNTI4MDY4MTE@._V1_FMjpg_UX1000_.jpg',
+    createdAt: 'Өнөөдөр 15:00',
+  },
+  {
+    id: 'notif_init_korra_s4',
+    type: 'NEW_ANIME',
+    title: 'Төгсгөлийн Бүлэг Нэмэгдлээ! ⚙️',
+    message: '«Коррагийн Домог Бүлэг 4: Тэнцвэр (Book 4: Balance)» бүх 13 анги нэмэгдлээ. Аватар Коррагийн сүүлчийн агуу тулааныг үзээрэй!',
+    movieId: 'm_legend_of_korra_s4',
+    movieTitle: 'Коррагийн Домог Бүлэг 4',
+    poster: 'https://m.media-amazon.com/images/M/MV5BNTBhOGY2N2QtMDQ4Ny00OTM2LWI3NDYtY2ZhZjM3MDk2NjY2XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    createdAt: 'Өнөөдөр 15:30',
+  },
+  {
     id: 'notif_init_deathnote',
     type: 'NEW_ANIME',
     title: 'Сонгодог Анимэ Нэмэгдлээ! 📓',

@@ -23,6 +23,20 @@ import {
   LEGEND_OF_KORRA_S2,
   batchSetLegendOfKorraS2EpisodeLinks,
 } from '../data/anime/legendOfKorra/legendOfKorraS2';
+import {
+  LEGEND_OF_KORRA_S3,
+  batchSetLegendOfKorraS3EpisodeLinks,
+} from '../data/anime/legendOfKorra/legendOfKorraS3';
+import {
+  LEGEND_OF_KORRA_S4,
+  batchSetLegendOfKorraS4EpisodeLinks,
+} from '../data/anime/legendOfKorra/legendOfKorraS4';
+import {
+  SPY_X_FAMILY,
+  SPY_X_FAMILY_EPISODE_LINKS,
+  setSpyXFamilyEpisodeLink,
+  batchSetSpyXFamilyEpisodeLinks,
+} from '../data/anime/spyXFamily';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -69,6 +83,28 @@ export function connectDeathNoteEpisode(episodeNumber: number, videoUrl: string)
 }
 
 /**
+ * 🕵️‍♂️ Тагнуулч х Гэр бүл (Spy x Family)-ийн ангийг холбох
+ * @param episodeNumber Ангийн дугаар (1-25)
+ * @param videoUrl Google Drive линк, ID эсвэл видеоны хаяг
+ */
+export function connectSpyXFamilyEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setSpyXFamilyEpisodeLink(episodeNumber, formatted);
+  
+  // LocalStorage-д хадгалах
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[SPY_X_FAMILY.id] = SPY_X_FAMILY.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Spy x Family episode link:', e);
+  }
+
+  return SPY_X_FAMILY.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+/**
  * 📝 Текстээс олон ангийн линкийг задлан ялгах туслах функц (Batch Link Parser)
  * Жишээ орцууд:
  * - 1: https://drive.google.com/...
@@ -110,6 +146,12 @@ export function batchConnectEpisodes(
 ): Episode[] {
   if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл')) {
     batchSetDeathNoteEpisodeLinks(linksMap);
+  } else if (movie.id === SPY_X_FAMILY.id || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл')) {
+    batchSetSpyXFamilyEpisodeLinks(linksMap);
+  } else if (movie.id === LEGEND_OF_KORRA_S4.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('4') || movie.titleMongolian.includes('4')))) {
+    batchSetLegendOfKorraS4EpisodeLinks(linksMap);
+  } else if (movie.id === LEGEND_OF_KORRA_S3.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('3') || movie.titleMongolian.includes('3')))) {
+    batchSetLegendOfKorraS3EpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA_S2.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) {
     batchSetLegendOfKorraS2EpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA.id || movie.title.toLowerCase().includes('korra')) {
@@ -145,11 +187,19 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'DeathNote' | 'LegendOfKorra',
+  seriesName: 'DeathNote' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
   links: Record<number, string>
 ): string {
   const varName = seriesName === 'DeathNote'
     ? 'DEATH_NOTE_EPISODE_LINKS'
+    : seriesName === 'SpyXFamily'
+    ? 'SPY_X_FAMILY_EPISODE_LINKS'
+    : seriesName === 'LegendOfKorraS2'
+    ? 'LEGEND_OF_KORRA_S2_EPISODE_LINKS'
+    : seriesName === 'LegendOfKorraS3'
+    ? 'LEGEND_OF_KORRA_S3_EPISODE_LINKS'
+    : seriesName === 'LegendOfKorraS4'
+    ? 'LEGEND_OF_KORRA_S4_EPISODE_LINKS'
     : 'LEGEND_OF_KORRA_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))

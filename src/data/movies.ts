@@ -4,7 +4,13 @@ import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
-import { LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 } from './anime/legendOfKorra';
+import {
+  LEGEND_OF_KORRA,
+  LEGEND_OF_KORRA_S2,
+  LEGEND_OF_KORRA_S3,
+  LEGEND_OF_KORRA_S4
+} from './anime/legendOfKorra';
+import { SPY_X_FAMILY } from './anime/spyXFamily';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -197,12 +203,23 @@ export const SAMPLE_MOVIES: Movie[] = [
   MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
   KAMI_KUZU_IDOL,
+  SPY_X_FAMILY,
   DEATH_NOTE,
   LEGEND_OF_KORRA,
-  LEGEND_OF_KORRA_S2
+  LEGEND_OF_KORRA_S2,
+  LEGEND_OF_KORRA_S3,
+  LEGEND_OF_KORRA_S4
 ];
 
-export { KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 };
+export {
+  KAMI_KUZU_IDOL,
+  SPY_X_FAMILY,
+  DEATH_NOTE,
+  LEGEND_OF_KORRA,
+  LEGEND_OF_KORRA_S2,
+  LEGEND_OF_KORRA_S3,
+  LEGEND_OF_KORRA_S4
+};
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 95 },
@@ -228,6 +245,26 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_sxf1',
+    movieId: 'm_spy_x_family',
+    userName: 'Мишээл',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
+    text: 'Spy x Family бол ямар ч маргаангүй бүхэл гэр бүлээрээ үзэхэд хамгийн тааламжтай, хөгжилтэй анимэ! Анягийн царайны хувирлууд болон "Ваку ваку!" үнэхээр хайр татам, монгол дуу оруулга нь маш өндөр түвшинд хийгджээ.',
+    rating: 10,
+    date: 'Өнөөдөр 22:15',
+    likes: 68
+  },
+  {
+    id: 'c_sxf2',
+    movieId: 'm_spy_x_family',
+    userName: 'Тэмүүлэн',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    text: 'Лойдын супер тагнуулчийн ур чадвар, Йорын алуурчны нууц, нохой Бондын ирээдүй хардаг чадвар гээд анги бүр нь сонирхолтой. 25 анги бүрэн орсонд маш их баярлалаа!',
+    rating: 10,
+    date: 'Өнөөдөр 20:30',
+    likes: 51
+  },
   {
     id: 'c_korra1',
     movieId: 'm_legend_of_korra',
@@ -267,6 +304,26 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 22:15',
     likes: 41
+  },
+  {
+    id: 'c_korra_s3_1',
+    movieId: 'm_legend_of_korra_s3',
+    userName: 'Баярсайхан',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    text: '3-р бүлэг Өөрчлөлт (Book 3 Change) бол Коррагийн цувралын оргил бүлэг! Захир болон Улаан Бадамлянхуагийн тулаанууд, шинэ агаарын махирчид гарч ирдэг хэсгүүд үнэхээр сэтгэл хөдөлгөм. 13 ангиа бүгдийг нь тасралтгүй үзлээ.',
+    rating: 10,
+    date: 'Өнөөдөр 23:10',
+    likes: 62
+  },
+  {
+    id: 'c_korra_s4_1',
+    movieId: 'm_legend_of_korra_s4',
+    userName: 'Оюунбилэг',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
+    text: '4-р бүлэг Тэнцвэр (Book 4 Balance) бүрэн орлоо! Коррагийн дотоод тэмцэл, Кувирагийн дайралт, Бүгд Найрамдах Хотыг хамгаалах сүүлчийн агуу тулаан үнэхээр төгс төгсгөл болсон. Аватарын 4 бүлгийг бүгдийг нь оруулсанд маш их баярлалаа!',
+    rating: 10,
+    date: 'Өнөөдөр 23:55',
+    likes: 54
   },
   {
     id: 'c1',

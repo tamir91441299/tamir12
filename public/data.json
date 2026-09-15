@@ -124,5 +124,12 @@
     "answer": "Dandadan",
     "options": "Dandadan | Mob Psycho 100 | Jujutsu Kaisen | Chainsaw Man",
     "image": "/images/dandadan_poster.jpg"
+  },
+  {
+    "id": 19,
+    "emojies": "🕵️‍♂️ 🥜 👧 🗡️ 🐕 🤫",
+    "answer": "Spy x Family",
+    "options": "Spy x Family | Death Note | Kaguya-sama | The Promised Neverland",
+    "image": "https://images.justwatch.com/poster/300438183/s718/spy-x-family.jpg"
   }
 ]
