@@ -27,7 +27,7 @@ export function formatChainsawManDriveLink(driveIdOrUrl: string): string {
  * Өөрийн Google Drive болон видео линкүүдээ энд дугаарын дагуу хуулж тавина уу:
  */
 export const CHAINSAW_MAN_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1g3iWpH9hG7cp4JrCBem3-rhqZBtVCOOE/view?usp=drivesdk',
+  1: 'https://drive.google.com/file/d/1J7jLrV1CuxJ3xtINcymQ_kwq8hkDnAwZ/view?usp=drivesdk',
   2: 'https://drive.google.com/file/d/1csm_ep02_drive_link/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1csm_ep03_drive_link/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1csm_ep04_drive_link/view?usp=drivesdk',
@@ -158,8 +158,8 @@ export const CHAINSAW_MAN: Movie = {
   title: 'Chainsaw Man',
   titleMongolian: 'Чэйнсо Мэн (Chainsaw Man)',
   type: 'anime',
-  poster: '/images/chainsaw_man_poster.jpg',
-  backdrop: '/images/chainsaw_man_backdrop.jpg',
+  poster: 'https://i.pinimg.com/736x/83/65/14/8365142a49ed796536043f5a49c0adff.jpg',
+  backdrop: 'https://i.pinimg.com/736x/83/65/14/8365142a49ed796536043f5a49c0adff.jpg',
   year: 2024,
   duration: '12 анги (Бүлэг 1)',
   rating: 9.9,

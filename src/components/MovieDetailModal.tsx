@@ -151,7 +151,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
-  const isGravityFalls = movie.id === 'm_gravity_falls' || movie.title.toLowerCase().includes('gravity falls') || movie.titleMongolian.toLowerCase().includes('гравити');
   const isDeathNote = movie.id === 'm_death_note' || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл');
 
   // Check access permission for specific episode
@@ -306,29 +305,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       14: '14-р анги (26) - Харанхуй дахь гэрэл (Light in the Dark - Төгсгөл)'
     };
 
-    const defaultGravityFallsTitles: Record<number, string> = {
-      1: '1-р анги - Жуулчдын урхи (Tourist Trapped)',
-      2: '2-р анги - Гобблвонкерын домог (The Legend of the Gobblewonker)',
-      3: '3-р анги - Лааны баримлын ангуучид (Headhunters)',
-      4: '4-р анги - Мэйбэлийн эрх мэдэл ба Бяцхан Гидеон (The Hand That Rocks the Mabel)',
-      5: '5-р анги - Эвгүй сүнстэй дэлгүүр (The Inconveniencing)',
-      6: '6-р анги - Диппер эр зоригийн эрэлд (Dipper vs. Manliness)',
-      7: '7-р анги - Хоёр Диппер & Хувилсан ихрүүд (Double Dipper)',
-      8: '8-р анги - Цаг хугацааны аялагчийн гахай (Time Traveler\'s Pig)',
-      9: '9-р анги - Тоглоомын тулаанчид амилсан нь (Fight Fighters)',
-      10: '10-р анги - Жижиг Диппер & Кристалын нууц (Little Dipper)',
-      11: '11-р анги - Зуны Халловин (Summerween)',
-      12: '12-р анги - Захирал Мэйбэл & Нууцын овоохой (Boss Mabel)',
-      13: '13-р анги - Ёроолгүй нүхний нууц (Bottomless Pit!)',
-      14: '14-р анги - Гүн усанд шумбагч ба Мерман (The Deep End)',
-      15: '15-р анги - Хивсний цахилгаан нууц (Carpet Diem)',
-      16: '16-р анги - Хөвгүүдийн хамтлаг ба хувилах машин (Boyz Crazy)',
-      17: '17-р анги - Гахайг аврах аварга динозавр (Land Before Swine)',
-      18: '18-р анги - Зүүдний ертөнц ба Билл Сайферын дайралт (Dreamscaperers)',
-      19: '19-р анги - Гидеоны мандалт (Gideon Rises - 1-р бүлгийн төгсгөл)',
-      20: '20-р анги - Нууцын тайлал & Билл Сайферын тусгай анги (Weirdmageddon Special)'
-    };
-
     const defaultDeathNoteTitles: Record<number, string> = {
       1: '1-р анги - Сэргэлт / Төрөлт (Rebirth)',
       2: '2-р анги - Сөргөлдөөн (Confrontation)',
@@ -376,7 +352,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
-        isGravityFalls ? defaultGravityFallsTitles[i] || `${i}-р анги` :
         isDeathNote ? defaultDeathNoteTitles[i] || `${i}-р анги` :
         isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
         isKorra ? defaultKorraTitles[i] || `${i}-р анги` :

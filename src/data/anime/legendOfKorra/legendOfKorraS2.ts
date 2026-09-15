@@ -17,20 +17,20 @@ export function formatLegendOfKorraS2DriveLink(driveIdOrUrl: string): string {
  * Анги бүрийн линкийг доор шууд оруулах эсвэл Админ цонхоор тохируулж болно.
  */
 export const LEGEND_OF_KORRA_S2_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1B7zT8YnQlK8_korra_s2_01/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1C9uV0XoRmP9_korra_s2_02/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1D0wW1YpSnQ0_korra_s2_03/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1E1xX2ZqToR1_korra_s2_04/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1F2yY3ArUpS2_korra_s2_05/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1G3zZ4BsVqT3_korra_s2_06/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1H4aA5CtWrU4_korra_s2_07/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1I5bB6DuXsV5_korra_s2_08/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1J6cC7EvYtW6_korra_s2_09/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1K7dD8FwZuX7_korra_s2_10/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1L8eE9GxaAv8_korra_s2_11/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1M9fF0HybBw9_korra_s2_12/view?usp=drivesdk',
-  13: 'https://drive.google.com/file/d/1N0gG1IzcCx0_korra_s2_13/view?usp=drivesdk',
-  14: 'https://drive.google.com/file/d/1O1hH2JadDy1_korra_s2_14/view?usp=drivesdk',
+  1: 'https://drive.google.com/file/d/1rMcHRewZRVhCWRs45pHGz5UK8Bnl9dSc/view?usp=drivesdk',
+  2: 'https://drive.google.com/file/d/1WwpATNw1NgrluvsyRo_4lOTWjU0LGYfV/view?usp=drivesdk&usp=embed_facebook',
+  3: 'https://drive.google.com/file/d/1QuZPd3l-SHnmj2tIaGsfovr-4KwLIlHX/view?usp=drivesdk&usp=embed_facebook',
+  4: 'https://drive.google.com/file/d/1Bbu1k-6qDO3BuAaTi3966k1IoPjywh33/view?usp=drivesdk&usp=embed_facebook',
+  5: 'https://drive.google.com/file/d/1O_FcRypLfN7TNpDCjbr1Totn7lHMrBsT/view?usp=drivesdk&usp=embed_facebook',
+  6: 'https://drive.google.com/file/d/1hMwuhg8NQUL1t5XJBxlnK8u7nlAt11kA/view?usp=drivesdk&usp=embed_facebook',
+  7: 'https://drive.google.com/file/d/1p0PZgewuKJFt4W8_-4F0ech8USwGMi6r/view?usp=drivesdk&usp=embed_facebook',
+  8: 'https://drive.google.com/file/d/18X-k0aseNx1epxsU4GSjmmLziRFPXgZU/view?usp=drivesdk&usp=embed_facebook',
+  9: 'https://drive.google.com/file/d/1h-4GeQYB9_fDIMsHhwiKKu8n8XDMYTZT/view?usp=drivesdk&usp=embed_facebook',
+  10: 'https://drive.google.com/file/d/1qbhfFfT6z3GWW4SKXcauz6o-X2HYQRaI/view?usp=drivesdk&usp=embed_facebook',
+  11: 'https://drive.google.com/file/d/1TB2sll4EzSUKjP1JFP5PBR2xAPHTmQJm/view?usp=drivesdk&usp=embed_facebook',
+  12: 'https://drive.google.com/file/d/1z9KE68veuxa80ussXtK1Q1fwk7mPLUlC/view?usp=drivesdk&usp=embed_facebook',
+  13: 'https://drive.google.com/file/d/1a71zCfysrKk0GT9YNujzhYLy8Trt2KWn/view?usp=drivesdk&usp=embed_facebook',
+  14: 'https://drive.google.com/file/d/1fyZ-51GEytB4SNgoS4e4mSxI7wI6Qt2F/view?usp=drivesdk&usp=embed_facebookk',
 };
 
 export function setLegendOfKorraS2EpisodeLink(episodeNumber: number, link: string) {

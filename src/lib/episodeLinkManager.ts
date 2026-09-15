@@ -2,19 +2,13 @@
  * 🎬 FlickNime - Анги холбох туслах үйлчилгээ (Episode Link Manager)
  * 
  * Энэхүү модуль нь:
- * 1. Gravity Falls, Monkart болон бүх хүүхэлдэйн кино, анимэгийн ангиудын линкийг найдвартай холбоно.
+ * 1. Бүх хүүхэлдэйн кино, анимэгийн ангиудын линкийг найдвартай холбоно.
  * 2. Google Drive, YouTube, Filemoon, Ok.ru, MP4, HLS шууд дамжуулалтын линкүүдийг автоматаар хөрвүүлнэ.
  * 3. Хэрэглэгчид зориулсан хуулж тавих бэлэн TypeScript код болон тохиргоог гаргаж өгнө.
  */
 
 import { Episode, Movie } from '../types';
 import { extractGoogleDriveId, extractYouTubeId } from './videoUtils';
-import {
-  GRAVITY_FALLS,
-  GRAVITY_FALLS_EPISODE_LINKS,
-  setGravityFallsEpisodeLink,
-  batchSetGravityFallsEpisodeLinks,
-} from '../data/anime/gravityFalls';
 import {
   DEATH_NOTE,
   DEATH_NOTE_EPISODE_LINKS,
@@ -68,28 +62,6 @@ export function formatEpisodeVideoUrl(urlOrId: string): string {
   }
 
   return clean;
-}
-
-/**
- * 🌲 Гравити Фоллс-ийн ангийг холбох (Gravity Falls Episode Linker)
- * @param episodeNumber Ангийн дугаар (1-20)
- * @param videoUrl Google Drive линк, ID эсвэл видеоны хаяг
- */
-export function connectGravityFallsEpisode(episodeNumber: number, videoUrl: string): Episode | null {
-  const formatted = formatEpisodeVideoUrl(videoUrl);
-  setGravityFallsEpisodeLink(episodeNumber, formatted);
-  
-  // LocalStorage-д хадгалах
-  try {
-    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
-    const epMap = JSON.parse(saved);
-    epMap[GRAVITY_FALLS.id] = GRAVITY_FALLS.episodes;
-    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
-  } catch (e) {
-    console.error('Failed to persist Gravity Falls episode link:', e);
-  }
-
-  return GRAVITY_FALLS.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
 }
 
 /**
@@ -154,9 +126,7 @@ export function batchConnectEpisodes(
   movie: Movie,
   linksMap: Record<number, string>
 ): Episode[] {
-  if (movie.id === GRAVITY_FALLS.id || movie.title.toLowerCase().includes('gravity falls')) {
-    batchSetGravityFallsEpisodeLinks(linksMap);
-  } else if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл')) {
+  if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл')) {
     batchSetDeathNoteEpisodeLinks(linksMap);
   } else if (movie.id === CHAINSAW_MAN.id || movie.title.toLowerCase().includes('chainsaw man')) {
     batchSetChainsawManEpisodeLinks(linksMap);
@@ -199,12 +169,10 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'GravityFalls' | 'DeathNote' | 'ChainsawMan' | 'SoulEater' | 'Dandadan',
+  seriesName: 'DeathNote' | 'ChainsawMan' | 'SoulEater' | 'Dandadan',
   links: Record<number, string>
 ): string {
-  const varName = seriesName === 'GravityFalls' 
-    ? 'GRAVITY_FALLS_EPISODE_LINKS' 
-    : seriesName === 'DeathNote'
+  const varName = seriesName === 'DeathNote'
     ? 'DEATH_NOTE_EPISODE_LINKS'
     : seriesName === 'ChainsawMan'
     ? 'CHAINSAW_MAN_EPISODE_LINKS'

@@ -5,7 +5,6 @@ import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import { DEATH_NOTE } from './anime/deathNote';
 import { LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 } from './anime/legendOfKorra';
-import { GRAVITY_FALLS } from './anime/gravityFalls';
 import { CHAINSAW_MAN } from './anime/chainsawMan';
 import { SOUL_EATER } from './anime/soulEater';
 import { DANDADAN } from './anime/dandadan';
@@ -206,11 +205,10 @@ export const SAMPLE_MOVIES: Movie[] = [
   KAMI_KUZU_IDOL,
   DEATH_NOTE,
   LEGEND_OF_KORRA,
-  LEGEND_OF_KORRA_S2,
-  GRAVITY_FALLS
+  LEGEND_OF_KORRA_S2
 ];
 
-export { CHAINSAW_MAN, SOUL_EATER, DANDADAN, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2, GRAVITY_FALLS };
+export { CHAINSAW_MAN, SOUL_EATER, DANDADAN, KAMI_KUZU_IDOL, DEATH_NOTE, LEGEND_OF_KORRA, LEGEND_OF_KORRA_S2 };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [
   { name: 'Animation', count: 95 },
@@ -295,16 +293,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өнөөдөр 20:10',
     likes: 49
-  },
-  {
-    id: 'c_gf1',
-    movieId: 'm_gravity_falls',
-    userName: 'Тэмүүлэн',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
-    text: 'Гравити Фоллс хүүхэлдэйн кино орсонд маш их баярлалаа! Диппер, Мэйбэл болон Билл Сайферын нууцууд үнэхээр сонирхолтой. Монгол дуу оруулга нь маш тод, чанартай сонсогдож байна.',
-    rating: 10,
-    date: 'Өнөөдөр 21:30',
-    likes: 58
   },
   {
     id: 'c_korra1',
