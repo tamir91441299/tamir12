@@ -101,7 +101,7 @@ export const KAMI_KUZU_IDOL: Movie = {
   title: 'Kami Kuzu Idol (Phantom of the Idol)',
   titleMongolian: 'Ками Күзү Айдол (Phantom of the Idol)',
   type: 'anime',
-  poster: '/images/kami_kuzu_poster.jpg',
+  poster: 'https://ramenparados.com/wp-content/uploads/2021/11/Kami-Kuzu-Idol-1-destacado.jpg',
   backdrop: '/images/kami_kuzu_backdrop.jpg',
   year: 2024,
   duration: '10 анги',
