@@ -307,9 +307,10 @@ export default function App() {
   const [purchasedMovies, setPurchasedMovies] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('ioio_purchased');
-      return saved ? JSON.parse(saved) : ['m_91_days'];
+      const list = saved ? JSON.parse(saved) : [];
+      return Array.isArray(list) ? list.filter((id: string) => id !== 'm_91_days') : [];
     } catch {
-      return ['m_91_days'];
+      return [];
     }
   });
 
@@ -535,8 +536,8 @@ export default function App() {
 
   const isFavorite = (movieId: string) => favorites.includes(movieId);
 
-  const isPurchased = (_movieId: string) => {
-    return true;
+  const isPurchased = (movieId: string) => {
+    return purchasedMovies.includes(movieId);
   };
 
   // Modals state

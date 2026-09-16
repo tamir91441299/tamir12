@@ -146,6 +146,21 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   const handleOpenProtectedWindow = (epNum: number = 1) => {
+    if (!currentUser) {
+      if (onOpenAuthModal) onOpenAuthModal('phone');
+      else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+      return;
+    }
+
+    if (!userHasAccessToEpisode(epNum)) {
+      if (onRequestPurchase) {
+        onRequestPurchase(movie);
+      } else {
+        alert(`🔒 ${epNum}-р анги түгжээтэй байна! Анимэ эрхээ аваагүй хэрэглэгчид зөвхөн эхний ангийг үзэх боломжтой.`);
+      }
+      return;
+    }
+
     if (isPasscodeVerifiedInSession()) {
       openWindowDirect(epNum);
     } else {
@@ -178,21 +193,34 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   // 1. Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй (Заавал системд нэвтрэх / бүртгүүлэх шаардлагатай)
   // 2. Бүртгэлтэй боловч эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг үзэж болно (Үнэгүй)
   // 3. Эрх авсан (Анимэ багц, VIP, худалдан авсан) хэрэглэгчид бүх ангийг үзнэ
+  // Access rule:
+  // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй
+  // 2. Анимэ эрхээ аваагүй хүмүүс ЗӨВХӨН 1-р ангийг үзнэ (эхний ангиас бусад бүх анги ТҮГЖЭЭТЭЙ)
+  // 3. Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хэрэглэгчид бүх ангийг үзнэ
   const userHasAccessToEpisode = (epNumber: number = 1): boolean => {
-    // Бүртгэлгүй хүн анимэ үзэх боломжгүй
     if (!currentUser) return false;
     if (isAdmin) return true;
     if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
-    if (movie.type === 'anime' && (isAnimePackage || (currentUser as any)?.packageType === 'anime')) {
-      return true;
+    if (movie.type === 'anime') {
+      if (isAnimePackage || (currentUser as any)?.packageType === 'anime') {
+        return true;
+      }
+      if (isPurchased) {
+        return true;
+      }
+      // Анимэ эрхээ аваагүй бол ЗӨВХӨН эхний 1-р анги үзэх эрхтэй, 2-р ангиас эхлээд бусад бүх анги ТҮГЖЭЭТЭЙ!
+      return epNumber === 1;
     }
-    if (movie.type !== 'anime' && (isMoviePackage || (currentUser as any)?.packageType === 'movie')) {
-      return true;
+    if (movie.type !== 'anime') {
+      if (isMoviePackage || (currentUser as any)?.packageType === 'movie') {
+        return true;
+      }
+      if (isPurchased) {
+        return true;
+      }
+      return epNumber === 1;
     }
-    if (isPurchased) return true;
-    // Эрхээ аваагүй бүртгэлтэй хэрэглэгч ЗӨВХӨН 1-р ангийг үзэж болно
-    if (epNumber <= 1) return true;
-    return false;
+    return epNumber === 1;
   };
 
   const handleEpisodeSelect = (epNumber: number) => {
@@ -210,10 +238,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     if (hasAccess) {
       onPlay(movie, epNumber);
     } else {
+      // Анимэ эрхээ аваагүй тул уг анги түгжээтэй, төлбөр төлөх эсвэл багц авах цонх нээнэ
       if (onRequestPurchase) {
         onRequestPurchase(movie);
       } else {
-        onPlay(movie, epNumber);
+        alert(`🔒 ${epNumber}-р анги түгжээтэй байна! Анимэ эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг үзэх боломжтой тул та Анимэ багцаа идэвхжүүлнэ үү.`);
       }
     }
   };
@@ -948,22 +977,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs bg-zinc-950/80 border border-cyan-500/30 text-cyan-300 p-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] border border-emerald-500/30">
+                  <div className="text-xs bg-zinc-950/90 border border-amber-500/40 text-amber-300 p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px] border border-emerald-500/30 shrink-0">
                         1-р анги Үнэгүй
                       </span>
-                      <span className="text-zinc-300 text-[11px]">
-                        2-р ангиас эхлэн эрх авсан (Анимэ багцтай) хэрэглэгчид үзэх боломжтой.
+                      <span className="text-zinc-300 text-[11px] leading-relaxed">
+                        Анимэ эрхээ аваагүй хүмүүс зөвхөн <b>1-р ангийг</b> үзэх боломжтой. 2-р ангиас бусад бүх анги <b>түгжээтэй</b> тул та Анимэ багцын эрхээ авна уу.
                       </span>
                     </div>
                     {!userHasAccessToEpisode(2) && onRequestPurchase && (
                       <button
                         type="button"
                         onClick={() => onRequestPurchase(movie)}
-                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[11px] rounded-lg transition-all cursor-pointer shadow"
+                        className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold text-xs rounded-lg transition-all cursor-pointer shadow flex items-center gap-1.5 shrink-0 hover:scale-105"
                       >
-                        Багцын эрх авах
+                        <Zap className="w-3.5 h-3.5 fill-black" />
+                        <span>Анимэ багцын эрх авах</span>
                       </button>
                     )}
                   </div>
@@ -1250,7 +1280,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                           className={`relative rounded-xl border transition-all text-left flex flex-col justify-between group overflow-hidden ${
                             hasEpAccess
                               ? 'bg-zinc-900 border-zinc-800 hover:border-cyan-500 hover:bg-zinc-850'
-                              : 'bg-zinc-950/80 border-amber-500/20 hover:border-amber-500/50'
+                              : 'bg-gradient-to-br from-zinc-950 to-zinc-900/90 border-amber-500/30 hover:border-amber-500/60 shadow-inner'
                           }`}
                         >
                           <button
@@ -1259,13 +1289,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                             className="p-2.5 w-full text-left cursor-pointer flex-1 flex flex-col justify-between"
                           >
                             <div className="flex items-center justify-between font-bold text-xs text-zinc-200">
-                              <span className={hasEpAccess ? 'group-hover:text-cyan-300' : 'group-hover:text-amber-300'}>
+                              <span className={hasEpAccess ? 'group-hover:text-cyan-300' : 'text-zinc-300 group-hover:text-amber-300'}>
                                 {ep.episodeNumber}-р анги
                               </span>
                               {hasEpAccess ? (
                                 <Play className="w-3.5 h-3.5 fill-current opacity-0 group-hover:opacity-100 transition-opacity text-cyan-400" />
                               ) : (
-                                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                  <Lock className="w-3 h-3 text-amber-400 shrink-0" />
+                                  <span>ТҮГЖЭЭТЭЙ</span>
+                                </span>
                               )}
                             </div>
                             <span className="text-[10px] text-zinc-400 truncate mt-1 block">
@@ -1288,8 +1321,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                                   НЭЭЛТТЭЙ
                                 </span>
                               ) : (
-                                <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-0.5">
-                                  <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
+                                <span className="text-[9px] bg-amber-500/20 text-amber-300 font-black px-1.5 py-0.5 rounded border border-amber-500/40 flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5 text-amber-400" /> ЭРХЭЭР
                                 </span>
                               )}
                             </div>

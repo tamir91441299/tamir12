@@ -94,32 +94,47 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй (Заавал нэвтрэх шаардлагатай)
-  // 2. Эрхээ аваагүй бүртгэлтэй хүмүүс зөвхөн 1-р ангийг (epIndex === 0) үзэж болно
-  // 3. Эрх авсан (Анимэ багц, VIP, худалдан авсан) хүмүүс бүх ангийг үзнэ
+  // 2. Анимэ эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг (epIndex === 0) үзэж болно (Бусад бүх анги ТҮГЖЭЭТЭЙ)
+  // 3. Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хүмүүс бүх ангийг үзнэ
   const checkEpisodeAccess = (epIndex: number): boolean => {
     // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
     if (!currentUser) return false;
     if (isAdmin) return true;
     if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
-    if (movie?.type === 'anime' && (isAnimePackage || (currentUser as any)?.packageType === 'anime')) {
-      return true;
+    if (movie?.type === 'anime') {
+      if (isAnimePackage || (currentUser as any)?.packageType === 'anime') {
+        return true;
+      }
+      if (isPurchased) {
+        return true;
+      }
+      // Анимэ эрхээ аваагүй бол ЗӨВХӨН 1-р анги (epIndex === 0). Бусад бүх ангиуд ТҮГЖЭЭТЭЙ!
+      return epIndex === 0;
     }
-    if (movie?.type !== 'anime' && (isMoviePackage || (currentUser as any)?.packageType === 'movie')) {
-      return true;
+    if (movie?.type !== 'anime') {
+      if (isMoviePackage || (currentUser as any)?.packageType === 'movie') {
+        return true;
+      }
+      if (isPurchased) {
+        return true;
+      }
+      return epIndex === 0;
     }
-    if (isPurchased) return true;
-    // Эрхээ аваагүй бүртгэлтэй хүмүүс зөвхөн 1-р ангийг үзнэ
-    if (epIndex <= 0) return true;
-    return false;
+    return epIndex === 0;
   };
 
   const hasAccessToCurrentEpisode = checkEpisodeAccess(currentEpisodeIndex);
 
   useEffect(() => {
     if (initialEpisodeNumber && initialEpisodeNumber > 0) {
-      setCurrentEpisodeIndex(Math.max(0, initialEpisodeNumber - 1));
+      const idx = Math.max(0, initialEpisodeNumber - 1);
+      setCurrentEpisodeIndex(idx);
       setCurrentTime(0);
-      setIsPlaying(true);
+      if (checkEpisodeAccess(idx)) {
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(false);
+      }
     }
   }, [initialEpisodeNumber]);
 
@@ -857,9 +872,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     if (index >= 0 && index < episodes.length) {
       setCurrentEpisodeIndex(index);
       setCurrentTime(0);
+      setShowEpisodesDrawer(false);
+
+      // Хэрэв уг ангийг үзэх эрхгүй (түгжээтэй) бол видеог шууд тоглуулахгүй, түгжээний дэлгэц харуулна
+      if (!checkEpisodeAccess(index)) {
+        setIsPlaying(false);
+        setIsBuffering(false);
+        if (videoRef.current) {
+          try {
+            videoRef.current.pause();
+          } catch {}
+        }
+        return;
+      }
+
       setIsPlaying(true);
       setIsBuffering(false);
-      setShowEpisodesDrawer(false);
 
       // Trigger immediate playback on video element
       setTimeout(() => {
@@ -1279,14 +1307,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 /* Registered but No Package for Ep > 1 */
                 <>
                   <div className="space-y-2 max-w-md">
-                    <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-block">
-                      {currentEpisodeIndex + 1}-р анги түгжигдсэн
+                    <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      {currentEpisodeIndex + 1}-р анги түгжээтэй байна
                     </span>
                     <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                      2-р ангиас эхлэн эрх авсан хэрэглэгчид үзнэ
+                      Энэ ангийг үзэхийн тулд Анимэ эрхээ авна уу
                     </h3>
                     <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      1-р ангийг үнэгүй үзэх боломжтой бөгөөд 2-р ангиас эхлэн та өөрийн хүссэн Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
+                      Анимэ эрхээ аваагүй хэрэглэгчид зөвхөн <b>1-р ангийг (Үнэгүй)</b> үзэх боломжтой ба 2-р ангиас эхлэн бусад бүх анги <b>түгжээтэй</b> байдаг. Та Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -1296,16 +1325,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         onClick={() => onRequestPurchase(movie)}
                         className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
                       >
-                        <Zap className="w-4 h-4 fill-current" />
-                        <span>Багцын эрх авах / Төлбөр төлөх</span>
+                        <Zap className="w-4 h-4 fill-black" />
+                        <span>Анимэ багцын эрх авах / Төлбөр төлөх</span>
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => selectEpisode(0)}
-                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
+                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700 flex items-center gap-1.5"
                     >
-                      <span>1-р анги үнэгүй үзэх</span>
+                      <Play className="w-3.5 h-3.5 fill-current text-cyan-400" />
+                      <span>1-р анги (Үнэгүй) үзэх</span>
                     </button>
                   </div>
                 </>
@@ -1883,13 +1913,28 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       id="player-next-ep"
                       type="button"
                       onClick={() => {
-                        selectEpisode(currentEpisodeIndex + 1);
+                        const nextIdx = currentEpisodeIndex + 1;
+                        selectEpisode(nextIdx);
+                        if (!checkEpisodeAccess(nextIdx) && onRequestPurchase && movie) {
+                          onRequestPurchase(movie);
+                        }
                         resetControlsTimer();
                       }}
-                      className="p-2 hover:bg-zinc-800 active:bg-zinc-700 rounded-xl text-zinc-300 hover:text-white cursor-pointer border border-zinc-700/60 bg-zinc-900/60"
-                      title="Дараагийн анги"
+                      className={`p-2 rounded-xl cursor-pointer border transition-all flex items-center gap-1.5 ${
+                        !checkEpisodeAccess(currentEpisodeIndex + 1)
+                          ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/80 shadow-md shadow-amber-500/10'
+                          : 'hover:bg-zinc-800 active:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700/60 bg-zinc-900/60'
+                      }`}
+                      title={
+                        !checkEpisodeAccess(currentEpisodeIndex + 1)
+                          ? `🔒 ${currentEpisodeIndex + 2}-р анги түгжээтэй (Анимэ эрх шаардлагатай)`
+                          : 'Дараагийн анги'
+                      }
                     >
                       <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {!checkEpisodeAccess(currentEpisodeIndex + 1) && (
+                        <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      )}
                     </button>
                   )}
 
@@ -2508,6 +2553,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         type="button"
                         onClick={() => {
                           selectEpisode(idx);
+                          if (!hasEpAccess && onRequestPurchase && movie) {
+                            onRequestPurchase(movie);
+                          }
                           // Auto close drawer on mobile after selection
                           if (window.innerWidth < 1024) {
                             setShowEpisodesDrawer(false);
@@ -2516,7 +2564,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         className={`w-full text-left p-2.5 sm:p-3 rounded-xl transition-all flex items-center justify-between gap-2.5 sm:gap-3 cursor-pointer ${
                           isActive
                             ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/60 font-bold shadow-lg shadow-cyan-500/10'
-                            : 'hover:bg-zinc-900 text-zinc-300 hover:text-white border border-transparent'
+                            : hasEpAccess
+                            ? 'hover:bg-zinc-900 text-zinc-300 hover:text-white border border-transparent'
+                            : 'bg-zinc-950/60 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-amber-500/20 hover:border-amber-500/40'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
