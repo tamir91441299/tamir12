@@ -18,16 +18,16 @@ export function formatKamiKuzuDriveLink(driveIdOrUrl: string): string {
  * доорх 1-10 дугаарын ард Drive линк эсвэл ID-гаа хуулж тавина уу:
  */
 export const KAMI_KUZU_IDOL_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1EmjiJeQYSsZoZueJhVldZ8zGjlBsYmY-/view?usp=drivesdk&usp=embed_facebook',
-  2: 'https://drive.google.com/file/d/1Y0sSVUMsjrPlqMrdOAUA6GnQryH8aUlq/view?usp=drivesdk&usp=embed_facebook',
-  3: 'https://drive.google.com/file/d/12xSLydSnAImoLj-Peafl7TmBcbEy42DS/view?usp=drivesdk&usp=embed_facebook',
-  4: 'https://drive.google.com/file/d/1e4_aYTTlCdMPQh-UFYKZbrwr0cUQrh71/view?usp=drivesdk&usp=embed_facebook',
-  5: 'https://drive.google.com/file/d/1Cij53-qS6PKECQ_r-bimg3V3HXeHwR81/view?usp=drivesdk&usp=embed_facebook',
-  6: 'https://drive.google.com/file/d/1AzXXH7pvxTMDNeC69KZXQ9-0dVNv5HnM/view?usp=drivesdk&usp=embed_facebook',
-  7: 'https://drive.google.com/file/d/1axi1oVcIfGYZdVuqAUzJ1yL_FmgLBMi8/view?usp=drivesdk&usp=embed_facebook',
-  8: 'https://drive.google.com/file/d/1a_bxUnt3uj98LUaM5UMT6AzvZqQoIfy4/view?usp=drivesdk&usp=embed_facebook',
-  9: 'https://drive.google.com/file/d/1wjhlMnxf67V8lqAkYMNqElAHxG8TbXc6/view?usp=drivesdk&usp=embed_facebook',
-  10: 'https://drive.google.com/file/d/1eFszO2SF_9M6sx1thTZMrpd7O_4PwC6N/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZMekRJZh9NRadru6lzWFKkwUrxtBFSrUv7X',
+  2: 'https://u.pcloud.link/publink/show?code=XZgekRJZ0iUOMBlp6N0ntTAbObAhQRsD9SlV',
+  3: 'https://u.pcloud.link/publink/show?code=XZAekRJZAAlgot08ddHeSvNwK21HuQUyAM0X',
+  4: 'https://u.pcloud.link/publink/show?code=XZaekRJZs37Uc08HIokpXaKw0SmU6RfATPlX',
+  5: 'https://u.pcloud.link/publink/show?code=XZGekRJZhvpeaOqHNShP2Ij110kVaRfRb2tk',
+  6: 'https://u.pcloud.link/publink/show?code=XZrekRJZD59Dn8vNihRTvFng1ln8uyoa9xXy',
+  7: 'https://u.pcloud.link/publink/show?code=XZoekRJZK62lDOJv484BqP8KmIzjzmJVDE6k',
+  8: 'https://u.pcloud.link/publink/show?code=XZynkRJZk4IHyTFVF8Ji94BPwP0iljo3XWCy',
+  9: 'https://u.pcloud.link/publink/show?code=XZFnkRJZF2FuQEN0qDpFXMYipTQgUHV6wDEk',
+  10: 'https://u.pcloud.link/publink/show?code=XZVnkRJZH83krxqF7h4nY6GUxmG2n5tvm7kk',
 };
 
 export const KAMI_KUZU_IDOL_EPISODES: Episode[] = [

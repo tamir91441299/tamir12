@@ -94,8 +94,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй (Заавал нэвтрэх шаардлагатай)
-  // 2. Анимэ эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг (epIndex === 0) үзэж болно (Бусад бүх анги ТҮГЖЭЭТЭЙ)
-  // 3. Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хүмүүс бүх ангийг үзнэ
+  // 2. Анимэ эрхээ аваагүй хүмүүс анимэ үзэх боломжгүй (Бүх ангиуд ТҮГЖЭЭТЭЙ)
+  // 3. Зөвхөн Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хүмүүс үзнэ
   const checkEpisodeAccess = (epIndex: number): boolean => {
     // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
     if (!currentUser) return false;
@@ -108,8 +108,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       if (isPurchased) {
         return true;
       }
-      // Анимэ эрхээ аваагүй бол ЗӨВХӨН 1-р анги (epIndex === 0). Бусад бүх ангиуд ТҮГЖЭЭТЭЙ!
-      return epIndex === 0;
+      // Эрх аваагүй хүмүүс анимэ үзэх боломжгүй!
+      return false;
     }
     if (movie?.type !== 'anime') {
       if (isMoviePackage || (currentUser as any)?.packageType === 'movie') {
@@ -120,7 +120,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       }
       return epIndex === 0;
     }
-    return epIndex === 0;
+    return false;
   };
 
   const hasAccessToCurrentEpisode = checkEpisodeAccess(currentEpisodeIndex);
@@ -381,12 +381,20 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Open protected cinema stream in a dedicated new window with passcode security
   const handleOpenProtectedNewWindow = useCallback(() => {
+    if (movie.type === 'anime' && !checkEpisodeAccess(currentEpisodeIndex)) {
+      if (onRequestPurchase) {
+        onRequestPurchase(movie);
+      } else {
+        alert('🔒 Анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та Анимэ багцын эрхээ авна уу.');
+      }
+      return;
+    }
     if (isPasscodeVerifiedInSession()) {
       doLaunchProtectedWindow();
     } else {
       setShowPasscodePrompt(true);
     }
-  }, [doLaunchProtectedWindow]);
+  }, [movie, currentEpisodeIndex, checkEpisodeAccess, onRequestPurchase, doLaunchProtectedWindow]);
 
   // Play video safely with audio / autoplay / error handling without cascading loops
   const playVideoSafe = useCallback(async () => {
@@ -1269,7 +1277,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй
                     </h3>
                     <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      Энэхүү сайтын анимэг үзэхийн тулд заавал бүртгүүлэх эсвэл нэвтрэх шаардлагатай. Та гар утасны дугаар эсвэл PC горимоор нэвтрэн 1-р ангийг шууд үнэгүй үзэх боломжтой.
+                      Энэхүү сайтын анимэг үзэхийн тулд заавал системд бүртгүүлж, Анимэ эрхээ идэвхжүүлэх шаардлагатай.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -1304,7 +1312,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   </div>
                 </>
               ) : (
-                /* Registered but No Package for Ep > 1 */
+                /* Registered but No Anime Package */
                 <>
                   <div className="space-y-2 max-w-md">
                     <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-flex items-center gap-1.5">
@@ -1312,10 +1320,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       {currentEpisodeIndex + 1}-р анги түгжээтэй байна
                     </span>
                     <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                      Энэ ангийг үзэхийн тулд Анимэ эрхээ авна уу
+                      Эрх аваагүй хэрэглэгч анимэ үзэх боломжгүй
                     </h3>
                     <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      Анимэ эрхээ аваагүй хэрэглэгчид зөвхөн <b>1-р ангийг (Үнэгүй)</b> үзэх боломжтой ба 2-р ангиас эхлэн бусад бүх анги <b>түгжээтэй</b> байдаг. Та Анимэ багцын эрхээ идэвхжүүлж үзнэ үү.
+                      Эрх аваагүй хүмүүс энэхүү анимэг үзэх боломжгүй тул та Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -1329,14 +1337,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         <span>Анимэ багцын эрх авах / Төлбөр төлөх</span>
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => selectEpisode(0)}
-                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700 flex items-center gap-1.5"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current text-cyan-400" />
-                      <span>1-р анги (Үнэгүй) үзэх</span>
-                    </button>
                   </div>
                 </>
               )}
@@ -2602,12 +2602,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               <Lock className="w-2.5 h-2.5" /> НЭВТРЭХ
                             </span>
                           )}
-                          {!isActive && currentUser && isFreeEp && (
-                            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">
-                              ҮНЭГҮЙ
+                          {!isActive && currentUser && hasEpAccess && (
+                            <span className="text-[9px] bg-cyan-500/20 text-cyan-400 font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
+                              НЭЭЛТТЭЙ
                             </span>
                           )}
-                          {!isActive && currentUser && !isFreeEp && !hasEpAccess && (
+                          {!isActive && currentUser && !hasEpAccess && (
                             <span className="text-[9px] bg-amber-500/20 text-amber-400 font-bold px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
                               <Lock className="w-2.5 h-2.5" /> ЭРХЭЭР
                             </span>

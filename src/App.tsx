@@ -651,6 +651,22 @@ export default function App() {
       handleOpenAuthModal('phone');
       return;
     }
+
+    // Эрх аваагүй хүмүүс анимэ үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
+    const hasAnimeRights =
+      isAdmin ||
+      isMonthlyVip ||
+      isAnimePackage ||
+      purchasedMovies.includes(movie.id) ||
+      (currentUser as any)?.packageType === 'anime' ||
+      (currentUser as any)?.packageType === 'full_vip';
+
+    if (movie.type === 'anime' && !hasAnimeRights) {
+      setPaymentMovie(movie);
+      setShowPaymentModal(true);
+      return;
+    }
+
     console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}, videoUrl: ${movie.videoUrl}`);
     setSelectedMovieForPlayer(movie);
     setPlayerInitialEpisode(episodeNumber);
@@ -1368,7 +1384,7 @@ export default function App() {
                   className="text-[11px] bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md flex items-center gap-1.5 active:scale-95"
                 >
                   <Film className="w-3.5 h-3.5" />
-                  <span>Шууд үзэх (1-р анги үнэгүй)</span>
+                  <span>Шууд үзэх</span>
                 </button>
               ) : (
                 isAdmin && (
