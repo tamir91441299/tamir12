@@ -17,19 +17,19 @@ export function formatLegendOfKorraS3DriveLink(driveIdOrUrl: string): string {
  * Анги бүрийн линкийг доор шууд оруулах эсвэл Админ цонхоор тохируулж болно.
  */
 export const LEGEND_OF_KORRA_S3_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1rMcHRewZRVhCWRs45pHGz5UK8Bnl9dSc/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1WwpATNw1NgrluvsyRo_4lOTWjU0LGYfV/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1QuZPd3l-SHnmj2tIaGsfovr-4KwLIlHX/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1Bbu1k-6qDO3BuAaTi3966k1IoPjywh33/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1O_FcRypLfN7TNpDCjbr1Totn7lHMrBsT/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1hMwuhg8NQUL1t5XJBxlnK8u7nlAt11kA/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1p0PZgewuKJFt4W8_-4F0ech8USwGMi6r/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZYBkRJZNI4tLwxzF7pSMBIMFTMNd4PvAXRV',
+  2: 'https://u.pcloud.link/publink/show?code=XZmBkRJZPzCmjuFXcLjGP4KXNyOY20sGIUd7',
+  3: 'https://u.pcloud.link/publink/show?code=XZeBkRJZFLPVeJPN1Up6P1ouhdNMeLt1OQRk',
+  4: 'https://u.pcloud.link/publink/show?code=XZeBkRJZFLPVeJPN1Up6P1ouhdNMeLt1OQRk',
+  5: 'https://u.pcloud.link/publink/show?code=XZQ2kRJZWoEJjW1irQJ7xkh2DT3zSf9VM5ik',
+  6: 'https://u.pcloud.link/publink/show?code=XZd2kRJZzKGXXjpu5XfmN2AI07SxXRiWESO7',
+  7: 'https://u.pcloud.link/publink/show?code=XZh2kRJZ4AljRW9Fdumgxm9Pu3yTj43GiSyX',
   8: 'https://drive.google.com/file/d/18X-k0aseNx1epxsU4GSjmmLziRFPXgZU/view?usp=drivesdk',
   9: 'https://drive.google.com/file/d/1h-4GeQYB9_fDIMsHhwiKKu8n8XDMYTZT/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1qbhfFfT6z3GWW4SKXcauz6o-X2HYQRaI/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1TB2sll4EzSUKjP1JFP5PBR2xAPHTmQJm/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1z9KE68veuxa80ussXtK1Q1fwk7mPLUlC/view?usp=drivesdk',
-  13: 'https://drive.google.com/file/d/1a71zCfysrKk0GT9YNujzhYLy8Trt2KWn/view?usp=drivesdk',
+  10: 'https://u.pcloud.link/publink/show?code=XZ62kRJZUmUi5auaScuXfLufloutluaYJ1bk',
+  11: 'https://u.pcloud.link/publink/show?code=XZU2kRJZk1V0OOou3jSzoQWlldTMFL4gFKmk',
+  12: 'https://u.pcloud.link/publink/show?code=XZ32kRJZdGDlLk1GTaJDYobenya3Djd2mh4k',
+  13: 'https://u.pcloud.link/publink/show?code=XZo2kRJZJ6J4wStv6Uy38oWaOqQdG4cnW0Yk',
 };
 
 export function setLegendOfKorraS3EpisodeLink(episodeNumber: number, link: string) {

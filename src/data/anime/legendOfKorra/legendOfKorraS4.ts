@@ -17,19 +17,19 @@ export function formatLegendOfKorraS4DriveLink(driveIdOrUrl: string): string {
  * Анги бүрийн линкийг доор шууд оруулах эсвэл Админ цонхоор тохируулж болно.
  */
 export const LEGEND_OF_KORRA_S4_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1rMcHRewZRVhCWRs45pHGz5UK8Bnl9dSc/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1WwpATNw1NgrluvsyRo_4lOTWjU0LGYfV/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1QuZPd3l-SHnmj2tIaGsfovr-4KwLIlHX/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1Bbu1k-6qDO3BuAaTi3966k1IoPjywh33/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1O_FcRypLfN7TNpDCjbr1Totn7lHMrBsT/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1hMwuhg8NQUL1t5XJBxlnK8u7nlAt11kA/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1p0PZgewuKJFt4W8_-4F0ech8USwGMi6r/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/18X-k0aseNx1epxsU4GSjmmLziRFPXgZU/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1h-4GeQYB9_fDIMsHhwiKKu8n8XDMYTZT/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1qbhfFfT6z3GWW4SKXcauz6o-X2HYQRaI/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1TB2sll4EzSUKjP1JFP5PBR2xAPHTmQJm/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1z9KE68veuxa80ussXtK1Q1fwk7mPLUlC/view?usp=drivesdk',
-  13: 'https://drive.google.com/file/d/1a71zCfysrKk0GT9YNujzhYLy8Trt2KWn/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZKWkRJZqxPt5OWXRmuFY19tKTapoRpyW2ny',
+  2: 'https://u.pcloud.link/publink/show?code=XZtWkRJZLQ51C4hEHYFpW9dCNnpe9yuhTyS7',
+  3: 'https://drive.google.com/file/d/1Ukqpyrd6ggwDe2YBfz-Na9vtrhsbTvl2/view?usp=drivesdk&usp=embed_facebook',
+  4: 'https://u.pcloud.link/publink/show?code=XZOWkRJZGufCfO0EyBy6quTELsuUELQ6FDj7',
+  5: 'https://u.pcloud.link/publink/show?code=XZIWkRJZTxypW6rBOSmtKMp8cMLoRLEGEpr7',
+  6: 'https://drive.google.com/file/d/1mwHci8uzMLmDBY1ygQHvjnvj3sLewed_/view?usp=drivesdk&usp=embed_facebook',
+  7: 'https://u.pcloud.link/publink/show?code=XZAWkRJZ3nTpLBnRSffVgOHuRXXL7bGBts1V',
+  8: 'https://u.pcloud.link/publink/show?code=XZNWkRJZ6gMy0cs79mkewooAkazXhHbrmlqV',
+  9: 'https://drive.google.com/file/d/1vwiVkUlHUbQbdfn0cjfdOz-BaCtPL-Vv/view?usp=drivesdk&usp=embed_facebook',
+  10: 'https://u.pcloud.link/publink/show?code=XZvWkRJZax1tCbUpaGJwuIavyMFID8GNYd1k',
+  11: 'https://drive.google.com/file/d/1SEtHj9hffbI7xAxgyqeSlnw1asH74h8e/view?usp=drivesdk&usp=embed_facebook',
+  12: 'https://u.pcloud.link/publink/show?code=XZcDkRJZR0SRbuCbFz5kbwP55v1FgyEW2o9X',
+  13: '',
 };
 
 export function setLegendOfKorraS4EpisodeLink(episodeNumber: number, link: string) {
