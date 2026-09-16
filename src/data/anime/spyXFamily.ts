@@ -20,7 +20,7 @@ export function formatSpyXFamilyDriveLink(driveIdOrUrl: string): string {
 export const SPY_X_FAMILY_EPISODE_LINKS: Record<number, string> = {
   1: 'https://drive.google.com/file/d/1OnGBSiqEY7V-OgzLXYhhdBYNy9xlTXfz/view?usp=drivesdk&usp=embed_facebook',
   2: 'https://u.pcloud.link/publink/show?code=XZcJkRJZcgBcJLEWXcQmKmsavqwdWzuSQg4X',
-  3: 'https://u.pcloud.link/publink/show?code=XZcJkRJZcgBcJLEWXcQmKmsavqwdWzuSQg4X',
+  3: 'https://u.pcloud.link/publink/show?code=XZzFkRJZfyMcM6od88Sov84BHxHmDSyURaTy',
   4: 'https://u.pcloud.link/publink/show?code=XZzFkRJZfyMcM6od88Sov84BHxHmDSyURaTy',
   5: 'https://u.pcloud.link/publink/show?code=XZYFkRJZXoAaJO64an0Na7na1se4cp0tXHW7',
   6: 'https://u.pcloud.link/publink/show?code=XZuFkRJZL5cjLEbKX4BYQCzOf378BS503Yi7',
