@@ -19,7 +19,7 @@ export function formatLegendOfKorraDriveLink(driveIdOrUrl: string): string {
  */
 export const LEGEND_OF_KORRA_EPISODE_LINKS: Record<number, string> = {
   1: 'https://filemoon.org/en/7d5GLnE73xRJ/file',
-  2: 'https://u.pcloud.link/publink/show?code=XZM7kRJZIjivk9nogvpNHQythHtmwVJoj2jX',
+  2: 'https://u.pcloud.link/publink/show?code=XZi7kRJZxdYqzRRNmLkiYSY6UR8cuyWmrzEV',
   3: 'https://drive.google.com/file/d/1VOmLbJQU9fscXdj147epT0WTnLePG-KL/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1u2tsMQtvfbd3lgKmIMVLJ6_8op77KqRT/view?usp=drivesdk&usp=embed_facebook',
   5: 'https://drive.google.com/file/d/1ZHXJ42X2LmZdVfvaCq0j0Bi4wUTHDOrw/view?usp=drivesdk&usp=embed_facebook',

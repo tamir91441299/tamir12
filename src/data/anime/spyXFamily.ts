@@ -18,7 +18,7 @@ export function formatSpyXFamilyDriveLink(driveIdOrUrl: string): string {
  * доорх 1-25 дугаарын ард Drive линк эсвэл ID-гаа хуулж тавина уу:
  */
 export const SPY_X_FAMILY_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://filemoon.org/en/RMKGJAXPz1oP/file',
+  1: 'https://drive.google.com/file/d/1OnGBSiqEY7V-OgzLXYhhdBYNy9xlTXfz/view?usp=drivesdk&usp=embed_facebook',
   2: 'https://drive.google.com/file/d/1spy_family_ep2_drive_link/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1spy_family_ep3_drive_link/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1spy_family_ep4_drive_link/view?usp=drivesdk',
