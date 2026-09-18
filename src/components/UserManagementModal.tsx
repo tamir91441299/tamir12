@@ -38,7 +38,11 @@ import {
   Sliders,
   Zap,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Lock,
+  CheckCircle,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { Movie } from '../types';
@@ -62,6 +66,11 @@ import {
   setProtectedWindowPasscode,
   subscribePasscodeFromFirestore
 } from '../lib/passcodeService';
+import {
+  subscribeRechargeRequests,
+  updateRechargeRequestStatus,
+  RechargeRequest
+} from '../lib/rechargeService';
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -226,8 +235,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     walletBalance: 0,
   });
 
-  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes' | 'security'
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes' | 'security'>('users');
+  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'>('users');
+  const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
+  const [rechargeFilterStatus, setRechargeFilterStatus] = useState<string>('all');
+  const [rechargeSearch, setRechargeSearch] = useState<string>('');
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [promoCodesList, setPromoCodesList] = useState<PromoCode[]>(() => getAllPromoCodes());
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
@@ -441,13 +453,80 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const unsubscribePasscode = subscribePasscodeFromFirestore((code) => {
       setCurrentPasscode(code);
     });
+    const unsubscribeRecharges = subscribeRechargeRequests((reqs) => {
+      setRechargeRequests(reqs);
+    });
     return () => {
       unsubscribeUsers();
       unsubscribeNotifs();
       unsubscribeCodes();
       unsubscribePasscode();
+      unsubscribeRecharges();
     };
   }, []);
+
+  const handleApproveRecharge = async (req: RechargeRequest) => {
+    if (!isAdmin) return;
+    const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн ${req.planLabel} (${req.amount.toLocaleString()}₮)-ийг баталгаажуулж анимэ үзэх эрхийг нээх үү?`;
+    if (!confirm(confirmMsg)) return;
+
+    await updateRechargeRequestStatus(req.id, 'approved', 'Админ төлбөрийг шалгаж баталгаажууллаа.');
+
+    // Find user by id, email, or phone
+    const targetUser = users.find(
+      (u) =>
+        u.id === req.userId ||
+        (req.userEmail && u.email?.toLowerCase() === req.userEmail.toLowerCase()) ||
+        (req.userPhone && u.phone && u.phone === req.userPhone)
+    );
+
+    const durationDays = req.durationDays || (req.planId === '15d' ? 15 : req.planId === '2m' ? 60 : 30);
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
+    const expiryStr = expiryDate.toISOString().split('T')[0];
+
+    if (targetUser) {
+      const updated = users.map((u) => {
+        if (u.id === targetUser.id) {
+          return {
+            ...u,
+            packageType: 'anime' as const,
+            packageExpiry: expiryStr,
+          };
+        }
+        return u;
+      });
+      saveUsersState(updated);
+    } else {
+      const newUserRecord: UserDetail = {
+        id: req.userId,
+        name: req.userName,
+        email: req.userEmail || `${req.userPhone}@user.ioio.mn`,
+        phone: req.userPhone,
+        registeredAt: new Date().toISOString().split('T')[0],
+        role: 'user',
+        status: 'active',
+        packageType: 'anime',
+        packageExpiry: expiryStr,
+        walletBalance: 0,
+        lastLogin: 'Идэвхтэй',
+        watchedCount: 0,
+        favoriteCount: 0,
+      };
+      saveUsersState([...users, newUserRecord]);
+    }
+
+    alert(`🎉 ${req.userName} хэрэглэгчийн анимэ эрх (${req.planLabel}) амжилттай нээгдлээ! Хэрэглэгч одоо бүх анимэг үзэх боломжтой боллоо.`);
+  };
+
+  const handleRejectRecharge = async (req: RechargeRequest) => {
+    if (!isAdmin) return;
+    const reason = prompt('Цуцлах шалтгаан оруулна уу (Жишээ: Гүйлгээ орж ирээгүй, утас буруу гэх мэт):', 'Төлбөр шалгахад шилжүүлэг илрээгүй байна.');
+    if (reason === null) return;
+
+    await updateRechargeRequestStatus(req.id, 'rejected', reason);
+    alert(`❌ ${req.userName} хэрэглэгчийн хүсэлтийг цуцаллаа.`);
+  };
 
   const saveUsersState = (updatedUsers: UserDetail[]) => {
     const deduplicated = deduplicateUserList(updatedUsers);
@@ -877,6 +956,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           >
             <ShieldCheck className="w-4 h-4 text-amber-400" />
             <span>🔒 Шинэ Цонхны Нууц Код</span>
+          </button>
+
+          <button
+            id="admin-tab-recharges"
+            onClick={() => setActiveAdminTab('recharges')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 ${
+              activeAdminTab === 'recharges'
+                ? 'bg-zinc-800 text-rose-400 border-rose-500 shadow'
+                : 'text-zinc-400 hover:text-white border-transparent hover:bg-zinc-800/50'
+            }`}
+          >
+            <CreditCard className="w-4 h-4 text-rose-400" />
+            <span>💳 Цэнэглэлтийн Хүсэлтүүд</span>
+            {rechargeRequests.filter((r) => r.status === 'pending').length > 0 && (
+              <span className="bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse shadow">
+                {rechargeRequests.filter((r) => r.status === 'pending').length} ШИНЭ
+              </span>
+            )}
           </button>
         </div>
 
@@ -1921,6 +2018,211 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
               </form>
             </div>
+          </div>
+        ) : activeAdminTab === 'recharges' ? (
+          <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+            {/* Header & Stats */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-zinc-900 border border-rose-500/30 p-4 rounded-2xl gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                    💳 Хэрэглэгчдийн Төлбөр & Цэнэглэлтийн Хүсэлтүүд
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Эрх аваагүй хэрэглэгчид MonPay / Дансаар шилжүүлэг хийгээд энд хүсэлт илгээнэ. Админ шалгаад эрхийг нь шууд нээнэ.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="bg-black/60 border border-zinc-800 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Хүлээгдэж буй</span>
+                  <span className="text-sm font-black text-rose-400">
+                    {rechargeRequests.filter((r) => r.status === 'pending').length}
+                  </span>
+                </div>
+                <div className="bg-black/60 border border-zinc-800 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Баталгаажсан</span>
+                  <span className="text-sm font-black text-emerald-400">
+                    {rechargeRequests.filter((r) => r.status === 'approved').length}
+                  </span>
+                </div>
+                <div className="bg-black/60 border border-zinc-800 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Нийт Орлого</span>
+                  <span className="text-sm font-black text-amber-400">
+                    {rechargeRequests
+                      .filter((r) => r.status === 'approved')
+                      .reduce((acc, curr) => acc + (curr.amount || 0), 0)
+                      .toLocaleString()} ₮
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={rechargeSearch}
+                  onChange={(e) => setRechargeSearch(e.target.value)}
+                  placeholder="Нэр, утас, гүйлгээний утгаар хайх..."
+                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-rose-400 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
+                <span className="text-xs text-zinc-400 shrink-0">Төлөв:</span>
+                <select
+                  value={rechargeFilterStatus}
+                  onChange={(e) => setRechargeFilterStatus(e.target.value)}
+                  className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-2 px-3 rounded-xl focus:outline-none focus:border-rose-500 cursor-pointer"
+                >
+                  <option value="all">Бүх төлөв</option>
+                  <option value="pending">⏳ Зөвхөн хүлээгдэж буй</option>
+                  <option value="approved">✓ Баталгаажсан</option>
+                  <option value="rejected">✕ Цуцлагдсан</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Requests List */}
+            {(() => {
+              const filtered = rechargeRequests.filter((r) => {
+                const q = rechargeSearch.toLowerCase().trim();
+                const matchesSearch =
+                  !q ||
+                  r.userName.toLowerCase().includes(q) ||
+                  r.userPhone.includes(q) ||
+                  (r.userEmail && r.userEmail.toLowerCase().includes(q)) ||
+                  (r.note && r.note.toLowerCase().includes(q));
+
+                const matchesStatus =
+                  rechargeFilterStatus === 'all' || r.status === rechargeFilterStatus;
+
+                return matchesSearch && matchesStatus;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="text-center py-16 bg-zinc-900/30 rounded-2xl border border-zinc-800/80 space-y-2">
+                    <CreditCard className="w-10 h-10 text-zinc-600 mx-auto" />
+                    <p className="text-sm font-bold text-zinc-400">Цэнэглэлтийн хүсэлт олдсонгүй</p>
+                    <p className="text-xs text-zinc-600">
+                      Хэрэглэгчид MonPay эсвэл QR кодоор төлбөр хийж админд мэдэгдэх үед энд харагдана.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {filtered.map((req) => (
+                    <div
+                      key={req.id}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                        req.status === 'pending'
+                          ? 'bg-rose-950/20 border-rose-500/50 shadow-lg ring-1 ring-rose-500/30'
+                          : req.status === 'approved'
+                          ? 'bg-zinc-900/80 border-emerald-500/30'
+                          : 'bg-zinc-900/40 border-zinc-800/60 opacity-60'
+                      }`}
+                    >
+                      {/* Left: User Info & Request Details */}
+                      <div className="space-y-1.5 min-w-[280px]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-white">{req.userName}</span>
+                          <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-amber-400" />
+                            {req.userPhone}
+                          </span>
+                          {req.status === 'pending' ? (
+                            <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow">
+                              ⏳ Хүлээгдэж байна
+                            </span>
+                          ) : req.status === 'approved' ? (
+                            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                              ✓ Баталгаажсан
+                            </span>
+                          ) : (
+                            <span className="bg-zinc-800 text-zinc-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              ✕ Цуцлагдсан
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-300">
+                          <span className="font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
+                            {req.planLabel}
+                          </span>
+                          <span className="font-black text-rose-400 font-mono text-sm">
+                            {req.amount.toLocaleString()} ₮
+                          </span>
+                          <span className="text-zinc-500">•</span>
+                          <span className="text-[11px] text-zinc-400 uppercase font-bold">
+                            Төлсөн: {req.method}
+                          </span>
+                          {req.createdAt && (
+                            <>
+                              <span className="text-zinc-500">•</span>
+                              <span className="text-[10px] text-zinc-500">
+                                {new Date(req.createdAt).toLocaleString('mn-MN')}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        {req.note && (
+                          <div className="text-xs bg-black/40 border border-zinc-800/80 p-2 rounded-xl text-zinc-300">
+                            <span className="text-zinc-500 font-bold">Гүйлгээний утга: </span>
+                            <span className="font-mono text-amber-300">{req.note}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                        {req.status === 'pending' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleRejectRecharge(req)}
+                              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                            >
+                              Цуцлах
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleApproveRecharge(req)}
+                              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Шалгасан, Анимэ Эрх Нээх</span>
+                            </button>
+                          </>
+                        ) : req.status === 'approved' ? (
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
+                            <CheckCircle className="w-4 h-4 text-emerald-400" />
+                            <span>Эрх нээгдсэн ✓</span>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-zinc-500 italic">
+                            Цуцлагдсан хүсэлт
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         ) : null}
       </div>

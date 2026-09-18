@@ -57,6 +57,13 @@ service cloud.firestore {
       allow create, update: if true;
       allow delete: if isMasterAdmin();
     }
+
+    // Recharge requests collection (Users submit payment proof; Admin approves/rejects)
+    match /recharge_requests/{reqId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isMasterAdmin();
+    }
   }
 }
 

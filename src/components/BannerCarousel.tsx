@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Info, Star, Bookmark, Sparkles, Flame, Tv, Film, Clapperboard, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Info, Star, Bookmark, Sparkles, Flame, Tv, Film, Clapperboard, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { Movie } from '../types';
 
 interface BannerCarouselProps {
@@ -8,6 +8,7 @@ interface BannerCarouselProps {
   onOpenDetails: (movie: Movie) => void;
   onToggleFavorite: (movieId: string) => void;
   isFavorite: (movieId: string) => boolean;
+  hasAccessCheck?: (movie: Movie) => boolean;
   deviceMode?: 'auto' | 'phone' | 'tablet' | 'pc';
 }
 
@@ -17,6 +18,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
   onOpenDetails,
   onToggleFavorite,
   isFavorite,
+  hasAccessCheck,
   deviceMode = 'auto',
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -157,14 +159,28 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({
 
           {/* Action Triggers */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <button
-              id={`play-banner-${currentMovie.id}`}
-              onClick={() => onPlayMovie(currentMovie)}
-              className="gold-glow-btn font-black text-xs sm:text-sm px-4 sm:px-7 py-2.5 sm:py-3.5 rounded-xl flex items-center gap-2 cursor-pointer"
-            >
-              <Play className="w-3.5 sm:w-5 h-3.5 sm:h-5 fill-current" />
-              <span>ШУУД ҮЗЭХ</span>
-            </button>
+            {(() => {
+              const hasAccess = hasAccessCheck ? hasAccessCheck(currentMovie) : true;
+              return (
+                <button
+                  id={`play-banner-${currentMovie.id}`}
+                  onClick={() => onPlayMovie(currentMovie)}
+                  className={`font-black text-xs sm:text-sm px-4 sm:px-7 py-2.5 sm:py-3.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all ${
+                    hasAccess
+                      ? 'gold-glow-btn text-black shadow-lg hover:scale-105'
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black border border-amber-300 shadow-amber-500/30'
+                  }`}
+                  title={hasAccess ? 'Шууд үзэх' : 'Эрх авах / Төлбөр хийх'}
+                >
+                  {hasAccess ? (
+                    <Play className="w-3.5 sm:w-5 h-3.5 sm:h-5 fill-current" />
+                  ) : (
+                    <Lock className="w-3.5 sm:w-5 h-3.5 sm:h-5 text-black" />
+                  )}
+                  <span>{hasAccess ? 'ШУУД ҮЗЭХ' : 'ЭРХ АВЧ ҮЗЭХ'}</span>
+                </button>
+              );
+            })()}
 
             <button
               id={`detail-banner-${currentMovie.id}`}

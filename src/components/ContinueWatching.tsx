@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Trash2, Clock, CheckCircle2, Film, Sparkles } from 'lucide-react';
+import { Play, Trash2, Clock, CheckCircle2, Film, Sparkles, Lock } from 'lucide-react';
 import { Movie } from '../types';
 import { DeviceMode } from './DisplaySettingsModal';
 
@@ -19,6 +19,7 @@ interface ContinueWatchingProps {
   onOpenDetails: (movie: Movie) => void;
   onRemove: (movieId: string) => void;
   onClearAll?: () => void;
+  hasAccessCheck?: (movie: Movie) => boolean;
   deviceMode?: DeviceMode;
 }
 
@@ -29,6 +30,7 @@ export const ContinueWatching: React.FC<ContinueWatchingProps> = ({
   onOpenDetails,
   onRemove,
   onClearAll,
+  hasAccessCheck,
   deviceMode = 'auto',
 }) => {
   const itemsWithMovies = history
@@ -126,15 +128,29 @@ export const ContinueWatching: React.FC<ContinueWatchingProps> = ({
                 </div>
 
                 {/* Center Play Button */}
-                <button
-                  onClick={() => onPlay(movie, hist.episodeNumber)}
-                  className="absolute inset-0 flex items-center justify-center group/btn cursor-pointer"
-                  aria-label="Үргэлжлүүлэн үзэх"
-                >
-                  <div className="w-11 h-11 rounded-full gold-glow-btn text-black flex items-center justify-center shadow-2xl group-hover/btn:scale-110 transition-all duration-300">
-                    <Play className="w-5 h-5 fill-current translate-x-0.5" />
-                  </div>
-                </button>
+                {(() => {
+                  const hasAccess = hasAccessCheck ? hasAccessCheck(movie) : true;
+                  return (
+                    <button
+                      onClick={() => onPlay(movie, hist.episodeNumber)}
+                      className="absolute inset-0 flex items-center justify-center group/btn cursor-pointer"
+                      aria-label={hasAccess ? 'Үргэлжлүүлэн үзэх' : 'Эрх авах / Төлбөр хийх'}
+                      title={hasAccess ? 'Үргэлжлүүлэн үзэх' : 'Эрх шаардлагатай (Түгжээтэй)'}
+                    >
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-2xl group-hover/btn:scale-110 transition-all duration-300 ${
+                        hasAccess
+                          ? 'gold-glow-btn text-black'
+                          : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/50 border border-rose-400'
+                      }`}>
+                        {hasAccess ? (
+                          <Play className="w-5 h-5 fill-current translate-x-0.5" />
+                        ) : (
+                          <Lock className="w-5 h-5 text-white" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })()}
 
                 {/* Golden Progress Bar */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-800/80 overflow-hidden">

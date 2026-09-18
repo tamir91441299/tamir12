@@ -695,6 +695,13 @@ export default function App() {
     setSearchQuery('');
   };
 
+  const checkMovieAccess = useCallback(
+    (movie: Movie) => {
+      return checkUserContentAccess(currentUser, movie, purchasedMovies.includes(movie.id)).hasAccess;
+    },
+    [currentUser, purchasedMovies]
+  );
+
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
     // Бүртгэлгүй хүмүүс анимэ болон контент үзэх боломжгүй (Нэвтрэх шаардлагатай)
     if (!currentUser) {
@@ -919,6 +926,7 @@ export default function App() {
               onOpenDetails={(m) => setSelectedMovieForDetails(m)}
               onToggleFavorite={toggleFavorite}
               isFavorite={isFavorite}
+              hasAccessCheck={checkMovieAccess}
               deviceMode={deviceMode}
             />
           )}
@@ -1162,6 +1170,7 @@ export default function App() {
                 onToggleFavorite={toggleFavorite}
                 isFavorite={isFavorite}
                 isPurchased={isPurchased}
+                hasAccessCheck={checkMovieAccess}
                 onResetFilters={resetFilters}
                 cardDensity={cardDensity}
                 deviceMode={deviceMode}
@@ -1178,6 +1187,7 @@ export default function App() {
                     onOpenDetails={(m) => setSelectedMovieForDetails(m)}
                     onRemove={handleRemoveFromHistory}
                     onClearAll={handleClearHistory}
+                    hasAccessCheck={checkMovieAccess}
                     deviceMode={deviceMode}
                   />
                 )}
@@ -1193,6 +1203,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
+                    hasAccessCheck={checkMovieAccess}
                     onSeeAll={() => setActiveTab('series')}
                     cardDensity={cardDensity}
                     deviceMode={deviceMode}
@@ -1209,6 +1220,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
+                    hasAccessCheck={checkMovieAccess}
                     onSeeAll={() => setActiveTab('anime')}
                     cardDensity={cardDensity}
                     deviceMode={deviceMode}
@@ -1225,6 +1237,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
+                    hasAccessCheck={checkMovieAccess}
                     cardDensity={cardDensity}
                     deviceMode={deviceMode}
                   />
@@ -1240,6 +1253,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     isFavorite={isFavorite}
                     isPurchased={isPurchased}
+                    hasAccessCheck={checkMovieAccess}
                     onSeeAll={() => setActiveTab('anime')}
                     cardDensity={cardDensity}
                     deviceMode={deviceMode}
@@ -1319,10 +1333,15 @@ export default function App() {
       {(paymentMovie || showPaymentModal) && (
         <PaymentModal
           movie={paymentMovie}
+          currentUser={currentUser}
           userBalance={userBalance}
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
+          onOpenAuthModal={() => {
+            setShowPaymentModal(false);
+            handleOpenAuthModal('login');
+          }}
           onClose={() => {
             setPaymentMovie(null);
             setShowPaymentModal(false);

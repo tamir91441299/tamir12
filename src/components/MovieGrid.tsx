@@ -12,6 +12,7 @@ interface MovieGridProps {
   onToggleFavorite: (movieId: string) => void;
   isFavorite: (movieId: string) => boolean;
   isPurchased?: (movieId: string) => boolean;
+  hasAccessCheck?: (movie: Movie) => boolean;
   onSeeAll?: () => void;
   onResetFilters?: () => void;
   cardDensity?: 'compact' | 'normal' | 'large';
@@ -27,6 +28,7 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
   onToggleFavorite,
   isFavorite,
   isPurchased,
+  hasAccessCheck,
   onSeeAll,
   onResetFilters,
   cardDensity = 'normal',
@@ -122,6 +124,7 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={isFavorite(movie.id)}
                 isPurchased={isPurchased ? isPurchased(movie.id) : false}
+                hasAccess={hasAccessCheck ? hasAccessCheck(movie) : true}
               />
             ))}
           </div>

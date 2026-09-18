@@ -295,3 +295,296 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Hub</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      background: #111827;
+      padding: 18px 0;
+      border-bottom: 1px solid #1f2937;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #f59e0b;
+    }
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+    .nav-links a {
+      color: #d1d5db;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .hero {
+      padding: 50px 0 30px;
+      background: linear-gradient(135deg, #111827, #1e293b);
+    }
+    .hero-box {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      align-items: center;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 4vw, 4rem);
+      margin: 0 0 15px;
+    }
+    .hero p {
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    .cta {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn.primary {
+      background: #f59e0b;
+      color: #111827;
+    }
+    .btn.secondary {
+      background: transparent;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+    }
+    .poster {
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .poster img {
+      width: 100%;
+      display: block;
+      height: 420px;
+      object-fit: cover;
+    }
+    .section {
+      padding: 30px 0;
+    }
+    .section-title {
+      margin: 0 0 20px;
+      font-size: 1.7rem;
+    }
+    .anime-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+    }
+    .anime-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .anime-card:hover {
+      transform: translateY(-5px);
+    }
+    .anime-card img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      display: block;
+    }
+    .anime-card .info {
+      padding: 12px;
+    }
+    .anime-card h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+    .anime-card span {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    .player-wrap {
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 20px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    video {
+      width: 100%;
+      max-height: 520px;
+      border-radius: 12px;
+      background: #000;
+    }
+    @media (max-width: 768px) {
+      .hero-box {
+        grid-template-columns: 1fr;
+      }
+      .nav {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav">
+      <div class="logo">AnimeHub</div>
+      <nav class="nav-links">
+        <a href="#">Home</a>
+        <a href="#">Popular</a>
+        <a href="#">New</a>
+        <a href="#">Genres</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-box">
+      <div>
+        <h1>Watch Anime Anytime</h1>
+        <p>
+          Your favorite anime in one place. Explore trending series,
+          watch episodes, and enjoy a clean, fast streaming experience.
+        </p>
+        <div class="cta">
+          <button class="btn primary" onclick="scrollToAnime()">Browse Anime</button>
+          <button class="btn secondary">Trending Now</button>
+        </div>
+      </div>
+      <div class="poster">
+        <img src="https://images.unsplash.com/...">
+      </div>
+    </div>
+  </section>
+
+  <main class="container">
+    <section class="section">
+      <h2 class="section-title">Popular Anime</h2>
+      <div class="anime-grid" id="animeGrid"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Watch</h2>
+      <div class="player-wrap">
+        <video id="player" controls poster="https://images.unsplash.com/...">
+          <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const animeData = [
+      {
+        title: "Naruto",
+        type: "Action",
+        image: "https://images.unsplash.com/photo-1578632767115-351597cf2477?...",
+        video: "https://www.w3schools.com/html/mov_bbb.mp4"
+      },
+      {
+        title: "One Piece",
+        type: "Adventure",
+        image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?...",
+        video: "https://www.w3schools.com/html/movie.mp4"
+      },
+      {
+        title: "Attack on Titan",
+        type: "Drama",
+        image: "https://images.unsplash.com/photo-1542204165-65bf26472b9b?...",
+        video: "https://www.w3schools.com/html/mov_bbb.mp4"
+      },
+      {
+        title: "Demon Slayer",
+        type: "Fantasy",
+        image: "https://images.unsplash.com/photo-1532517891316-3c1aee9c4a3f?...",
+        video: "https://www.w3schools.com/html/movie.mp4"
+      }
+    ];
+
+    const grid = document.getElementById("animeGrid");
+    const player = document.getElementById("player");
+
+    animeData.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "anime-card";
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.title}">
+        <div class="info">
+          <h3>${item.title}</h3>
+          <span>${item.type}</span>
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        player.src = item.video;
+        player.load();
+        player.play();
+        window.scrollTo({ top: document.body.scrollHeight * 0.5, behavior: "smooth" });
+      });
+      grid.appendChild(card);
+    });
+
+    function scrollToAnime() {
+      document.getElementById("animeGrid").scrollIntoView({ behavior: "smooth" });
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Star, Bookmark, Sparkles, Tv, Film, Clapperboard } from 'lucide-react';
+import { Play, Star, Bookmark, Sparkles, Tv, Film, Clapperboard, Lock } from 'lucide-react';
 import { Movie } from '../types';
 
 interface MovieCardProps {
@@ -9,6 +9,7 @@ interface MovieCardProps {
   onToggleFavorite: (movieId: string) => void;
   isFavorite: boolean;
   isPurchased?: boolean;
+  hasAccess?: boolean;
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({
@@ -17,6 +18,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   onOpenDetails,
   onToggleFavorite,
   isFavorite,
+  hasAccess = true,
 }) => {
   const typeBadgeLabel = movie.type === 'anime' ? 'ANIME' : movie.type === 'series' ? 'SERIES' : 'CINEMA';
   const audioLabel = movie.country === 'Монгол' ? 'MN ORIGINAL' : movie.type === 'anime' ? 'MN SUB / DUB' : 'MN DUB';
@@ -29,12 +31,24 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     setHasError(false);
   }, [movie.poster, movie.backdrop]);
 
+  const handleCardClick = () => {
+    if (!hasAccess) {
+      onPlay(movie);
+    } else {
+      onOpenDetails(movie);
+    }
+  };
+
   return (
-    <div className="group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer">
+    <div 
+      className={`group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer transition-all duration-300 ${
+        !hasAccess ? 'border-rose-500/20 hover:border-rose-500/50' : 'hover:border-amber-400/30'
+      }`}
+    >
       {/* Poster Image Container */}
       <div
         className="relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-b from-[#181b24] via-[#101218] to-[#0a0b0f] flex items-center justify-center"
-        onClick={() => onOpenDetails(movie)}
+        onClick={handleCardClick}
       >
         {imgSrc && !hasError ? (
           <img
@@ -78,17 +92,25 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
         {/* Top Floating Studio Badges */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none gap-1 z-10">
-          <span
-            className={`text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-md backdrop-blur-md border ${
-              movie.type === 'anime'
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                : movie.type === 'series'
-                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-            }`}
-          >
-            {typeBadgeLabel}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-md backdrop-blur-md border ${
+                movie.type === 'anime'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                  : movie.type === 'series'
+                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}
+            >
+              {typeBadgeLabel}
+            </span>
+            {!hasAccess && (
+              <span className="bg-rose-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-md border border-rose-400/50 animate-in fade-in">
+                <Lock className="w-2.5 h-2.5 text-white" />
+                <span>Эрх авах</span>
+              </span>
+            )}
+          </div>
 
           {/* Rating Pill */}
           <span className="bg-black/60 backdrop-blur-md border border-amber-500/30 text-amber-300 text-[10px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
@@ -121,18 +143,26 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           <Bookmark className="w-3.5 h-3.5 fill-current" />
         </button>
 
-        {/* Cinematic Play Orb Hover Overlay (Desktop Mouse Hover Only to prevent mobile touch blackout) */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hidden sm:flex items-center justify-center backdrop-blur-[2px] pointer-events-none sm:group-hover:pointer-events-auto">
+        {/* Cinematic Play / Lock Orb Hover Overlay */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hidden sm:flex items-center justify-center backdrop-blur-[2px] pointer-events-none sm:group-hover:pointer-events-auto">
           <button
             id={`card-play-${movie.id}`}
             onClick={(e) => {
               e.stopPropagation();
               onPlay(movie);
             }}
-            className="w-13 h-13 rounded-full gold-glow-btn text-black flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-300 cursor-pointer"
-            title="Тоглуулах"
+            className={`w-13 h-13 rounded-full flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-300 cursor-pointer ${
+              hasAccess
+                ? 'gold-glow-btn text-black'
+                : 'bg-rose-600 hover:bg-rose-500 text-white shadow-xl shadow-rose-600/40 border border-rose-400'
+            }`}
+            title={hasAccess ? 'Тоглуулах' : 'Эрх авах / Төлбөр төлөх'}
           >
-            <Play className="w-5 h-5 fill-black translate-x-0.5" />
+            {hasAccess ? (
+              <Play className="w-5 h-5 fill-black translate-x-0.5" />
+            ) : (
+              <Lock className="w-5 h-5 text-white" />
+            )}
           </button>
         </div>
       </div>
@@ -140,7 +170,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       {/* Card Info Content */}
       <div 
         className="p-3 sm:p-3.5 flex flex-col flex-1 justify-between bg-gradient-to-b from-[#0e1017] to-[#0a0b10] border-t border-white/[0.05]"
-        onClick={() => onOpenDetails(movie)}
+        onClick={handleCardClick}
       >
         <div>
           <h3

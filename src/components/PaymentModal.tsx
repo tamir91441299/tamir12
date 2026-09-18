@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Sparkles, Copy, Check, Ticket, Gift, KeyRound } from 'lucide-react';
+import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Sparkles, Copy, Check, Ticket, Gift, KeyRound, Lock, Send, Phone } from 'lucide-react';
 import { Movie } from '../types';
+import { UserAccount } from './AuthModal';
 import { redeemCode } from '../lib/codeService';
+import { submitRechargeRequest } from '../lib/rechargeService';
 
 interface PaymentModalProps {
   movie: Movie | null;
+  currentUser?: UserAccount | null;
   userBalance: number;
   isMonthlyVip?: boolean;
   isAnimePackage: boolean;
   isMoviePackage?: boolean;
   onClose: () => void;
+  onOpenAuthModal?: () => void;
   onPaymentSuccess: (movieId: string, deductedAmount?: number) => void;
   onSubscribePackage: (
     packageType: 'anime' | 'movie' | 'full_vip',
@@ -68,11 +72,13 @@ const PLANS: PlanConfig[] = [
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   movie,
+  currentUser,
   userBalance,
   isMonthlyVip,
   isAnimePackage,
   isMoviePackage,
   onClose,
+  onOpenAuthModal,
   onPaymentSuccess,
   onSubscribePackage,
   onTopUpBalance,
@@ -82,13 +88,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const currentPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[0];
   const activePrice = currentPlan.price;
 
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('code');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('monpay');
   const [selectedBank, setSelectedBank] = useState<string>('monpay');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMsgText, setSuccessMsgText] = useState<string>('');
   const [topUpRequestSent, setTopUpRequestSent] = useState(false);
+  const [topUpSuccessNotice, setTopUpSuccessNotice] = useState<string>('');
   const [copiedMonpay, setCopiedMonpay] = useState(false);
+
+  // User contact input for recharge confirmation
+  const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
+  const [userNoteInput, setUserNoteInput] = useState<string>('');
 
   // Activation Code States
   const [inputActivationCode, setInputActivationCode] = useState('');
@@ -142,15 +153,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     { id: 'socialpay', name: 'SocialPay', color: 'bg-purple-600', code: 'SOCIAL' },
   ];
 
-  const handleConfirmPayment = () => {
-    setIsVerifying(true);
-
+  const handleConfirmPayment = async () => {
     if (paymentMethod === 'code') {
       handleRedeemActivationCode();
       return;
     }
 
     if (paymentMethod === 'wallet') {
+      setIsVerifying(true);
       if (userBalance < activePrice) {
         setIsVerifying(false);
         alert(`⚠️ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()} оноо байна. Энэ багцыг авахад ${activePrice.toLocaleString()} оноо шаардлагатай. Админаас оноогоо цэнэглүүлнэ үү.`);
@@ -168,12 +178,45 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
         }, 1200);
       }, 1000);
+      return;
+    }
+
+    // MonPay / QPay method: Send real topup request to admin
+    if (!currentUser) {
+      alert('Төлбөр төлж админаас цэнэглэлт авахын тулд эхлээд системд нэвтэрнэ үү.');
+      onClose();
+      if (onOpenAuthModal) onOpenAuthModal();
+      return;
+    }
+
+    const phone = (userPhoneInput.trim() || currentUser.phone || '').trim();
+    if (!phone) {
+      alert('Гүйлгээ шалгахад шаардлагатай утасны дугаараа оруулна уу.');
+      return;
+    }
+
+    setIsVerifying(true);
+    const res = await submitRechargeRequest({
+      userId: currentUser.id,
+      userName: currentUser.name || 'Хэрэглэгч',
+      userPhone: phone,
+      userEmail: currentUser.email || '',
+      planId: currentPlan.id,
+      planLabel: currentPlan.label,
+      durationDays: currentPlan.durationDays,
+      amount: activePrice,
+      method: paymentMethod,
+      note: userNoteInput.trim() || `${currentPlan.label} (${activePrice.toLocaleString()}₮) шилжүүлэв`,
+    });
+
+    setIsVerifying(false);
+    if (res.success) {
+      setTopUpRequestSent(true);
+      setTopUpSuccessNotice(
+        `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах хүсэлт Админ Тамирт илгээгдлээ! Төлбөр шалгагдаж админ баталгаажуулмагц анимэ эрх тань автоматаар идэвхжинэ.`
+      );
     } else {
-      // MonPay / QPay method: Send topup request to admin instead of instant free activation
-      setTimeout(() => {
-        setIsVerifying(false);
-        setTopUpRequestSent(true);
-      }, 1200);
+      alert(res.message);
     }
   };
 
@@ -418,41 +461,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     {codeError}
                   </p>
                 )}
-
-                {/* Quick Presets for Death Note, Korra, VIP */}
-                <div className="pt-1.5">
-                  <span className="text-[10px] text-zinc-400 font-bold block mb-1.5">
-                    💡 Танд зориулсан эрхийн кодууд (Дарж шууд оруулах):
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInputActivationCode('KORRA');
-                        setCodeError(null);
-                      }}
-                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 cursor-pointer transition-all flex items-center gap-1"
-                    >
-                      <span>🌊 KORRA</span>
-                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Корра 30 хоног)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInputActivationCode('VIP2025');
-                        setCodeError(null);
-                      }}
-                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 cursor-pointer transition-all flex items-center gap-1"
-                    >
-                      <span>👑 VIP2025</span>
-                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Бүтэн 1 жил)</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-400">
-                <span>ℹ️ Эрхийн код аваагүй бол MonPay / Дансаар төлбөрөө шилжүүлэн админаас авна уу.</span>
+                <span>ℹ️ Эрхийн код аваагүй бол MonPay / Дансаар төлбөрөө шилжүүлэн админаас эрхээ цэнэглүүлнэ үү.</span>
               </div>
             </div>
           )}
@@ -481,9 +493,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   MonPay Шилжүүлэх Дугаар / Данс:
                 </span>
                 <div className="flex items-center justify-between bg-black/60 p-2 rounded-lg border border-zinc-700/80">
-                  <span className="font-mono text-base font-black text-amber-400 tracking-wider">
-                    {monpayNumber}
-                  </span>
+                  <div>
+                    <span className="font-mono text-base font-black text-amber-400 tracking-wider">
+                      {monpayNumber}
+                    </span>
+                    <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
+                  </div>
                   <button
                     id="copy-monpay-btn"
                     onClick={() => copyToClipboard(monpayNumber)}
@@ -503,7 +518,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-zinc-400 italic">
-                  * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{`IOIO-ANIME-${currentPlan.id.toUpperCase()}`}</span>
+                  * Гүйлгээний утга дээр өөрийн нэр, утасны дугаараа бичнэ үү: <span className="text-rose-300 font-mono font-bold">{`IOIO ${currentUser?.phone || 'УТАС'} ${currentPlan.id.toUpperCase()}`}</span>
                 </p>
               </div>
 
@@ -519,10 +534,54 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="text-xs space-y-0.5 text-zinc-300">
                   <p className="font-bold text-white text-[11px]">MonPay Апп ашиглаж байна уу?</p>
                   <p className="text-[10px] text-zinc-400">
-                    MonPay аппаараа <span className="text-amber-400 font-bold">{monpayNumber}</span> дугаар руу <span className="text-amber-400 font-bold">{activePrice.toLocaleString()}₮</span> шилжүүлнэ.
+                    MonPay аппаараа <span className="text-amber-400 font-bold">{monpayNumber}</span> дугаар руу <span className="text-amber-400 font-bold">{activePrice.toLocaleString()}₮</span> шилжүүлсний дараа доорх товчоор админд мэдэгдэж цэнэглэлтээ авна уу.
                   </p>
                 </div>
               </div>
+
+              {/* Contact phone & note input */}
+              {!currentUser ? (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2">
+                  <span className="text-xs text-amber-300">Цэнэглэлт авахын тулд нэвтэрнэ үү:</span>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      if (onOpenAuthModal) onOpenAuthModal();
+                    }}
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow cursor-pointer shrink-0"
+                  >
+                    Нэвтрэх
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 bg-black/40 p-2.5 rounded-xl border border-zinc-800">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-zinc-300 flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-rose-400" />
+                      <span>Таны холбогдох утасны дугаар (Админ шалгах):</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={userPhoneInput}
+                      onChange={(e) => setUserPhoneInput(e.target.value)}
+                      placeholder="Жишээ: 99112233"
+                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-zinc-300">
+                      Гүйлгээний утга / Нэмэлт тайлбар (Сонголттой):
+                    </label>
+                    <input
+                      type="text"
+                      value={userNoteInput}
+                      onChange={(e) => setUserNoteInput(e.target.value)}
+                      placeholder={`Жишээ: MonPay-ээр ${activePrice.toLocaleString()}₮ шилжүүлэв`}
+                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white text-xs px-3 py-2 rounded-lg focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -542,7 +601,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-zinc-300 font-medium">
-                  Банкны апп-аараа QR кодыг уншуулж төлбөрөө хийнэ үү
+                  Банкны апп-аараа QR кодыг уншуулж эсвэл данс руу шилжүүлэн админаас цэнэглэлтээ авна уу
                 </p>
               </div>
 
@@ -569,6 +628,38 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Contact phone for QPay topup */}
+              {!currentUser ? (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2">
+                  <span className="text-xs text-amber-300">Цэнэглэлт авахын тулд нэвтэрнэ үү:</span>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      if (onOpenAuthModal) onOpenAuthModal();
+                    }}
+                    className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow cursor-pointer shrink-0"
+                  >
+                    Нэвтрэх
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 bg-black/40 p-2.5 rounded-xl border border-zinc-800">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-zinc-300 flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-rose-400" />
+                      <span>Таны холбогдох утасны дугаар (Админ шалгах):</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={userPhoneInput}
+                      onChange={(e) => setUserPhoneInput(e.target.value)}
+                      placeholder="Жишээ: 99112233"
+                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -619,37 +710,61 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </span>
             </div>
           ) : topUpRequestSent ? (
-            <div className="bg-rose-500/20 border border-rose-500 text-rose-200 text-xs font-bold p-3 rounded-xl flex items-center justify-between gap-2 animate-in zoom-in-95">
-              <div className="space-y-0.5">
-                <p className="text-white font-extrabold flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>📩 Оноо цэнэглүүлэх хүсэлт Админд хүрэглээ!</span>
-                </p>
-                <p className="text-[11px] text-zinc-300">
-                  Банкаар / MonPay-ээр шилжүүлсэн тул Админ таны акаунтыг шалгаад оноо оруулна. Оноо ормогц эндээс оноогоороо багцаа идэвхжүүлнэ үү.
-                </p>
+            <div className="bg-gradient-to-b from-rose-950/70 to-zinc-900 border border-rose-500/60 text-rose-200 text-xs p-4 rounded-xl space-y-3 animate-in zoom-in-95 shadow-xl">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-white font-black text-sm">
+                    📩 Цэнэглэлтийн хүсэлт Админ Тамирт илгээгдлээ!
+                  </p>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed">
+                    {topUpSuccessNotice ||
+                      `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах хүсэлт бүртгэгдлээ. Админ Тамир төлбөрийг шалгаад таны эрхийг системд баталгаажуулмагц анимэ шууд нээгдэнэ.`}
+                  </p>
+                </div>
               </div>
+              <div className="p-2.5 bg-black/50 rounded-lg border border-zinc-800 text-[10px] text-zinc-400 space-y-0.5">
+                <p>• Админ баталгаажуулсан даруйд таны дэлгэцэнд мэдэгдэл ирж эрх шууд нээгдэнэ.</p>
+                <p>• Яаралтай бол Админ Тамиртай холбогдох: <span className="text-amber-400 font-bold">99106883518</span></p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2.5 rounded-xl border border-zinc-700 cursor-pointer transition-colors"
+              >
+                Ойлголоо, Цонхыг хаах
+              </button>
             </div>
           ) : (
             <button
               id="confirm-payment-action"
               onClick={handleConfirmPayment}
               disabled={isVerifying || (paymentMethod === 'wallet' && userBalance < activePrice)}
-              className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+              className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
             >
               {isVerifying ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Төлбөр баталгаажуулж байна...</span>
                 </>
+              ) : paymentMethod === 'code' ? (
+                <>
+                  <Ticket className="w-4 h-4" />
+                  <span>КОД ИДЭВХЖҮҮЛЭХ</span>
+                </>
               ) : paymentMethod === 'wallet' ? (
-                <span>
-                  {`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
-                </span>
+                <>
+                  <Wallet className="w-4 h-4" />
+                  <span>
+                    {`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
+                  </span>
+                </>
               ) : (
-                <span>
-                  📩 АДМИНААС {activePrice.toLocaleString()}₮ ОНОО ЦЭНЭГЛҮҮЛЭХ ХҮСЭЛТ ИЛГЭЭХ
-                </span>
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>
+                    {`📩 ТӨЛБӨР ШИЛЖҮҮЛСНЭЭ МЭДЭГДЭЖ АДМИНААС ЦЭНЭГЛЭЛТ АВАХ (${activePrice.toLocaleString()}₮)`}
+                  </span>
+                </>
               )}
             </button>
           )}
