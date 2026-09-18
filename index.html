@@ -565,8 +565,465 @@
 </body>
 </html>
 
+<VSCode.Cell language="markdown">
+# Odoo-style Dashboard Demo
+This notebook page shows a simple Odoo-like admin dashboard that works well on a laptop, tablet, or small screen.
+</VSCode.Cell>
 
+<VSCode.Cell language="python">
+from IPython.display import HTML, display
 
+display(HTML("""
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --nav: #1f2d3d;
+    --nav-soft: #2f4050;
+    --primary: #1e8fff;
+    --primary-dark: #146fca;
+    --text: #2d3a4a;
+    --muted: #7b8ca6;
+    --line: #e9edf3;
+    --green: #20b26b;
+    --amber: #ffb020;
+    --red: #ef5350;
+    --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .odoo-app {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  .sidebar {
+    width: 240px;
+    background: var(--nav);
+    color: white;
+    padding: 18px 16px;
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 28px;
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #6fd7ff, #1e8fff);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+  }
+
+  .menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .menu li {
+    margin: 10px 0;
+  }
+
+  .menu a {
+    color: #dfe8f5;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: 10px;
+    transition: 0.2s;
+  }
+
+  .menu a:hover {
+    background: var(--nav-soft);
+  }
+
+  .main {
+    flex: 1;
+    padding: 18px;
+  }
+
+  .topbar {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .search-box {
+    background: #f6f8fb;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    width: 320px;
+    color: var(--muted);
+  }
+
+  .user-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd86b, #ff8f00);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  .card-value {
+    font-size: 30px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .trend.up { color: var(--green); }
+  .trend.down { color: var(--red); }
+  .trend.neutral { color: var(--amber); }
+
+  .content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  .panel h3 {
+    margin: 0 0 14px;
+    font-size: 18px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .badge.done { background: #eafaf1; color: var(--green); }
+  .badge.pending { background: #fff4de; color: #d98b00; }
+  .badge.cancel { background: #fde8e7; color: var(--red); }
+
+  .activity {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  .activity-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
+  .dot.green { background: var(--green); }
+  .dot.amber { background: var(--amber); }
+  .dot.red { background: var(--red); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .btn.primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn.primary:hover {
+    background: var(--primary-dark);
+  }
+
+  .btn.secondary {
+    background: #edf4ff;
+    color: var(--primary-dark);
+  }
+
+  @media (max-width: 980px) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+    .content {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .odoo-app {
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+    }
+    .topbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .search-box {
+      width: 100%;
+    }
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="odoo-app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">O</div>
+      Odoo
+    </div>
+
+    <ul class="menu">
+      <li><a href="#">🏠 Dashboard</a></li>
+      <li><a href="#">📦 Sales</a></li>
+      <li><a href="#">🧾 Invoices</a></li>
+      <li><a href="#">👥 Customers</a></li>
+      <li><a href="#">📊 Reports</a></li>
+      <li><a href="#">⚙️ Settings</a></li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="font-size: 24px; font-weight: 700;">Dashboard</div>
+      <div class="search-box">Search...</div>
+      <div class="user-box">
+        <div class="avatar">A</div>
+        <div>
+          <div style="font-weight: bold;">Admin User</div>
+          <div style="font-size: 12px; color: var(--muted);">Super Admin</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-head">
+          <span>Total Revenue</span>
+          <span>↗</span>
+        </div>
+        <div class="card-value">$84,250</div>
+        <div class="trend up">+12.4% from last month</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span>Orders</span>
+          <span>↗</span>
+        </div>
+        <div class="card-value">1,245</div>
+        <div class="trend up">+8.6% this week</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span>Customers</span>
+          <span>↘</span>
+        </div>
+        <div class="card-value">3,842</div>
+        <div class="trend down">-1.2% this month</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span>Conversion</span>
+          <span>→</span>
+        </div>
+        <div class="card-value">6.8%</div>
+        <div class="trend neutral">Stable</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="panel">
+        <h3>Recent Orders</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>#1042</td>
+              <td>John Smith</td>
+              <td><span class="badge done">Paid</span></td>
+              <td>$320.00</td>
+            </tr>
+            <tr>
+              <td>#1043</td>
+              <td>Maria Lee</td>
+              <td><span class="badge pending">Pending</span></td>
+              <td>$480.50</td>
+            </tr>
+            <tr>
+              <td>#1044</td>
+              <td>Alex Kim</td>
+              <td><span class="badge done">Paid</span></td>
+              <td>$215.30</td>
+            </tr>
+            <tr>
+              <td>#1045</td>
+              <td>Sam Brown</td>
+              <td><span class="badge cancel">Cancelled</span></td>
+              <td>$90.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h3>Activity</h3>
+        <div class="activity">
+          <div class="activity-item">
+            <span class="dot"></span>
+            <div>
+              <strong>New invoice created</strong><br>
+              <small>2 hours ago</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <span class="dot green"></span>
+            <div>
+              <strong>Payment received</strong><br>
+              <small>5 hours ago</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <span class="dot amber"></span>
+            <div>
+              <strong>Customer follow up</strong><br>
+              <small>Today</small>
+            </div>
+          </div>
+          <div class="activity-item">
+            <span class="dot red"></span>
+            <div>
+              <strong>Refund requested</strong><br>
+              <small>Yesterday</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary">Create Invoice</button>
+          <button class="btn secondary">View Reports</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+"""))
+</VSCode.Cell>
 
 
 
