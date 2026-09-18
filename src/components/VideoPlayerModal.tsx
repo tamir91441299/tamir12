@@ -43,6 +43,7 @@ import { UserAccount } from './AuthModal';
 import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { recordAnimeView } from '../lib/animeViewService';
+import { checkUserContentAccess } from '../lib/permissionService';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -94,34 +95,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй (Заавал нэвтрэх шаардлагатай)
-  // 2. Анимэ эрхээ аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх ангиуд ТҮГЖЭЭТЭЙ)
+  // 2. Эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх ангиуд ТҮГЖЭЭТЭЙ)
   // 3. Зөвхөн Анимэ багц, VIP эсвэл тухайн контентын эрх авсан хүмүүс үзнэ
-  const checkEpisodeAccess = (epIndex: number): boolean => {
-    // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
-    if (!currentUser) return false;
-    if (isAdmin) return true;
-    if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
-    if (movie?.type === 'anime') {
-      if (isAnimePackage || (currentUser as any)?.packageType === 'anime') {
-        return true;
-      }
-      if (isPurchased) {
-        return true;
-      }
-      // Эрх аваагүй хүмүүс анимэ үзэх боломжгүй!
-      return false;
-    }
-    if (movie?.type !== 'anime') {
-      if (isMoviePackage || (currentUser as any)?.packageType === 'movie') {
-        return true;
-      }
-      if (isPurchased) {
-        return true;
-      }
-      // Эрх аваагүй хүмүүс контент үзэх боломжгүй!
-      return false;
-    }
-    return false;
+  const checkEpisodeAccess = (_epIndex?: number): boolean => {
+    const res = checkUserContentAccess(currentUser, movie, isPurchased);
+    return res.hasAccess;
   };
 
   const hasAccessToCurrentEpisode = checkEpisodeAccess(currentEpisodeIndex);

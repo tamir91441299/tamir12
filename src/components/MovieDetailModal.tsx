@@ -39,6 +39,7 @@ import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
 import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
+import { checkUserContentAccess } from '../lib/permissionService';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -156,7 +157,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       if (onRequestPurchase) {
         onRequestPurchase(movie);
       } else {
-        alert(`🔒 ${epNum}-р анги түгжээтэй байна! Анимэ эрхээ аваагүй хэрэглэгчид зөвхөн эхний ангийг үзэх боломжтой.`);
+        alert(`🔒 ${epNum}-р анги түгжээтэй байна! Эрх аваагүй хэрэглэгч анимэ үзэх боломжгүй тул эрхээ идэвхжүүлнэ үү.`);
       }
       return;
     }
@@ -191,31 +192,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
   // 2. Анимэ үзэх эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх анги ТҮГЖЭЭТЭЙ)
   // 3. Зөвхөн Анимэ багцын эрх, VIP эсвэл тухайн контентын эрхийг худалдан авсан хэрэглэгчид үзнэ
-  const userHasAccessToEpisode = (epNumber: number = 1): boolean => {
-    if (!currentUser) return false;
-    if (isAdmin) return true;
-    if (isMonthlyVip || (currentUser as any)?.packageType === 'full_vip') return true;
-    if (movie.type === 'anime') {
-      if (isAnimePackage || (currentUser as any)?.packageType === 'anime') {
-        return true;
-      }
-      if (isPurchased) {
-        return true;
-      }
-      // Эрх аваагүй хүмүүс анимэ үзэх боломжгүй!
-      return false;
-    }
-    if (movie.type !== 'anime') {
-      if (isMoviePackage || (currentUser as any)?.packageType === 'movie') {
-        return true;
-      }
-      if (isPurchased) {
-        return true;
-      }
-      // Эрх аваагүй хүмүүс контент үзэх боломжгүй!
-      return false;
-    }
-    return false;
+  const userHasAccessToEpisode = (_epNumber: number = 1): boolean => {
+    const res = checkUserContentAccess(currentUser, movie, isPurchased);
+    return res.hasAccess;
   };
 
   const handleEpisodeSelect = (epNumber: number) => {

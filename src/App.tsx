@@ -31,8 +31,15 @@ import {
   sendNewAnimeNotification,
   getPersistedActiveSession,
   persistActiveSession,
+  subscribeUserAccount,
   AppNotification
 } from './lib/userService';
+import {
+  isAdminUser,
+  isPackageExpired,
+  checkUserContentAccess,
+  clearLegacyDevicePackages
+} from './lib/permissionService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
 
 export default function App() {
@@ -237,7 +244,27 @@ export default function App() {
     setShowAuthModal(true);
   };
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
+  const isAdmin = useMemo(() => isAdminUser(currentUser), [currentUser]);
+
+  // Clean legacy device packages on startup to ensure unauthorized users cannot bypass
+  useEffect(() => {
+    clearLegacyDevicePackages();
+  }, []);
+
+  // Listen for real-time changes to the current user's profile and permissions
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const unsubscribe = subscribeUserAccount(currentUser.id, (updated) => {
+      setCurrentUser(updated);
+      if (typeof updated.walletBalance === 'number') {
+        setUserBalance(updated.walletBalance);
+      }
+      if (Array.isArray(updated.purchasedMovies)) {
+        setPurchasedMovies(updated.purchasedMovies);
+      }
+    });
+    return () => unsubscribe();
+  }, [currentUser?.id]);
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {
@@ -291,16 +318,9 @@ export default function App() {
             return;
           }
 
-          const hasRights =
-            isAdmin ||
-            isMonthlyVip ||
-            isAnimePackage ||
-            purchasedMovies.includes(found.id) ||
-            (currentUser as any)?.packageType === 'anime' ||
-            (currentUser as any)?.packageType === 'full_vip' ||
-            (found.type !== 'anime' && ((currentUser as any)?.packageType === 'movie' || isMoviePackage));
+          const accessResult = checkUserContentAccess(currentUser, found, purchasedMovies.includes(found.id));
 
-          if (!hasRights) {
+          if (!accessResult.hasAccess) {
             setPaymentMovie(found);
             setShowPaymentModal(true);
             return;
@@ -342,32 +362,29 @@ export default function App() {
     }
   });
 
-  // Package states: 15 days (2,500₮), 1 month (5,000₮), 2 months (8,500₮)
-  const [isAnimePackage, setIsAnimePackage] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('ioio_anime_package') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  // Package states derived from authenticated user account with expiration check
+  const isMonthlyVip = useMemo(() => {
+    if (!currentUser) return false;
+    if (isAdmin) return true;
+    if (currentUser.status === 'blocked') return false;
+    return !isPackageExpired(currentUser.packageExpiry) && currentUser.packageType === 'full_vip';
+  }, [currentUser, isAdmin]);
 
-  const [isMoviePackage, setIsMoviePackage] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('ioio_movie_package') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const isAnimePackage = useMemo(() => {
+    if (!currentUser) return false;
+    if (isAdmin) return true;
+    if (currentUser.status === 'blocked') return false;
+    const pkg = currentUser.packageType;
+    return !isPackageExpired(currentUser.packageExpiry) && (pkg === 'anime' || pkg === 'full_vip');
+  }, [currentUser, isAdmin]);
 
-  // VIP Full Pass state (7,000₮)
-  const [isMonthlyVip, setIsMonthlyVip] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('ioio_monthly_vip');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const isMoviePackage = useMemo(() => {
+    if (!currentUser) return false;
+    if (isAdmin) return true;
+    if (currentUser.status === 'blocked') return false;
+    const pkg = currentUser.packageType;
+    return !isPackageExpired(currentUser.packageExpiry) && (pkg === 'movie' || pkg === 'full_vip');
+  }, [currentUser, isAdmin]);
 
   // User Wallet Balance (MNT / Points)
   const [userBalance, setUserBalance] = useState<number>(() => {
@@ -686,16 +703,9 @@ export default function App() {
     }
 
     // Эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
-    const hasAnimeRights =
-      isAdmin ||
-      isMonthlyVip ||
-      isAnimePackage ||
-      purchasedMovies.includes(movie.id) ||
-      (currentUser as any)?.packageType === 'anime' ||
-      (currentUser as any)?.packageType === 'full_vip' ||
-      (movie.type !== 'anime' && ((currentUser as any)?.packageType === 'movie' || isMoviePackage));
+    const access = checkUserContentAccess(currentUser, movie, purchasedMovies.includes(movie.id));
 
-    if (!hasAnimeRights) {
+    if (!access.hasAccess) {
       setPaymentMovie(movie);
       setShowPaymentModal(true);
       return;
@@ -708,12 +718,26 @@ export default function App() {
   };
 
   const handlePaymentSuccess = (movieId: string, deductedAmount: number = 0) => {
-    if (!purchasedMovies.includes(movieId)) {
-      setPurchasedMovies((prev) => [...prev, movieId]);
+    const updatedPurchased = purchasedMovies.includes(movieId) ? purchasedMovies : [...purchasedMovies, movieId];
+    setPurchasedMovies(updatedPurchased);
+
+    const newBalance = deductedAmount > 0 ? Math.max(0, userBalance - deductedAmount) : userBalance;
+    if (deductedAmount > 0) {
+      setUserBalance(newBalance);
     }
 
-    if (deductedAmount > 0) {
-      setUserBalance((prev) => Math.max(0, prev - deductedAmount));
+    if (currentUser) {
+      const updatedUser: UserAccount = {
+        ...currentUser,
+        purchasedMovies: updatedPurchased,
+        walletBalance: newBalance,
+      };
+      setCurrentUser(updatedUser);
+      persistActiveSession(updatedUser, true);
+      saveUserToFirestore(updatedUser, {
+        purchasedMovies: updatedPurchased,
+        walletBalance: newBalance,
+      });
     }
 
     if (paymentMovie) {
@@ -732,43 +756,32 @@ export default function App() {
     durationMonths: number = 1,
     durationDays?: number
   ) => {
+    const newBalance = deductedAmount > 0 ? Math.max(0, userBalance - deductedAmount) : userBalance;
     if (deductedAmount > 0) {
-      setUserBalance((prev) => Math.max(0, prev - deductedAmount));
+      setUserBalance(newBalance);
     }
 
     const expiryDate = new Date();
     const daysToAdd = durationDays ? durationDays : Math.round(durationMonths * 30);
     expiryDate.setDate(expiryDate.getDate() + daysToAdd);
-    const expiryStr = expiryDate.toLocaleDateString('mn-MN');
+    const expiryStr = expiryDate.toISOString().split('T')[0];
 
-    if (packageType === 'anime') {
-      setIsAnimePackage(true);
-      try {
-        localStorage.setItem('ioio_anime_package', 'true');
-        localStorage.setItem('ioio_anime_expiry', expiryStr);
-      } catch (e) {
-        console.error('Error saving anime package status:', e);
-      }
-    } else if (packageType === 'movie') {
-      setIsMoviePackage(true);
-      try {
-        localStorage.setItem('ioio_movie_package', 'true');
-        localStorage.setItem('ioio_movie_expiry', expiryStr);
-      } catch (e) {
-        console.error('Error saving movie package status:', e);
-      }
-    } else if (packageType === 'full_vip') {
-      setIsMonthlyVip(true);
-      setIsAnimePackage(true);
-      setIsMoviePackage(true);
-      try {
-        localStorage.setItem('ioio_monthly_vip', 'true');
-        localStorage.setItem('ioio_anime_package', 'true');
-        localStorage.setItem('ioio_movie_package', 'true');
-        localStorage.setItem('ioio_vip_expiry', expiryStr);
-      } catch (e) {
-        console.error('Error saving VIP status:', e);
-      }
+    if (currentUser) {
+      const updatedUser: UserAccount = {
+        ...currentUser,
+        packageType,
+        packageExpiry: expiryStr,
+        role: packageType === 'full_vip' ? 'vip' : (currentUser.role || 'user'),
+        walletBalance: newBalance,
+      };
+      setCurrentUser(updatedUser);
+      persistActiveSession(updatedUser, true);
+      saveUserToFirestore(updatedUser, {
+        packageType,
+        packageExpiry: expiryStr,
+        role: packageType === 'full_vip' ? 'vip' : (currentUser.role || 'user'),
+        walletBalance: newBalance,
+      });
     }
 
     setShowPaymentModal(false);
@@ -1338,9 +1351,19 @@ export default function App() {
           onClose={() => setShowAuthModal(false)}
           onLoginSuccess={(user) => {
             setCurrentUser(user);
+            if (typeof user.walletBalance === 'number') {
+              setUserBalance(user.walletBalance);
+            }
+            if (Array.isArray(user.purchasedMovies)) {
+              setPurchasedMovies(user.purchasedMovies);
+            }
           }}
           onLogout={() => {
             setCurrentUser(null);
+            setUserBalance(0);
+            setPurchasedMovies([]);
+            persistActiveSession(null);
+            clearLegacyDevicePackages();
           }}
           onOpenUserManagement={() => {
             setShowAuthModal(false);

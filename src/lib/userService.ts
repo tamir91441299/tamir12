@@ -485,6 +485,12 @@ export async function authenticateUserCredentials(
       email: 'tamir91441299@gmail.com',
       phone: '91441299',
       registeredAt: '2026-01-01',
+      role: 'admin',
+      status: 'active',
+      packageType: 'full_vip',
+      packageExpiry: '2030-01-01',
+      walletBalance: 999999,
+      purchasedMovies: [],
     };
     persistActiveSession(adminUser, true);
     return { success: true, user: adminUser };
@@ -513,7 +519,13 @@ export async function authenticateUserCredentials(
           name: found.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
           email: found.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
           phone: found.phone || (isPhone ? cleanPhone : '99110000'),
-          registeredAt: new Date().toLocaleDateString('mn-MN'),
+          registeredAt: found.registeredAt || new Date().toLocaleDateString('mn-MN'),
+          role: found.role || 'user',
+          status: found.status || 'active',
+          packageType: found.packageType || 'free',
+          packageExpiry: found.packageExpiry || '-',
+          walletBalance: found.walletBalance ?? 0,
+          purchasedMovies: found.purchasedMovies || [],
         };
         persistActiveSession(userAcc, true);
         return { success: true, user: userAcc };
@@ -555,6 +567,12 @@ export async function authenticateUserCredentials(
         email: matchedDoc.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
         phone: matchedDoc.phone || (isPhone ? cleanPhone : '99110000'),
         registeredAt: matchedDoc.registeredAt || new Date().toLocaleDateString('mn-MN'),
+        role: matchedDoc.role || 'user',
+        status: matchedDoc.status || 'active',
+        packageType: matchedDoc.packageType || 'free',
+        packageExpiry: matchedDoc.packageExpiry || '-',
+        walletBalance: matchedDoc.walletBalance ?? 0,
+        purchasedMovies: matchedDoc.purchasedMovies || [],
       };
 
       // Save credentials locally for faster future auth
@@ -581,6 +599,12 @@ export async function authenticateUserCredentials(
     email: fallbackEmail,
     phone: isPhone ? cleanPhone : '99110000',
     registeredAt: new Date().toLocaleDateString('mn-MN'),
+    role: isAdmin ? 'admin' : 'user',
+    status: 'active',
+    packageType: isAdmin ? 'full_vip' : 'free',
+    packageExpiry: isAdmin ? '2030-01-01' : '-',
+    walletBalance: 0,
+    purchasedMovies: [],
   };
 
   saveUserAuthRecord({
@@ -594,10 +618,58 @@ export async function authenticateUserCredentials(
   saveUserToFirestore(fallbackUser, {
     role: isAdmin ? 'admin' : 'user',
     status: 'active',
+    packageType: isAdmin ? 'full_vip' : 'free',
+    packageExpiry: isAdmin ? '2030-01-01' : '-',
+    walletBalance: 0,
+    purchasedMovies: [],
   });
 
   persistActiveSession(fallbackUser, true);
   return { success: true, user: fallbackUser };
+}
+
+/**
+ * Real-time subscription to the current user's document in Firestore.
+ * Automatically propagates admin package grants or revokes in real-time.
+ */
+export function subscribeUserAccount(
+  userId: string,
+  onUpdate: (user: UserAccount) => void
+): () => void {
+  if (!userId) return () => {};
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const updatedUser: UserAccount = {
+            id: data.id || docSnap.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            registeredAt: data.registeredAt,
+            role: data.role || 'user',
+            status: data.status || 'active',
+            packageType: data.packageType || 'free',
+            packageExpiry: data.packageExpiry || '-',
+            walletBalance: data.walletBalance ?? 0,
+            purchasedMovies: data.purchasedMovies || [],
+          };
+          persistActiveSession(updatedUser, true);
+          onUpdate(updatedUser);
+        }
+      },
+      (err) => {
+        console.error('Error listening to user account changes:', err);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to subscribe to user account:', err);
+    return () => {};
+  }
 }
 
 /**

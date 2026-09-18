@@ -29,6 +29,12 @@ export interface UserAccount {
   email: string;
   phone: string;
   registeredAt: string;
+  role?: 'admin' | 'user' | 'vip';
+  status?: 'active' | 'blocked';
+  packageType?: 'full_vip' | 'movie' | 'anime' | 'free';
+  packageExpiry?: string;
+  walletBalance?: number;
+  purchasedMovies?: string[];
 }
 
 interface AuthModalProps {
@@ -186,12 +192,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         const finalEmail = cleanEmail || `${cleanPhone || Date.now()}@flicknime.mn`;
+        const newUserRole = finalEmail === 'tamir91441299@gmail.com' ? ('admin' as const) : ('user' as const);
         const newUser: UserAccount = {
           id: 'user_' + Date.now(),
           name: cleanName,
           email: finalEmail,
           phone: cleanPhone || '99110000',
           registeredAt: new Date().toLocaleDateString('mn-MN'),
+          role: newUserRole,
+          status: 'active',
+          packageType: 'free',
+          packageExpiry: '-',
+          walletBalance: 0,
+          purchasedMovies: [],
         };
 
         // Save credentials into both Firestore and LocalStorage
@@ -204,10 +217,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         });
 
         await saveUserToFirestore(newUser, {
-          role: finalEmail === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+          role: newUserRole,
           status: 'active',
           packageType: 'free',
+          packageExpiry: '-',
           walletBalance: 0,
+          purchasedMovies: [],
         });
 
         // Persist session securely so user never gets logged out on refresh
