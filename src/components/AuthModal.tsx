@@ -438,7 +438,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
                 <div className="text-[11px] leading-snug">
                   <strong className="text-white block font-bold">Шинэ хэрэглэгчийн бүртгэл</strong>
-                  Бүртгүүлснээр кино сангийн 1-р ангиудыг үнэгүй үзэх эрх нээгдэнэ.
+                  Бүртгүүлсний дараа Анимэ багцын эрхээ авч хүссэн анимэгээ шууд үзээрэй.
                 </div>
               </div>
             )}

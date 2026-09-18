@@ -186,17 +186,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
-  const isDeathNote = movie.id === 'm_death_note' || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн тэмдэглэл');
 
-  // Check access permission for specific episode
-  // Rule:
-  // 1. Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй (Заавал системд нэвтрэх / бүртгүүлэх шаардлагатай)
-  // 2. Бүртгэлтэй боловч эрхээ аваагүй хүмүүс зөвхөн 1-р ангийг үзэж болно (Үнэгүй)
-  // 3. Эрх авсан (Анимэ багц, VIP, худалдан авсан) хэрэглэгчид бүх ангийг үзнэ
   // Access rule:
-  // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй
-  // 2. Анимэ эрхээ аваагүй хүмүүс ЗӨВХӨН 1-р ангийг үзнэ (эхний ангиас бусад бүх анги ТҮГЖЭЭТЭЙ)
-  // 3. Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хэрэглэгчид бүх ангийг үзнэ
+  // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
+  // 2. Анимэ үзэх эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх анги ТҮГЖЭЭТЭЙ)
+  // 3. Зөвхөн Анимэ багцын эрх, VIP эсвэл тухайн контентын эрхийг худалдан авсан хэрэглэгчид үзнэ
   const userHasAccessToEpisode = (epNumber: number = 1): boolean => {
     if (!currentUser) return false;
     if (isAdmin) return true;
@@ -218,7 +212,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       if (isPurchased) {
         return true;
       }
-      return epNumber === 1;
+      // Эрх аваагүй хүмүүс контент үзэх боломжгүй!
+      return false;
     }
     return false;
   };
@@ -354,46 +349,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       14: '14-р анги (26) - Харанхуй дахь гэрэл (Light in the Dark - Төгсгөл)'
     };
 
-    const defaultDeathNoteTitles: Record<number, string> = {
-      1: '1-р анги - Сэргэлт / Төрөлт (Rebirth)',
-      2: '2-р анги - Сөргөлдөөн (Confrontation)',
-      3: '3-р анги - Гүйлгээ (Dealings)',
-      4: '4-р анги - Мөрдөлт (Pursuit)',
-      5: '5-р анги - Тактик (Tactics)',
-      6: '6-р анги - Нээлттэй шарх (Unraveling)',
-      7: '7-р анги - Үүлэрхэг тэнгэр (Overcast)',
-      8: '8-р анги - Харц (Glare)',
-      9: '9-р анги - Уулзалт (Encounter)',
-      10: '10-р анги - Эргэлзээ (Doubt)',
-      11: '11-р анги - Довтолгоо (Assault)',
-      12: '12-р анги - Хайр (Love)',
-      13: '13-р анги - Итгэлцэл (Confession)',
-      14: '14-р анги - Найз (Friend)',
-      15: '15-р анги - Мөрий (Wager)',
-      16: '16-р анги - Шийдвэр (Decision)',
-      17: '17-р анги - Цаазаар авах ял (Execution)',
-      18: '18-р анги - Холбоотон (Ally)',
-      19: '19-р анги - Мацүда (Matsuda)',
-      20: '20-р анги - Түр зогсолт (Makeshift)',
-      21: '21-р анги - Гүйцэтгэл (Performance)',
-      22: '22-р анги - Удирдамж (Guidance)',
-      23: '23-р анги - Улангаслал (Frenzy)',
-      24: '24-р анги - Сэргэлт (Revival)',
-      25: '25-р анги - Чимээгүй байдал (Silence)',
-      26: '26-р анги - Хойд дүр (Renewal)',
-      27: '27-р анги - Хуваарилалт (Abduction)',
-      28: '28-р анги - Тэвчээр (Impatience)',
-      29: '29-р анги - Эцэг (Father)',
-      30: '30-р анги - Шударга ёс (Justice)',
-      31: '31-р анги - Шилжүүлэлт (Transfer)',
-      32: '32-р анги - Сонголт (Selection)',
-      33: '33-р анги - Доромжлол (Scorn)',
-      34: '34-р анги - Сэжиг (Vigilance)',
-      35: '35-р анги - Аллага (Malice)',
-      36: '36-р анги - 1.28 (1.28)',
-      37: '37-р анги - Шинэ ертөнц (New World - Төгсгөл)'
-    };
-
     const newEpList: Episode[] = [];
 
     for (let i = 1; i <= targetCount; i++) {
@@ -401,7 +356,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
-        isDeathNote ? defaultDeathNoteTitles[i] || `${i}-р анги` :
         isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
         isKorra ? defaultKorraTitles[i] || `${i}-р анги` :
         is91Days ? default91DaysTitles[i] || `${i}-р анги` :
@@ -526,7 +480,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
                       return;
                     }
-                    if (movie.type === 'anime' && !userHasAccessToEpisode(1)) {
+                    if (!userHasAccessToEpisode(1)) {
                       if (onRequestPurchase) {
                         onRequestPurchase(movie);
                       } else {
@@ -536,10 +490,18 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     }
                     onPlay(movie, 1);
                   }}
-                  className="absolute inset-0 m-auto w-16 h-16 rounded-full gold-glow-btn text-black flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10"
-                  title="Шууд үзэх"
+                  className={`absolute inset-0 m-auto w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-115 active:scale-95 transition-all cursor-pointer group z-10 ${
+                    userHasAccessToEpisode(1)
+                      ? 'gold-glow-btn text-black'
+                      : 'bg-amber-500 text-black border-2 border-amber-300 shadow-amber-500/50'
+                  }`}
+                  title={userHasAccessToEpisode(1) ? "Шууд үзэх" : "Эрх шаардлагатай (Түгжээтэй)"}
                 >
-                  <Play className="w-8 h-8 fill-black ml-1 group-hover:scale-110 transition-transform" />
+                  {userHasAccessToEpisode(1) ? (
+                    <Play className="w-8 h-8 fill-black ml-1 group-hover:scale-110 transition-transform" />
+                  ) : (
+                    <Lock className="w-8 h-8 text-black group-hover:scale-110 transition-transform" />
+                  )}
                 </button>
 
                 {movie.trailerUrl && (
@@ -677,7 +639,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
                         return;
                       }
-                      if (movie.type === 'anime' && !userHasAccessToEpisode(1)) {
+                      if (!userHasAccessToEpisode(1)) {
                         if (onRequestPurchase) {
                           onRequestPurchase(movie);
                         } else {
@@ -688,10 +650,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian, 'videoUrl:', movie.videoUrl);
                       onPlay(movie, 1);
                     }}
-                    className="gold-glow-btn text-black font-extrabold text-sm px-7 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 transition-all cursor-pointer"
+                    className={
+                      userHasAccessToEpisode(1)
+                        ? "gold-glow-btn text-black font-extrabold text-sm px-7 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 transition-all cursor-pointer"
+                        : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-sm px-7 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 transition-all cursor-pointer border border-amber-400/50"
+                    }
                   >
-                    <Play className="w-5 h-5 fill-black" />
-                    ШУУД ҮЗЭХ
+                    {userHasAccessToEpisode(1) ? (
+                      <>
+                        <Play className="w-5 h-5 fill-black" />
+                        ШУУД ҮЗЭХ
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-5 h-5 text-black" />
+                        ЭРХ АВЧ ҮЗЭХ (ТҮГЖЭЭТЭЙ)
+                      </>
+                    )}
                   </button>
 
                   {/* Open in New Protected Window with Passcode Verification */}
@@ -701,6 +676,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       if (!currentUser) {
                         if (onOpenAuthModal) onOpenAuthModal('phone');
                         else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+                        return;
+                      }
+                      if (!userHasAccessToEpisode(1)) {
+                        if (onRequestPurchase) {
+                          onRequestPurchase(movie);
+                        } else {
+                          alert('🔒 Анимэ эрхээ аваагүй хэрэглэгчид үзэх боломжгүй! Та Анимэ багцын эрхээ авна уу.');
+                        }
                         return;
                       }
                       handleOpenProtectedWindow(1);
@@ -746,38 +729,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Death Note Promo Code Special Banner */}
-            {isDeathNote && (
-              <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-red-950/20 to-zinc-900 border border-amber-500/40 text-xs shadow-lg flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
-                    <Ticket className="w-5 h-5 text-amber-400" />
-                  </div>
-                  <div>
-                    <div className="text-zinc-100 font-bold flex flex-wrap items-center gap-2">
-                      <span>📓 Death Note (Үхлийн Тэмдэглэл) Үзэх Эрхийн Код:</span>
-                      <span className="font-mono text-amber-400 font-black text-sm bg-black/60 px-2.5 py-0.5 rounded-lg border border-amber-500/40 tracking-wider">
-                        DEATHNOTE
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Төлбөрийн цонхонд уг кодыг оруулж 30 хоногийн эрхээ шууд идэвхжүүлэх боломжтой.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onRequestPurchase) onRequestPurchase(movie);
-                  }}
-                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-extrabold text-xs rounded-xl cursor-pointer transition-all shadow shrink-0 flex items-center gap-1.5"
-                >
-                  <Ticket className="w-3.5 h-3.5" />
-                  <span>Кодоор Идэвхжүүлэх</span>
-                </button>
-              </div>
-            )}
-
             {/* Description & Details */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400">
@@ -815,7 +766,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Season Switcher for Multi-Season Anime (Legend of Korra & My Hero Academia) */}
+            {/* Season Switcher for Multi-Season Anime (Legend of Korra) */}
             {(isKorra || isKorraS2) && (
               <div className="pt-3 border-t border-zinc-800">
                 <div className="flex items-center justify-between mb-2">
@@ -972,7 +923,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         <Lock className="w-3 h-3" /> Бүртгэл шаардлагатай
                       </span>
                       <span className="text-zinc-200 text-[11px]">
-                        Бүртгэлгүй хүмүүс анимэ үзэх боломжгүй. Та нэвтэрсний дараа 1-р ангийг шууд үзэж болно.
+                        Бүртгэлгүй болон эрх аваагүй хүмүүс анимэ үзэх боломжгүй. Та нэвтэрч, багцын эрхээ авна уу.
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1299,7 +1250,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       return true;
                     })
                     .map((ep) => {
-                      const isFreeEp = ep.episodeNumber === 1;
                       const hasEpAccess = userHasAccessToEpisode(ep.episodeNumber);
 
                       return (
@@ -1481,7 +1431,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                                 </span>
                               ) : (
                                 <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 shrink-0">
-                                  1-р анги үзэгч
+                                  Энгийн хэрэглэгч
                                 </span>
                               )}
                             </div>

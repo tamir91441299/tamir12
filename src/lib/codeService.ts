@@ -68,42 +68,6 @@ export const INITIAL_PRESET_CODES: PromoCode[] = [
     isActive: true,
   },
   {
-    id: 'promo_deathnote',
-    code: 'DEATHNOTE',
-    type: 'anime',
-    durationDays: 30,
-    description: '📓 Death Note (Үхлийн Тэмдэглэл) бүрэн 37 анги үзэх 30 хоногийн эрх',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_deathnote30',
-    code: 'DEATHNOTE30',
-    type: 'anime',
-    durationDays: 30,
-    description: '📓 Death Note 30 хоногийн багцын эрхийн код',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
-    id: 'promo_kira',
-    code: 'KIRA',
-    type: 'anime',
-    durationDays: 30,
-    description: '📓 Death Note (Кира / Ягами Лайт) бүрэн цуврал үзэх 30 хоногийн эрх',
-    maxUses: 1000,
-    usedCount: 0,
-    createdAt: '2025.01.01',
-    createdBy: 'Тамир Админ',
-    isActive: true,
-  },
-  {
     id: 'promo_kamikuzuidol',
     code: 'KAMIKUZUIDOL',
     type: 'anime',
@@ -311,26 +275,6 @@ export function redeemCode(inputCode: string): RedeemResult {
     return {
       success: false,
       message: '⚠️ Уг багцын код хүчингүй болсон байна. Багцын эрхээ албан ёсны төлбөрийн цэсээр идэвхжүүлнэ үү.',
-    };
-  }
-
-  // Instant recognition for Death Note (Үхлийн Тэмдэглэл) codes
-  if (
-    clean === 'DEATHNOTE' ||
-    clean === 'DEATH_NOTE' ||
-    clean === 'DEATH-NOTE' ||
-    clean === 'DEATHNOTE30' ||
-    clean === 'DEATHNOTE2025' ||
-    clean === 'DEATHNOTE2026' ||
-    clean === 'KIRA' ||
-    clean === 'DEATHBOTE' ||
-    clean === 'DEATH'
-  ) {
-    return {
-      success: true,
-      type: 'anime',
-      durationDays: 30,
-      message: '📓 Death Note (Үхлийн Тэмдэглэл) бүрэн 37 анги үзэх 30 хоногийн эрх амжилттай идэвхжлээ!',
     };
   }
 

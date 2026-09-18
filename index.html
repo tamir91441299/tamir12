@@ -114,28 +114,59 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     
-    <!-- Primary SEO Meta Tags -->
-    <title>FlickNime - Монгол хадмал, дуу оруулгатай анимэ платформ</title>
-    <meta name="title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ платформ" />
-    <meta name="description" content="FlickNime - Монгол хадмал болон дуу оруулгатай шилдэг анимэ, цувралуудыг өндөр чанартайгаар үзэх FlickNime онлайн платформ." />
-    <meta name="keywords" content="FlickNime, анимэ үзэх, монгол анимэ, монгол дуу оруулгатай анимэ, анимэ монгол, anime mongolia, anime sub mn, anime dub mn, flicknime anime" />
-    <meta name="robots" content="index, follow" />
-    <meta name="author" content="FlickNime Anime Team" />
-    <link rel="canonical" href="https://flicknime.com/" />
+    <!-- Primary Google Search SEO Meta Tags -->
+    <title>FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино платформ | Онлайн үзэх</title>
+    <meta name="title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино платформ | Онлайн үзэх" />
+    <meta name="description" content="FlickNime - Монгол хадмал болон дуу оруулгатай сүүлийн үеийн шилдэг анимэ, уран сайхны кино, олон ангит цувралуудыг өндөр чанартайгаар шууд үзэх Монголын онлайн платформ." />
+    <meta name="keywords" content="FlickNime, flicknime anime, анимэ үзэх, монгол анимэ, анимэ монгол, монгол дуу оруулгатай анимэ, mongol anime, anime uzex, anime mn, anime mongolia, монгол кино, цуврал кино, үнэгүй анимэ, chainsaw man монгол, dandadan монгол, korra mongol, шилдэг анимэ сайт" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="author" content="FlickNime Entertainment" />
+    <meta name="language" content="Mongolian" />
+    <meta name="revisit-after" content="1 days" />
+    <meta name="rating" content="general" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
+    <!-- Google Site Verification (Placeholder & dynamically updated from localStorage if set) -->
+    <meta name="google-site-verification" id="google-site-verification-meta" content="" />
+    <script>
+      (function() {
+        try {
+          var savedCode = localStorage.getItem('google_search_console_token');
+          if (savedCode) {
+            var meta = document.getElementById('google-site-verification-meta');
+            if (meta) meta.setAttribute('content', savedCode);
+          }
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- Canonical URL -->
+    <link rel="canonical" id="canonical-url" href="https://flicknime.com/" />
+    <script>
+      (function() {
+        try {
+          var link = document.getElementById('canonical-url');
+          if (link && window.location.origin) {
+            link.setAttribute('href', window.location.origin + window.location.pathname);
+          }
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- Open Graph / Facebook / Social Sharing -->
+    <meta property="og:type" content="video.movie" />
     <meta property="og:url" content="https://flicknime.com/" />
-    <meta property="og:title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ платформ" />
+    <meta property="og:title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино платформ" />
     <meta property="og:description" content="Шинэ болон эрэлттэй бүх анимэ, олон ангит цувралуудыг монгол орчуулгатайгаар чанарын өндөр түвшинд үзээрэй." />
     <meta property="og:image" content="https://static1.cbrimages.com/wordpress/wp-content/uploads/2023/10/91-days-anime-cover-art.jpg" />
-    <meta property="og:site_name" content="FlickNime Anime" />
+    <meta property="og:site_name" content="FlickNime" />
     <meta property="og:locale" content="mn_MN" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://flicknime.com/" />
-    <meta name="twitter:title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ платформ" />
+    <meta name="twitter:title" content="FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино платформ" />
     <meta name="twitter:description" content="Шинэ болон эрэлттэй бүх анимэ, олон ангит цувралуудыг монгол орчуулгатайгаар чанарын өндөр түвшинд үзээрэй." />
     <meta name="twitter:image" content="https://static1.cbrimages.com/wordpress/wp-content/uploads/2023/10/91-days-anime-cover-art.jpg" />
 
@@ -149,20 +180,92 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FlickNime" />
 
-    <!-- JSON-LD Structured Data for Google Rich Snippets -->
+    <!-- JSON-LD Structured Data for Google Rich Snippets & Search Carousels -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "FlickNime",
-        "alternateName": ["FlickNime Anime", "FlickNime Mongolian Anime"],
-        "url": "https://flicknime.com/",
-        "description": "Монгол хадмал болон дуу оруулгатай анимэ платформууд.",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://flicknime.com/?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://flicknime.com/#website",
+            "name": "FlickNime",
+            "alternateName": ["FlickNime Anime", "FlickNime Mongolia", "Монгол Анимэ Платформ"],
+            "url": "https://flicknime.com/",
+            "description": "Монгол хадмал болон дуу оруулгатай шилдэг анимэ, уран сайхны кино, олон ангит цувралууд.",
+            "inLanguage": "mn-MN",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://flicknime.com/?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://flicknime.com/#organization",
+            "name": "FlickNime",
+            "url": "https://flicknime.com/",
+            "logo": "https://flicknime.com/pwa-192x192.png",
+            "sameAs": []
+          },
+          {
+            "@type": "ItemList",
+            "name": "Шилдэг Монгол Дуу Оруулгатай Анимэ ба Цувралууд",
+            "description": "FlickNime дээр хамгийн их үзэгчтэй байгаа анимэ болон кинонууд",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Коррагийн Домог (The Legend of Korra)",
+                "url": "https://flicknime.com/?movie=m_korra_s1"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Хөрөө Төмөр Хүн (Chainsaw Man)",
+                "url": "https://flicknime.com/?movie=m_chainsaw_man"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "Дандадан (Dandadan)",
+                "url": "https://flicknime.com/?movie=m_dandadan"
+              },
+              {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Монкарт (Monkart)",
+                "url": "https://flicknime.com/?movie=m_monkart_s1"
+              },
+              {
+                "@type": "ListItem",
+                "position": 5,
+                "name": "Ками Кузу Айдол (Phantom of the Idol)",
+                "url": "https://flicknime.com/?movie=m_kami_kuzu"
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "FlickNime дээр анимэ хэрхэн үзэх вэ?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Та FlickNime платформ руу ороод хүссэн анимэ, киногоо сонгон 'Шууд Үзэх' товчийг даран үнэгүй эсвэл VIP багцаар өндөр чанартайгаар шууд үзэх боломжтой."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Бүх анимэ монгол дуу оруулга эсвэл хадмалтай юу?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Тийм ээ, FlickNime дээрх бүх анимэ болон цувралууд мэргэжлийн монгол дуу оруулга эсвэл монгол хадмал орчуулгатайгаар байршдаг."
+                }
+              }
+            ]
+          }
+        ]
       }
     </script>
   </head>

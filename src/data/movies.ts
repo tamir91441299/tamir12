@@ -1,9 +1,6 @@
 import { Movie, Comment, Episode } from '../types';
-import { MY_HERO_ACADEMIA_S1 } from './anime/myHeroAcademia';
-import { MY_HERO_ACADEMIA_S2 } from './anime/myHeroAcademiaS2';
 import { MEGALO_BOX_S1 } from './anime/megaloBox';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
-import { DEATH_NOTE } from './anime/deathNote';
 import {
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
@@ -199,12 +196,9 @@ export const SAMPLE_MOVIES: Movie[] = [
       }
     ]
   },
-  MY_HERO_ACADEMIA_S1,
-  MY_HERO_ACADEMIA_S2,
   MEGALO_BOX_S1,
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
-  DEATH_NOTE,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -214,7 +208,6 @@ export const SAMPLE_MOVIES: Movie[] = [
 export {
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
-  DEATH_NOTE,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -336,26 +329,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     likes: 24
   },
   {
-    id: 'c_dn1',
-    movieId: 'm_death_note',
-    userName: 'Ганбаяр',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
-    text: 'Үхлийн Тэмдэглэл бол анимэ ертөнцийн бүх цаг үеийн сор бүтээл! Ягами Лайт болон L хоёрын сэтгэл зүйн тулаан ямар ч эргэлзээгүй сод ухаан.',
-    rating: 10,
-    date: 'Өнөөдөр 20:15',
-    likes: 56
-  },
-  {
-    id: 'c_dn2',
-    movieId: 'm_death_note',
-    userName: 'Номин',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
-    text: 'Бүрэн 37 анги орсонд маш их баярлалаа! Кирагийн төлөвлөгөө, Рьюкийн алим идэж буй хэсгүүдийг дуу оруулгатай үзэх үнэхээр таашаалтай байлаа.',
-    rating: 10,
-    date: 'Өчигдөр 22:40',
-    likes: 38
-  },
-  {
     id: 'c2',
     movieId: 'm_91_days',
     userName: 'Анужин',
@@ -364,26 +337,6 @@ export const SAMPLE_COMMENTS: Comment[] = [
     rating: 10,
     date: 'Өчигдөр 21:15',
     likes: 18
-  },
-  {
-    id: 'c3',
-    movieId: 'm_mha_s1',
-    userName: 'Тэмүүжин',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
-    text: 'Миний Баатрын Академи 1-р бүлэг бүрэн 13 ангиараа орсонд баярлалаа! Дэкү All Might-тай уулздаг хэсэг үргэлж сэтгэл хөдөлгөдөг.',
-    rating: 10,
-    date: '3 хоногийн өмнө',
-    likes: 35
-  },
-  {
-    id: 'c4',
-    movieId: 'm_mha_s2',
-    userName: 'Энхжин',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-    text: '2-р бүлгийн Спортын наадам ба Тодорокигийн тулаан галзуу болсон. Дуу оруулга нь супер!',
-    rating: 10,
-    date: 'Өнөөдөр 14:10',
-    likes: 42
   },
   {
     id: 'c5',

@@ -80,6 +80,23 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
       metaDescElement.setAttribute('content', metaDescription);
     }
 
+    // Update Canonical URL dynamically
+    let canonicalElement = document.querySelector('link[rel="canonical"]');
+    if (canonicalElement) {
+      const currentUrl = window.location.origin + (selectedMovie ? `?movie=${selectedMovie.id}` : window.location.pathname);
+      canonicalElement.setAttribute('href', currentUrl);
+    }
+
+    // Update Meta Keywords
+    let keywordsElement = document.querySelector('meta[name="keywords"]');
+    if (keywordsElement) {
+      if (selectedMovie) {
+        keywordsElement.setAttribute('content', `${selectedMovie.titleMongolian}, ${selectedMovie.title}, ${selectedMovie.titleMongolian} үзэх, монгол анимэ, монгол хадмал, FlickNime`);
+      } else {
+        keywordsElement.setAttribute('content', 'FlickNime, flicknime anime, анимэ үзэх, монгол анимэ, анимэ монгол, монгол дуу оруулгатай анимэ, mongol anime, anime uzex, anime mn, anime mongolia, монгол кино, цуврал кино, үнэгүй анимэ');
+      }
+    }
+
     // Update OpenGraph Title & Description & Image
     let ogTitleElement = document.querySelector('meta[property="og:title"]');
     if (ogTitleElement) ogTitleElement.setAttribute('content', pageTitle);
@@ -89,6 +106,16 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
 
     let ogImageElement = document.querySelector('meta[property="og:image"]');
     if (ogImageElement) ogImageElement.setAttribute('content', ogImage);
+
+    // Update Twitter Cards
+    let twitterTitleElement = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitleElement) twitterTitleElement.setAttribute('content', pageTitle);
+
+    let twitterDescElement = document.querySelector('meta[name="twitter:description"]');
+    if (twitterDescElement) twitterDescElement.setAttribute('content', metaDescription);
+
+    let twitterImageElement = document.querySelector('meta[name="twitter:image"]');
+    if (twitterImageElement) twitterImageElement.setAttribute('content', ogImage);
 
     // Update Dynamic JSON-LD Script
     let existingJsonLd = document.getElementById('dynamic-json-ld');

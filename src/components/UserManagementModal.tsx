@@ -1406,8 +1406,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   Нийт оруулсан ангиуд ({currentMovieEpisodes.length})
                 </h4>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-500 hidden sm:inline">
-                    1-р анги нь бүх хэрэглэгчдэд ҮНЭГҮЙ үзэх боломжтой
+                  <span className="text-xs text-amber-500/80 hidden sm:inline">
+                    Анимэ үзэхийн тулд хэрэглэгч багцын эрхтэй байх ёстой
                   </span>
                   <button
                     type="button"
@@ -1575,22 +1575,6 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   Шинэ Эрхийн Код Үүсгэх
                 </h4>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewCodeForm({
-                        code: 'DEATHNOTE',
-                        type: 'anime',
-                        value: 0,
-                        durationDays: 30,
-                        description: '📓 Death Note (Үхлийн Тэмдэглэл) бүрэн 37 анги үзэх 30 хоногийн эрх',
-                        maxUses: 1000,
-                      });
-                    }}
-                    className="text-[11px] text-amber-300 hover:text-white font-bold bg-amber-950/60 hover:bg-amber-900/60 px-2.5 py-1 rounded-lg border border-amber-700/80 transition-all cursor-pointer flex items-center gap-1 shadow"
-                  >
-                    <span>📓 Death Note Код</span>
-                  </button>
                   <button
                     type="button"
                     onClick={() => {

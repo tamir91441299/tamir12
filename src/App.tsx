@@ -46,7 +46,14 @@ export default function App() {
 
   // Movies list state: Fresh code definition from SAMPLE_MOVIES + admin added movies
   const [moviesList, setMoviesList] = useState<Movie[]>(() => {
-    const DELETED_IDS = new Set(['m_dandadan', 'm_soul_eater', 'm_chainsaw_man']);
+    const DELETED_IDS = new Set([
+      'm_dandadan',
+      'm_soul_eater',
+      'm_chainsaw_man',
+      'm_mha_s1',
+      'm_mha_s2',
+      'm_death_note'
+    ]);
     let base = [...SAMPLE_MOVIES];
     try {
       const savedCustom = localStorage.getItem('ioio_custom_movies');
@@ -278,6 +285,27 @@ export default function App() {
           const parsedEp = epParam ? parseInt(epParam, 10) : 1;
           const validEp = !isNaN(parsedEp) && parsedEp > 0 ? parsedEp : 1;
 
+          // Бүртгэлгүй эсвэл эрх аваагүй хүмүүс үзэх боломжгүй
+          if (!currentUser) {
+            handleOpenAuthModal('phone');
+            return;
+          }
+
+          const hasRights =
+            isAdmin ||
+            isMonthlyVip ||
+            isAnimePackage ||
+            purchasedMovies.includes(found.id) ||
+            (currentUser as any)?.packageType === 'anime' ||
+            (currentUser as any)?.packageType === 'full_vip' ||
+            (found.type !== 'anime' && ((currentUser as any)?.packageType === 'movie' || isMoviePackage));
+
+          if (!hasRights) {
+            setPaymentMovie(found);
+            setShowPaymentModal(true);
+            return;
+          }
+
           if (isPasscodeVerifiedInSession()) {
             setSelectedMovieForPlayer(found);
             setPlayerInitialEpisode(validEp);
@@ -357,21 +385,26 @@ export default function App() {
 
   // Watch History & Continue Watching state
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>(() => {
+    const DELETED_IDS = new Set([
+      'm_dandadan',
+      'm_soul_eater',
+      'm_chainsaw_man',
+      'm_mha_s1',
+      'm_mha_s2',
+      'm_death_note'
+    ]);
     try {
       const saved = localStorage.getItem('ioio_watch_history');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item: WatchHistoryItem) => !DELETED_IDS.has(item.movieId));
+        }
+      }
     } catch (e) {
       console.error(e);
     }
     return [
-      {
-        movieId: 'm_mha_s1',
-        episodeNumber: 1,
-        progressPercent: 35,
-        currentTime: 520,
-        duration: 1440,
-        updatedAt: Date.now() - 1000 * 60 * 30,
-      },
       {
         movieId: 'm_91_days',
         episodeNumber: 1,
@@ -646,22 +679,23 @@ export default function App() {
   };
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
-    // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
-    if (!currentUser && movie.type === 'anime') {
+    // Бүртгэлгүй хүмүүс анимэ болон контент үзэх боломжгүй (Нэвтрэх шаардлагатай)
+    if (!currentUser) {
       handleOpenAuthModal('phone');
       return;
     }
 
-    // Эрх аваагүй хүмүүс анимэ үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
+    // Эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
     const hasAnimeRights =
       isAdmin ||
       isMonthlyVip ||
       isAnimePackage ||
       purchasedMovies.includes(movie.id) ||
       (currentUser as any)?.packageType === 'anime' ||
-      (currentUser as any)?.packageType === 'full_vip';
+      (currentUser as any)?.packageType === 'full_vip' ||
+      (movie.type !== 'anime' && ((currentUser as any)?.packageType === 'movie' || isMoviePackage));
 
-    if (movie.type === 'anime' && !hasAnimeRights) {
+    if (!hasAnimeRights) {
       setPaymentMovie(movie);
       setShowPaymentModal(true);
       return;
@@ -793,6 +827,9 @@ export default function App() {
         }}
         onOpenDisplaySettings={() => {
           setShowDisplaySettingsModal(true);
+        }}
+        onOpenSeoModal={() => {
+          setShowSeoModal(true);
         }}
         deviceMode={deviceMode}
         onDeviceModeChange={handleDeviceModeChange}

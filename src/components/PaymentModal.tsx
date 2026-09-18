@@ -428,17 +428,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setInputActivationCode('DEATHNOTE');
-                        setCodeError(null);
-                      }}
-                      className="text-[11px] font-mono font-black px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 cursor-pointer transition-all flex items-center gap-1 shadow"
-                    >
-                      <span>📓 DEATHNOTE</span>
-                      <span className="text-[9px] text-zinc-400 font-sans font-normal">(Death Note 30 хоног)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
                         setInputActivationCode('KORRA');
                         setCodeError(null);
                       }}

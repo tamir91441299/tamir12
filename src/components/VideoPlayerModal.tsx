@@ -94,8 +94,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ үзэх боломжгүй (Заавал нэвтрэх шаардлагатай)
-  // 2. Анимэ эрхээ аваагүй хүмүүс анимэ үзэх боломжгүй (Бүх ангиуд ТҮГЖЭЭТЭЙ)
-  // 3. Зөвхөн Анимэ багц, VIP эсвэл худалдан авсан эрхтэй хүмүүс үзнэ
+  // 2. Анимэ эрхээ аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх ангиуд ТҮГЖЭЭТЭЙ)
+  // 3. Зөвхөн Анимэ багц, VIP эсвэл тухайн контентын эрх авсан хүмүүс үзнэ
   const checkEpisodeAccess = (epIndex: number): boolean => {
     // Бүртгэлгүй хүмүүс энэ сайтын анимэ үзэх боломжгүй
     if (!currentUser) return false;
@@ -118,7 +118,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       if (isPurchased) {
         return true;
       }
-      return epIndex === 0;
+      // Эрх аваагүй хүмүүс контент үзэх боломжгүй!
+      return false;
     }
     return false;
   };
@@ -381,7 +382,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Open protected cinema stream in a dedicated new window with passcode security
   const handleOpenProtectedNewWindow = useCallback(() => {
-    if (movie.type === 'anime' && !checkEpisodeAccess(currentEpisodeIndex)) {
+    if (!currentUser) {
+      if (onOpenAuthModal) onOpenAuthModal('phone');
+      else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
+      return;
+    }
+    if (!checkEpisodeAccess(currentEpisodeIndex)) {
       if (onRequestPurchase) {
         onRequestPurchase(movie);
       } else {
@@ -394,7 +400,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     } else {
       setShowPasscodePrompt(true);
     }
-  }, [movie, currentEpisodeIndex, checkEpisodeAccess, onRequestPurchase, doLaunchProtectedWindow]);
+  }, [currentUser, movie, currentEpisodeIndex, checkEpisodeAccess, onRequestPurchase, onOpenAuthModal, doLaunchProtectedWindow]);
 
   // Play video safely with audio / autoplay / error handling without cascading loops
   const playVideoSafe = useCallback(async () => {
@@ -2543,7 +2549,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   })
                   .map(({ ep, idx }) => {
                     const isActive = idx === currentEpisodeIndex;
-                    const isFreeEp = idx === 0;
                     const hasEpAccess = checkEpisodeAccess(idx);
 
                     return (

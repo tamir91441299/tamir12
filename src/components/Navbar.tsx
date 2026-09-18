@@ -61,6 +61,7 @@ interface NavbarProps {
   deviceMode?: DeviceMode;
   onDeviceModeChange?: (mode: DeviceMode) => void;
   notifications?: AppNotification[];
+  onOpenSeoModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -88,6 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   deviceMode = 'auto',
   onDeviceModeChange,
   notifications = [],
+  onOpenSeoModal,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
@@ -762,6 +764,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Sliders className="w-3.5 h-3.5" />
                 </button>
               )}
+
+              {onOpenSeoModal && (
+                <button
+                  id="header-google-seo-btn"
+                  type="button"
+                  onClick={onOpenSeoModal}
+                  className="p-1 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer ml-0.5"
+                  title="Google SEO & Search Console Бүртгэл"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 
@@ -878,7 +892,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold text-[10px] shadow transition-transform hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1"
                                   >
                                     <Clapperboard className="w-3 h-3" />
-                                    <span>Шууд үзэх (1-р анги үнэгүй)</span>
+                                    <span>Анимэ үзэх</span>
                                   </button>
                                 </div>
                               )}
@@ -1217,6 +1231,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Sliders className="w-3.5 h-3.5 text-amber-400" />
               <span>Тохиргоо</span>
+            </button>
+          )}
+
+          {onOpenSeoModal && (
+            <button
+              id="mobile-nav-google-seo"
+              type="button"
+              onClick={onOpenSeoModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30"
+              title="Google SEO & Хайлтын системд бүртгүүлэх"
+            >
+              <Search className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Google SEO</span>
             </button>
           )}
         </div>

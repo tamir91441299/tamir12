@@ -69,6 +69,15 @@ Allow: /
 Disallow: /api/
 Disallow: /admin/
 
+User-agent: Googlebot
+Allow: /
+Allow: /sitemap.xml
+Allow: /manifest.json
+Allow: /images/
+
+User-agent: Bingbot
+Allow: /
+
 Sitemap: ${baseUrl}/sitemap.xml
 `;
   res.header('Content-Type', 'text/plain');
@@ -80,12 +89,12 @@ Sitemap: ${baseUrl}/sitemap.xml
  */
 router.get('/api/seo/meta', (req: Request, res: Response) => {
   res.json({
-    siteName: 'IOIO TV',
-    defaultTitle: 'IOIO TV - Монгол хадмал, дуу оруулгатай онлайн кино театр',
+    siteName: 'FlickNime',
+    defaultTitle: 'FlickNime - Монгол хадмал, дуу оруулгатай анимэ & кино платформ',
     sitemapUrl: `${req.protocol}://${req.get('host')}/sitemap.xml`,
     robotsUrl: `${req.protocol}://${req.get('host')}/robots.txt`,
     indexedCount: SAMPLE_MOVIES.length + 5,
-    schemaTypes: ['WebSite', 'Movie', 'TVSeries', 'BreadcrumbList'],
+    schemaTypes: ['WebSite', 'Organization', 'Movie', 'TVSeries', 'ItemList', 'FAQPage'],
   });
 });
 
