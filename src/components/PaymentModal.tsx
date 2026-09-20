@@ -24,7 +24,7 @@ interface PaymentModalProps {
   onTopUpBalance: (amount: number) => void;
 }
 
-export type PlanDurationId = '15d' | '1m' | '2m';
+export type PlanDurationId = '1m' | '2m' | '3m' | '6m' | '1y';
 
 export interface PlanConfig {
   id: PlanDurationId;
@@ -38,16 +38,6 @@ export interface PlanConfig {
 }
 
 const PLANS: PlanConfig[] = [
-  {
-    id: '15d',
-    label: '15 ХОНОГ',
-    subLabel: '15 Хоног эрх',
-    durationDays: 15,
-    durationMonths: 0.5,
-    price: 2500,
-    badge: '2.5k Эхлэл',
-    badgeStyle: 'bg-rose-600 text-white',
-  },
   {
     id: '1m',
     label: '1 САР',
@@ -67,6 +57,36 @@ const PLANS: PlanConfig[] = [
     price: 8500,
     badge: '8.5k Хэмнэлт',
     badgeStyle: 'bg-amber-400 text-black font-black',
+  },
+  {
+    id: '3m',
+    label: '3 САР',
+    subLabel: '90 Хоног эрх',
+    durationDays: 90,
+    durationMonths: 3,
+    price: 12000,
+    badge: 'Онцлох',
+    badgeStyle: 'bg-cyan-500 text-black font-black',
+  },
+  {
+    id: '6m',
+    label: '6 САР',
+    subLabel: '180 Хоног эрх',
+    durationDays: 180,
+    durationMonths: 6,
+    price: 22000,
+    badge: 'Супер хэмнэлт',
+    badgeStyle: 'bg-purple-600 text-white font-black',
+  },
+  {
+    id: '1y',
+    label: '1 ЖИЛ',
+    subLabel: '365 Хоног эрх',
+    durationDays: 365,
+    durationMonths: 12,
+    price: 40000,
+    badge: 'Бүтэн жил VIP',
+    badgeStyle: 'bg-gradient-to-r from-amber-400 to-orange-500 text-black font-black',
   },
 ];
 

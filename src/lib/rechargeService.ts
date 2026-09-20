@@ -2,13 +2,15 @@ import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 
 import { db } from './firebase';
 import { sendAdminNotification } from './userService';
 
+export type PlanDurationKey = '1m' | '2m' | '3m' | '6m' | '1y';
+
 export interface RechargeRequest {
   id: string;
   userId: string;
   userName: string;
   userPhone: string;
   userEmail: string;
-  planId: '15d' | '1m' | '2m';
+  planId: PlanDurationKey;
   planLabel: string;
   durationDays: number;
   amount: number;
@@ -27,7 +29,7 @@ export async function submitRechargeRequest(data: {
   userName: string;
   userPhone: string;
   userEmail?: string;
-  planId: '15d' | '1m' | '2m';
+  planId: PlanDurationKey;
   planLabel: string;
   durationDays: number;
   amount: number;

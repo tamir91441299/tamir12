@@ -124,7 +124,9 @@ export function checkUserContentAccess(
     return {
       hasAccess: false,
       reason: 'NO_PACKAGE',
-      message: 'Та анимэ/кино үзэх багцын эрхээ идэвхжүүлнэ үү.',
+      message: movie?.type === 'anime'
+        ? '🔒 Админаас анимэ үзэх эрх аваагүй байна. Та админаас 1 сар буюу түүнээс дээш хугацааны эрх авч үзнэ үү.'
+        : 'Энэхүү контентыг үзэхийн тулд эрхээ идэвхжүүлнэ үү.',
     };
   }
 
@@ -133,7 +135,9 @@ export function checkUserContentAccess(
     return {
       hasAccess: false,
       reason: 'EXPIRED',
-      message: 'Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
+      message: movie?.type === 'anime'
+        ? '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Админаас эрхээ сунгаж үзнэ үү.'
+        : 'Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
     };
   }
 
@@ -145,7 +149,7 @@ export function checkUserContentAccess(
     };
   }
 
-  // Anime package has access to anime content
+  // Anime package has access to anime content (Granted for 1 month or longer by admin)
   if (movie?.type === 'anime' && packageType === 'anime') {
     return {
       hasAccess: true,
@@ -161,12 +165,12 @@ export function checkUserContentAccess(
     };
   }
 
-  // Mismatched package (e.g. anime package trying to watch cinema movie)
+  // Mismatched package (e.g. movie package trying to watch anime)
   return {
     hasAccess: false,
     reason: 'NO_PACKAGE',
     message: movie?.type === 'anime'
-      ? 'Энэ анимэг үзэхийн тулд Анимэ багцын эрх шаардлагатай.'
+      ? '🔒 Админаас анимэ үзэх эрх аваагүй байна. Та админаас 1 сар буюу түүнээс дээш хугацааны Анимэ багцын эрх авна уу.'
       : 'Энэ киног үзэхийн тулд Кино багц эсвэл VIP эрх шаардлагатай.',
   };
 }
