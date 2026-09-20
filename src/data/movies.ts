@@ -126,43 +126,43 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 2,
         title: '2-р анги - Хуурмаг дүр төрх (Phantom of Falsehood)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1QP1BAEg_qgmrjAMHvdzN9e5ABf_lN-3R/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZH37LJZFYjsnI2CNu5irw8OkzLyuy2a0eSy'
       },
       {
         episodeNumber: 3,
         title: '3-р анги - Хаашаа чиглэсэн буун дуу (Where the Footsteps Lead)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1GLa61eek5jmVQ_nviEvXifCebAp4C7TN/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQ37LJZBkqKkV3Hxl8AqSWz8xODEL54BOcy'
       },
       {
         episodeNumber: 4,
         title: '4-р анги - Ялагдал ба Холбоотон (Lose to Win, and What Comes After)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1RA6tP9YeYblF95MsGdQFPuCssQM5OonL/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZm37LJZdEU4k9BOf1Q3OFbCWQLomXWJipjX'
       },
       {
         episodeNumber: 5,
         title: '5-р анги - Цусны үнэр (Blood Will Have Blood)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1W5KZGKjEqfSanWmui3o6tS19RguKYhHS/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZc37LJZbH8uXQFCdiFTVFnnGKXtczs4ALz7'
       },
       {
         episodeNumber: 6,
         title: '6-р анги - Хүн алахын тулд (To Slaughter a Pig)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1bAqg-QojH9BUMTcG2qpegKq9_WzT_cvQ/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZyG7LJZq8blFdHMGO4D93Xm5vicMHAC4l6y'
       },
       {
         episodeNumber: 7,
         title: '7-р анги - Муу ёрын өдөр (A Poor Player)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1548zu4SvzlkgtrRKq_RvLvB9lkA5pt_3/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZVG7LJZk4oBSvFCOd7B2ftpC2LpQYrqzCTV'
       },
       {
         episodeNumber: 8,
         title: '8-р анги - Далд хөшиг (Behind the Curtain)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1dT89Xw6u3RWna9YEXUVPH-MeD8YyZabY/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZ5G7LJZWsrkPEkKv88fe8bCCyUH77YmogFV'
       },
       {
         episodeNumber: 9,
@@ -174,7 +174,7 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 10,
         title: '10-р анги - Баталгаагүй замнал (Proof of Good Faith)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1WqjqzlDH-lcQJ0r69UZrSiIHGFV2nDVz/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQG7LJZf6PxWQG8bI7IlhQ0R83Yd4WQzR9X'
       },
       {
         episodeNumber: 11,

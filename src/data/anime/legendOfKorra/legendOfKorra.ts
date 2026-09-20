@@ -20,14 +20,14 @@ export function formatLegendOfKorraDriveLink(driveIdOrUrl: string): string {
 export const LEGEND_OF_KORRA_EPISODE_LINKS: Record<number, string> = {
   1: 'https://filemoon.org/en/7d5GLnE73xRJ/file',
   2: 'https://u.pcloud.link/publink/show?code=XZi7kRJZxdYqzRRNmLkiYSY6UR8cuyWmrzEV',
-  3: 'https://drive.google.com/file/d/1VOmLbJQU9fscXdj147epT0WTnLePG-KL/view?usp=drivesdk',
+  3: 'https://u.pcloud.link/publink/show?code=XZ0VkRJZI85lDhM215yCC6UwpDFj1F5UKNVX',
   4: 'https://drive.google.com/file/d/1u2tsMQtvfbd3lgKmIMVLJ6_8op77KqRT/view?usp=drivesdk&usp=embed_facebook',
   5: 'https://drive.google.com/file/d/1ZHXJ42X2LmZdVfvaCq0j0Bi4wUTHDOrw/view?usp=drivesdk&usp=embed_facebook',
-  6: 'https://drive.google.com/file/d/104h-La7pSxtIpTOg2Lsi0cqskHhmOZQn/view?usp=drivesdk&usp=embed_facebook',
+  6: 'https://u.pcloud.link/publink/show?code=XZ6a7LJZVAfp7IhHJ9fHWm0W9GunfmNfQWUk',
   7: 'https://drive.google.com/file/d/1XeZ9tLxZxPYLRm9DEAWNYH_QMGuKPxO0/view?usp=drivesdk&usp=embed_facebook',
   8: 'https://drive.google.com/file/d/1I4P6kTw0hY4_VW5lR-KR3kOPOO8DEUyf/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1wDlul3IzdmC81MvCbHISBkjyixDeJy4G/view?usp=drivesdk&usp=embed_facebook',
-  10: 'https://drive.google.com/file/d/1SvnzhXnU2bqni3DRy6sJvoC_YJ8QhQdg/view?usp=drivesdk&usp=embed_facebook',
+  9: 'https://u.pcloud.link/publink/show?code=XZGa7LJZXWg43sVsL3yG4s7xEtjNIp8vpH77',
+  10: 'https://u.pcloud.link/publink/show?code=XZGa7LJZXWg43sVsL3yG4s7xEtjNIp8vpH77',
   11: 'https://drive.google.com/file/d/1OOGydwzvuGvaN2qCUJ12uGqSZGuudL8t/view?usp=drivesdk&usp=embed_facebook',
   12: 'https://drive.google.com/file/d/1BRD0TERSLKeEcEYudv0qmvDCR7tDWhmn/view?usp=drivesdk&usp=embed_facebook',
 };
