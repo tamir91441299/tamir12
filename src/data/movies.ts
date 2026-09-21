@@ -168,7 +168,7 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 9,
         title: '9-р анги - Хар харгис сэтгэл (Black and Deep Desires)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1Ur_Gaa-9vKV2lrDevEo_PHuEspfyDgNI/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQG7LJZf6PxWQG8bI7IlhQ0R83Yd4WQzR9X'
       },
       {
         episodeNumber: 10,
