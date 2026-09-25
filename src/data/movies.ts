@@ -8,6 +8,7 @@ import {
   LEGEND_OF_KORRA_S4
 } from './anime/legendOfKorra';
 import { SPY_X_FAMILY } from './anime/spyXFamily';
+import { HUNTER_X_HUNTER } from './anime/hunterXHunter';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -199,6 +200,7 @@ export const SAMPLE_MOVIES: Movie[] = [
   MEGALO_BOX_S1,
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
+  HUNTER_X_HUNTER,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -208,6 +210,7 @@ export const SAMPLE_MOVIES: Movie[] = [
 export {
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
+  HUNTER_X_HUNTER,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -238,6 +241,26 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_hxh1',
+    movieId: 'm_hunter_x_hunter',
+    userName: 'Ганбаатар',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Hunter x Hunter бол дэлхийн шилдэг шонэн анимэ! Бүх 148 анги бүрэн холбогдсон, ялангуяа Химера Шоргоолжны тулаанууд, Меруем ба Нетерогийн агуу тулаан, Гоны уур хилэнгийн хэсэг үнэхээр сэтгэл догдлууллаа. Баярлалаа!',
+    rating: 10,
+    date: 'Өнөөдөр 22:45',
+    likes: 89
+  },
+  {
+    id: 'c_hxh2',
+    movieId: 'm_hunter_x_hunter',
+    userName: 'Энхжин',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    text: 'Киллуа ба Гоны нөхөрлөл, Курапикагийн Фантом Труптэй хийсэн өшөө авалт үнэхээр гайхалтай. 1-ээс 148 хүртэлх ангиуд бүгд тасралтгүй, дүрсний өндөр чанартай гарч байна.',
+    rating: 10,
+    date: 'Өнөөдөр 21:30',
+    likes: 67
+  },
   {
     id: 'c_sxf1',
     movieId: 'm_spy_x_family',

@@ -480,7 +480,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         (req.userPhone && u.phone && u.phone === req.userPhone)
     );
 
-    const durationDays = req.durationDays || (req.planId === '15d' ? 15 : req.planId === '2m' ? 60 : 30);
+    const durationDays = req.durationDays || ((req.planId as string) === '15d' ? 15 : (req.planId as string) === '2m' ? 60 : 30);
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + durationDays);
     const expiryStr = expiryDate.toISOString().split('T')[0];

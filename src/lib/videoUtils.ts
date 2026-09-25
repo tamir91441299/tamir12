@@ -74,6 +74,21 @@ export function extractGoogleDriveId(url: string): string | null {
   if (!url) return null;
   const clean = url.trim();
 
+  // Do not match known non-Drive media hosts
+  if (
+    clean.includes('pcloud.link') ||
+    clean.includes('filemoon.') ||
+    clean.includes('youtube.com') ||
+    clean.includes('youtu.be') ||
+    clean.includes('ok.ru') ||
+    clean.includes('dailymotion.com') ||
+    clean.includes('vimeo.com') ||
+    clean.includes('streamtape.') ||
+    clean.includes('dood.')
+  ) {
+    return null;
+  }
+
   // Match /file/d/ID or /d/ID
   const matchFileD = clean.match(/\/(?:file\/)?d\/([a-zA-Z0-9_-]{15,})/);
   if (matchFileD && matchFileD[1]) {
@@ -214,6 +229,7 @@ export function isExternalEmbedMedia(url?: string): boolean {
     clean.includes('docs.google.com') ||
     clean.includes('youtube.com') ||
     clean.includes('youtu.be') ||
+    clean.includes('pcloud.link') ||
     clean.includes('streamtape.') ||
     clean.includes('dood.') ||
     clean.includes('doodstream.') ||

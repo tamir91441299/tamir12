@@ -40,6 +40,8 @@ import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
 import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
 import { checkUserContentAccess } from '../lib/permissionService';
+import { generateEpisodeLinksCode } from '../lib/episodeLinkManager';
+import { HUNTER_X_HUNTER_EPISODE_LINKS } from '../data/anime/hunterXHunter';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -112,6 +114,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [selectedRange, setSelectedRange] = useState<string>('all');
   const [showPasscodeModal, setShowPasscodeModal] = useState<boolean>(false);
   const [pendingWindowEp, setPendingWindowEp] = useState<number>(1);
+  const [copiedHxhCode, setCopiedHxhCode] = useState<boolean>(false);
+  const [showHxhCodeModal, setShowHxhCodeModal] = useState<boolean>(false);
 
   // Real-time Watchers & View Tracking state
   const [watchersList, setWatchersList] = useState<AnimeWatcher[]>([]);
@@ -187,6 +191,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
+  const isHunterXHunter = movie.id === 'm_hunter_x_hunter' || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр');
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
@@ -262,7 +267,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     // Parse lines or split by whitespace/commas
     const lines = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
-    const targetCount = Math.max(1, Math.min(100, Number(batchTotalEpCount) || 13));
+    const targetCount = Math.max(1, Math.min(148, Number(batchTotalEpCount) || (isHunterXHunter ? 148 : 13)));
 
     const defaultMegaloTitles: Record<number, string> = {
       1: '1-р анги - Хувь тавилан хуурамч биш (BUY OR DIE?)',
@@ -335,6 +340,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const lineUrl = lines[i - 1] || lines[0] || movie.videoUrl || 'https://drive.google.com/file/d/1Q6W8jgTtnYJo7E_LQNOJkCUiAtI39Nku/view?usp=drivesdk';
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
+        isHunterXHunter ? `${i}-р анги` :
         isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
         isKorra ? defaultKorraTitles[i] || `${i}-р анги` :
         is91Days ? default91DaysTitles[i] || `${i}-р анги` :
@@ -809,6 +815,105 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             )}
 
+            {/* Arc Navigation for Hunter x Hunter (7 Arcs, 148 Episodes) */}
+            {isHunterXHunter && (
+              <div className="pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    Бүлэг / Үйл явдлын цуврал (Hunter x Hunter 148 анги):
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-mono">Нийт 7 бүлэг, 148 анги</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('1-25')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '1-25'
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-amber-400 font-bold">1-21 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Хантерын Шалгалт</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('26-50')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '26-50'
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-cyan-400 font-bold">22-36 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Золдик & Арена</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('37-58')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '37-58'
+                        ? 'bg-rose-500/20 border-rose-400 text-rose-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-rose-400 font-bold">37-58 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Йоркшин (Гал аалз)</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('59-75')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '59-75'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-emerald-400 font-bold">59-75 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Грийд Айланд</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('76-136')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '76-136'
+                        ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-purple-400 font-bold">76-136 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Химера Шоргоолж</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('137-148')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                      selectedRange === '137-148'
+                        ? 'bg-indigo-500/20 border-indigo-400 text-indigo-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] text-indigo-400 font-bold">137-148 анги</div>
+                    <div className="font-bold text-zinc-200 truncate">Даргын Сонгууль</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRange('all')}
+                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer sm:col-span-2 ${
+                      selectedRange === 'all'
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black shadow'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-[10px] font-bold">Бүх 148 анги</div>
+                    <div className="font-bold truncate">Бүрэн цуврал харах</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Main Tabs Navigation: Episodes, Watchers, Comments */}
             <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 pb-2 pt-4">
               <button
@@ -864,16 +969,35 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   </h3>
                   {isAdmin ? (
                     <div className="flex items-center gap-2">
+                      {isHunterXHunter && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = generateEpisodeLinksCode('HunterXHunter', HUNTER_X_HUNTER_EPISODE_LINKS);
+                            try {
+                              navigator.clipboard?.writeText(code);
+                              setCopiedHxhCode(true);
+                              setTimeout(() => setCopiedHxhCode(false), 2500);
+                            } catch {}
+                            setShowHxhCodeModal(true);
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-md"
+                          title="Hunter x Hunter-ийн 148 ангийг холбох кодыг харах, хуулах"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 fill-black" />
+                          <span>{copiedHxhCode ? '✓ Код хууллаа!' : '148 ангийн код'}</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setShowBatchLinkForm(!showBatchLinkForm);
                           setShowAddEpForm(false);
                         }}
                         className="flex items-center gap-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        title="1-13 ангийн бүх линкийг нэг дор холбох"
+                        title="Ангийн бүх линкийг нэг дор холбох"
                       >
                         <Layers className="w-3.5 h-3.5 text-amber-400" />
-                        {showBatchLinkForm ? 'Хаах' : '1-13 Линк Бөөнөөр холбох'}
+                        {showBatchLinkForm ? 'Хаах' : isHunterXHunter ? '1-148 Линк холбох' : '1-13 Линк Бөөнөөр холбох'}
                       </button>
                       <button
                         onClick={() => {
@@ -887,9 +1011,30 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg select-none">
-                      <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span>Видео холбоос оруулах эрх хамгаалагдсан</span>
+                    <div className="flex items-center gap-2">
+                      {isHunterXHunter && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = generateEpisodeLinksCode('HunterXHunter', HUNTER_X_HUNTER_EPISODE_LINKS);
+                            try {
+                              navigator.clipboard?.writeText(code);
+                              setCopiedHxhCode(true);
+                              setTimeout(() => setCopiedHxhCode(false), 2500);
+                            } catch {}
+                            setShowHxhCodeModal(true);
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-md"
+                          title="Hunter x Hunter-ийн 148 ангийг холбох кодыг харах, хуулах"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 fill-black" />
+                          <span>{copiedHxhCode ? '✓ Код хууллаа!' : '148 ангийн код'}</span>
+                        </button>
+                      )}
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg select-none">
+                        <Lock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>Видео холбоос оруулах эрх хамгаалагдсан</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1529,6 +1674,78 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Hunter x Hunter 148 Episodes Linking Code Modal */}
+      {showHxhCodeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-zinc-950 border border-amber-500/50 rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl relative text-left">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-black">
+                  🎯
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">
+                    Hunter x Hunter (1-148 анги) холбох TypeScript код
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Бүх 148 ангийн Google Drive, MP4, HLS линкийг холбох бэлэн код
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHxhCodeModal(false)}
+                className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span>Холболтын файл: <code className="text-amber-400 font-mono">src/data/anime/hunterXHunter.ts</code></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = generateEpisodeLinksCode('HunterXHunter', HUNTER_X_HUNTER_EPISODE_LINKS);
+                    try {
+                      navigator.clipboard?.writeText(code);
+                      setCopiedHxhCode(true);
+                      setTimeout(() => setCopiedHxhCode(false), 2500);
+                    } catch {}
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-lg cursor-pointer text-xs shadow transition-all"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedHxhCode ? '✓ Амжилттай хууллаа!' : 'Бүх кодыг хуулах'}</span>
+                </button>
+              </div>
+
+              <div className="bg-black/90 p-3.5 rounded-xl border border-zinc-800 text-[11px] font-mono text-cyan-300 max-h-72 overflow-y-auto leading-relaxed select-all">
+                <pre>{generateEpisodeLinksCode('HunterXHunter', HUNTER_X_HUNTER_EPISODE_LINKS)}</pre>
+              </div>
+
+              <div className="text-[11px] text-zinc-400 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800 flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  <b>Хэрэглэх заавар:</b> Админ та дээрх кодоор эсвэл "1-148 Линк холбох" товчийг дарж өөрийн Google Drive линкүүдээ шууд нэг дор нааж бүх ангийг амжилттай холбох боломжтой.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1 border-t border-zinc-800/80">
+              <button
+                type="button"
+                onClick={() => setShowHxhCodeModal(false)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Хаах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Passcode Security Verification Prompt for Protected Window */}
       <PasscodePromptModal

@@ -2,7 +2,7 @@ import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 
 import { db } from './firebase';
 import { sendAdminNotification } from './userService';
 
-export type PlanDurationKey = '1m' | '2m' | '3m' | '6m' | '1y';
+export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
 export interface RechargeRequest {
   id: string;

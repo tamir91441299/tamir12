@@ -31,6 +31,12 @@ import {
   setSpyXFamilyEpisodeLink,
   batchSetSpyXFamilyEpisodeLinks,
 } from '../data/anime/spyXFamily';
+import {
+  HUNTER_X_HUNTER,
+  HUNTER_X_HUNTER_EPISODE_LINKS,
+  setHunterXHunterEpisodeLink,
+  batchSetHunterXHunterEpisodeLinks,
+} from '../data/anime/hunterXHunter';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -77,6 +83,28 @@ export function connectSpyXFamilyEpisode(episodeNumber: number, videoUrl: string
 }
 
 /**
+ * 🎯 Хантэр х Хантэр (Hunter x Hunter 2011)-ийн ангийг холбох (1-148)
+ * @param episodeNumber Ангийн дугаар (1-148)
+ * @param videoUrl Google Drive линк, ID эсвэл видеоны хаяг
+ */
+export function connectHunterXHunterEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setHunterXHunterEpisodeLink(episodeNumber, formatted);
+  
+  // LocalStorage-д хадгалах
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[HUNTER_X_HUNTER.id] = HUNTER_X_HUNTER.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Hunter x Hunter episode link:', e);
+  }
+
+  return HUNTER_X_HUNTER.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+/**
  * 📝 Текстээс олон ангийн линкийг задлан ялгах туслах функц (Batch Link Parser)
  * Жишээ орцууд:
  * - 1: https://drive.google.com/...
@@ -116,7 +144,9 @@ export function batchConnectEpisodes(
   movie: Movie,
   linksMap: Record<number, string>
 ): Episode[] {
-  if (movie.id === SPY_X_FAMILY.id || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл')) {
+  if (movie.id === HUNTER_X_HUNTER.id || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр')) {
+    batchSetHunterXHunterEpisodeLinks(linksMap);
+  } else if (movie.id === SPY_X_FAMILY.id || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл')) {
     batchSetSpyXFamilyEpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA_S4.id || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('4') || movie.titleMongolian.includes('4')))) {
     batchSetLegendOfKorraS4EpisodeLinks(linksMap);
@@ -157,10 +187,12 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
+  seriesName: 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
   links: Record<number, string>
 ): string {
-  const varName = seriesName === 'SpyXFamily'
+  const varName = seriesName === 'HunterXHunter'
+    ? 'HUNTER_X_HUNTER_EPISODE_LINKS'
+    : seriesName === 'SpyXFamily'
     ? 'SPY_X_FAMILY_EPISODE_LINKS'
     : seriesName === 'LegendOfKorraS2'
     ? 'LEGEND_OF_KORRA_S2_EPISODE_LINKS'

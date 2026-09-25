@@ -215,7 +215,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     appendDebugLog(`Эх холбоос (Raw URL): ${rawVideoSrc}`);
     appendDebugLog(`Google Drive ID: ${googleDriveId || 'Байхгүй'}`);
     appendDebugLog(`YouTube ID: ${extractYouTubeId(rawVideoSrc) || 'Байхгүй'}`);
-    appendDebugLog(`Тоглуулах горим (Mode): Драйв нөөц (Embed)`);
+    const currentProvider = isGoogleDrive
+      ? 'Google Drive'
+      : isYouTube
+      ? 'YouTube'
+      : rawVideoSrc.includes('pcloud')
+      ? 'pCloud'
+      : rawVideoSrc.includes('filemoon')
+      ? 'Filemoon'
+      : serverMode === 'embed'
+      ? 'Embed тоглуулагч'
+      : 'Шууд HD дамжуулалт (HTML5)';
+    appendDebugLog(`Тоглуулах горим (Mode): ${currentProvider}`);
     appendDebugLog(`Сонгосон чанар (Quality): ${activeQualityOption.label} (${activeQualityOption.resolution})`);
     if (serverMode === 'embed') {
       appendDebugLog(`Iframe Embed URL: ${iframeUrl}`);
@@ -997,22 +1008,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       ref={modalContainerRef}
       className="fixed inset-0 w-full h-full z-50 bg-black flex flex-col justify-between overflow-hidden select-none"
     >
-      {/* PERSISTENT TOP-RIGHT 'ГАРАХ' (EXIT / CLOSE) BUTTON - Always visible and accessible */}
-      <div className={`fixed top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-50 flex items-center gap-2 ${showEpisodesDrawer ? 'hidden' : ''}`}>
-        <button
-          type="button"
-          id="top-right-corner-close-btn"
-          onClick={handleCloseSafely}
-          className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 pointer-events-auto group"
-          title="Видеогоос гарах / Хаах (Esc)"
-        >
-          <X className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover:rotate-90 transition-transform duration-200" />
-          <span>Гарах</span>
-        </button>
-      </div>
-
       {/* Top Header Bar - Clean transparent header, NO screen darkening */}
-      <header className={`p-2 sm:p-3 pr-28 sm:pr-36 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
+      <header className={`p-2 sm:p-3 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
         isFullscreen || isDeviceLandscape || isViewportLandscape
           ? controlsVisible
             ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
@@ -1245,7 +1242,29 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         >
           {/* Episode Access Restricted Overlay */}
           {!hasAccessToCurrentEpisode ? (
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none">
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none relative">
+              <div 
+                className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCloseSafely();
+                }}
+                title="Видеогоос гарах / Хаах (Esc)"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleCloseSafely();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span>Гарах</span>
+                </button>
+              </div>
               <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 flex items-center justify-center text-rose-400 shadow-2xl shadow-rose-500/20">
                 <Lock className="w-10 h-10 animate-pulse" />
               </div>
@@ -1388,6 +1407,29 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
+              {/* Direct Exit Button for HTML5 Player */}
+              <div 
+                className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCloseSafely();
+                }}
+                title="Видеогоос гарах / Хаах (Esc)"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleCloseSafely();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span>Гарах</span>
+                </button>
+              </div>
               <video
                 ref={videoRef}
                 src={videoSrcToPlay}
@@ -1448,8 +1490,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
                   // If source is Google Drive or External embed, automatically switch to reliable Embed mode
                   if (isGoogleDrive || isYouTube || isExternalEmbed) {
-                    appendDebugLog(`🔄 Google Drive HD тоглуулагч руу автоматаар шилжиж байна...`);
-                    setQualityNotice('💡 Google Drive HD тоглуулагч руу автоматаар шилжлээ');
+                    const fallbackProvider = isGoogleDrive ? 'Google Drive' : rawVideoSrc.includes('pcloud') ? 'pCloud' : isYouTube ? 'YouTube' : rawVideoSrc.includes('filemoon') ? 'Filemoon' : 'HD Embed';
+                    appendDebugLog(`🔄 ${fallbackProvider} тоглуулагч руу автоматаар шилжиж байна...`);
+                    setQualityNotice(`💡 ${fallbackProvider} тоглуулагч руу автоматаар шилжлээ`);
                     setServerMode('embed');
                     serverModeRef.current = 'embed';
                   } else if (videoRef.current && videoRef.current.src && !videoRef.current.src.includes('commondatastorage')) {

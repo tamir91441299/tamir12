@@ -8,8 +8,12 @@ import { extractGoogleDriveId } from '../../lib/videoUtils';
  */
 export function formatKamiKuzuDriveLink(driveIdOrUrl: string): string {
   if (!driveIdOrUrl) return '';
-  const id = extractGoogleDriveId(driveIdOrUrl) || driveIdOrUrl.trim();
-  return `https://drive.google.com/file/d/${id}/view?usp=drivesdk`;
+  const clean = driveIdOrUrl.trim();
+  const id = extractGoogleDriveId(clean);
+  if (id) {
+    return `https://drive.google.com/file/d/${id}/view?usp=drivesdk`;
+  }
+  return clean;
 }
 
 /**

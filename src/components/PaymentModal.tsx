@@ -24,7 +24,7 @@ interface PaymentModalProps {
   onTopUpBalance: (amount: number) => void;
 }
 
-export type PlanDurationId = '1m' | '2m' | '3m' | '6m' | '1y';
+export type PlanDurationId = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
 export interface PlanConfig {
   id: PlanDurationId;
@@ -38,6 +38,16 @@ export interface PlanConfig {
 }
 
 const PLANS: PlanConfig[] = [
+  {
+    id: '15d',
+    label: '15 ХОНОГ',
+    subLabel: '15 Хоног эрх',
+    durationDays: 15,
+    durationMonths: 0.5,
+    price: 2500,
+    badge: '2.5k Богино',
+    badgeStyle: 'bg-rose-600 text-white',
+  },
   {
     id: '1m',
     label: '1 САР',

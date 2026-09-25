@@ -44,7 +44,7 @@ export function isPackageExpired(expiryStr?: string | null): boolean {
 
     if (isNaN(time)) {
       // If unparseable string, treat as expired to be safe
-      return false;
+      return true;
     }
 
     // Grant access through the end of the specified day (23:59:59)
@@ -65,7 +65,7 @@ export interface AccessResult {
 
 /**
  * Centralized, authoritative access check for all media playback.
- * Enforces that unauthorized users (erh awaaguu hereglegch) CANNOT watch content.
+ * Enforces that unauthorized users (erh awaaguu hereglegch / tolbor toloogu hereglegch) CANNOT watch content.
  */
 export function checkUserContentAccess(
   user: UserAccount | null | undefined,
@@ -77,7 +77,7 @@ export function checkUserContentAccess(
     return {
       hasAccess: false,
       reason: 'UNAUTHENTICATED',
-      message: 'Энэхүү контентыг үзэхийн тулд эхлээд системд нэвтэрнэ үү.',
+      message: '🔒 Төлбөр төлөөгүй болон бүртгэлгүй хэрэглэгч үзэх боломжгүй. Эхлээд системд нэвтэрч эрхээ авна уу.',
     };
   }
 
@@ -119,14 +119,14 @@ export function checkUserContentAccess(
   const packageType = (user as any).packageType;
   const packageExpiry = (user as any).packageExpiry;
 
-  // Free or undefined package has NO access
+  // Free or undefined package has NO access (Төлбөр төлөөгүй хэрэглэгч)
   if (!packageType || packageType === 'free') {
     return {
       hasAccess: false,
       reason: 'NO_PACKAGE',
       message: movie?.type === 'anime'
-        ? '🔒 Админаас анимэ үзэх эрх аваагүй байна. Та админаас 1 сар буюу түүнээс дээш хугацааны эрх авч үзнэ үү.'
-        : 'Энэхүү контентыг үзэхийн тулд эрхээ идэвхжүүлнэ үү.',
+        ? '🔒 Төлбөр төлөөгүй хэрэглэгч анимэ үзэх боломжгүй! Та Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.'
+        : '🔒 Төлбөр төлөөгүй хэрэглэгч энэхүү контентыг үзэх боломжгүй. Та эрхээ идэвхжүүлнэ үү.',
     };
   }
 
@@ -136,8 +136,8 @@ export function checkUserContentAccess(
       hasAccess: false,
       reason: 'EXPIRED',
       message: movie?.type === 'anime'
-        ? '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Админаас эрхээ сунгаж үзнэ үү.'
-        : 'Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
+        ? '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Багцын эрхээ сунгаж үзнэ үү.'
+        : '⏳ Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
     };
   }
 
