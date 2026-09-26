@@ -26,14 +26,14 @@ export const LEGEND_OF_KORRA_EPISODE_LINKS: Record<number, string> = {
   2: 'https://u.pcloud.link/publink/show?code=XZi7kRJZxdYqzRRNmLkiYSY6UR8cuyWmrzEV',
   3: 'https://u.pcloud.link/publink/show?code=XZ0VkRJZI85lDhM215yCC6UwpDFj1F5UKNVX',
   4: 'https://u.pcloud.link/publink/show?code=XZla7LJZsJsk4fuqbRpRujhHkDHyOb7MIiAy',
-  5: 'https://drive.google.com/file/d/1ZHXJ42X2LmZdVfvaCq0j0Bi4wUTHDOrw/view?usp=drivesdk&usp=embed_facebook',
+  5: 'https://u.pcloud.link/publink/show?code=XZCQU4JZHL4NEa7v8OmIlHDBeMTHFQHE5NVX',
   6: 'https://u.pcloud.link/publink/show?code=XZ6a7LJZVAfp7IhHJ9fHWm0W9GunfmNfQWUk',
-  7: 'https://drive.google.com/file/d/1XeZ9tLxZxPYLRm9DEAWNYH_QMGuKPxO0/view?usp=drivesdk&usp=embed_facebook',
-  8: 'https://drive.google.com/file/d/1I4P6kTw0hY4_VW5lR-KR3kOPOO8DEUyf/view?usp=drivesdk',
+  7: 'https://u.pcloud.link/publink/show?code=XZImU4JZiLAlDSNx0AfQOeTGwgjKJVMHOu6V',
+  8: 'https://u.pcloud.link/publink/show?code=XZamU4JZFDTBhGv6OzbjGCSXxVllI4aWb75k',
   9: 'https://u.pcloud.link/publink/show?code=XZGa7LJZXWg43sVsL3yG4s7xEtjNIp8vpH77',
-  10: 'https://u.pcloud.link/publink/show?code=XZGa7LJZXWg43sVsL3yG4s7xEtjNIp8vpH77',
-  11: 'https://drive.google.com/file/d/1OOGydwzvuGvaN2qCUJ12uGqSZGuudL8t/view?usp=drivesdk&usp=embed_facebook',
-  12: 'https://drive.google.com/file/d/1BRD0TERSLKeEcEYudv0qmvDCR7tDWhmn/view?usp=drivesdk&usp=embed_facebook',
+  10: 'https://u.pcloud.link/publink/show?code=XZca7LJZa6NeqjztBKJukOmDDoS5ikCeGCv7',
+  11: 'https://u.pcloud.link/publink/show?code=XZvmU4JZKdv9DCzGYHR6IQQvfslkR5fEPLhV',
+  12: 'https://u.pcloud.link/publink/show?code=XZrmU4JZPByWkHpKqKzA4cHKgPWSWuMbzbKV',
 };
 
 export function setLegendOfKorraEpisodeLink(episodeNumber: number, link: string) {
