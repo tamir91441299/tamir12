@@ -195,6 +195,13 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const baseObj = foundKey ? map.get(foundKey) : null;
     const targetKey = foundKey || cleanId;
 
+    const parsedTimestamp =
+      u.registeredTimestamp ||
+      baseObj?.registeredTimestamp ||
+      (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-')).getTime())
+        ? new Date(u.registeredAt.replace(/\./g, '-')).getTime()
+        : Date.now());
+
     const merged: UserDetail = {
       ...baseObj,
       ...u,
@@ -208,6 +215,8 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       role: (u.email === 'tamir91441299@gmail.com' || baseObj?.email === 'tamir91441299@gmail.com') ? 'admin' : (u.role || baseObj?.role || 'user'),
       status: u.status || baseObj?.status || 'active',
       registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleDateString('mn-MN'),
+      registeredTimestamp: parsedTimestamp,
+      isMockUser: u.isMockUser ?? baseObj?.isMockUser ?? false,
       lastLogin: u.lastLogin || baseObj?.lastLogin || 'Идэвхтэй одоо',
       watchedCount: Math.max(u.watchedCount ?? 0, baseObj?.watchedCount ?? 0),
       favoriteCount: Math.max(u.favoriteCount ?? 0, baseObj?.favoriteCount ?? 0),
@@ -217,6 +226,173 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
   });
 
   return Array.from(map.values());
+}
+
+/**
+ * Sorts users so real registered users appear first, and newest registrations appear at the top.
+ */
+export function sortUsersByNewest(users: UserDetail[]): UserDetail[] {
+  return [...users].sort((a, b) => {
+    // Non-mock users always come before mock sample users
+    if (a.isMockUser && !b.isMockUser) return 1;
+    if (!a.isMockUser && b.isMockUser) return -1;
+    const timeA = a.registeredTimestamp || 0;
+    const timeB = b.registeredTimestamp || 0;
+    return timeB - timeA;
+  });
+}
+
+/**
+ * Authoritative admin action to grant anime package access to any user.
+ * Directly updates packageType to 'anime', computes expiry date,
+ * persists to Firestore, updates local caches, and notifies user in real-time.
+ */
+export async function grantAnimeAccessToUser(
+  userId: string,
+  durationDays: number,
+  customExpiryDate?: string
+): Promise<{ success: boolean; expiryDate: string; user?: UserDetail; message: string }> {
+  try {
+    let expiryStr: string;
+
+    if (customExpiryDate && customExpiryDate.trim() && customExpiryDate !== '-') {
+      expiryStr = customExpiryDate.trim();
+    } else {
+      let baseDate = new Date();
+      // Try to read current package expiry if already active to extend seamlessly
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      if (savedListStr) {
+        try {
+          const list: UserDetail[] = JSON.parse(savedListStr);
+          const current = list.find((u) => u.id === userId);
+          if (
+            current?.packageExpiry &&
+            current.packageExpiry !== '-' &&
+            current.packageExpiry !== 'Идэвхгүй' &&
+            !isNaN(new Date(current.packageExpiry).getTime())
+          ) {
+            const exp = new Date(current.packageExpiry);
+            if (exp.getTime() > Date.now()) {
+              baseDate = exp;
+            }
+          }
+        } catch {}
+      }
+
+      baseDate.setDate(baseDate.getDate() + durationDays);
+      expiryStr = baseDate.toISOString().split('T')[0];
+    }
+
+    // 1. Update Firestore document
+    const docRef = doc(db, 'users', userId);
+    await setDoc(
+      docRef,
+      {
+        packageType: 'anime',
+        packageExpiry: expiryStr,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // 2. Update local storage users list
+    let updatedUser: UserDetail | undefined;
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+      if (Array.isArray(list)) {
+        list = list.map((u) => {
+          if (u.id === userId) {
+            updatedUser = {
+              ...u,
+              packageType: 'anime',
+              packageExpiry: expiryStr,
+            };
+            return updatedUser;
+          }
+          return u;
+        });
+        localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
+      }
+    } catch {}
+
+    // 3. If target user is the currently logged-in user in this session, update session
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const activeU = JSON.parse(activeStr);
+        if (activeU.id === userId) {
+          activeU.packageType = 'anime';
+          activeU.packageExpiry = expiryStr;
+          persistActiveSession(activeU, true);
+        }
+      }
+    } catch {}
+
+    // 4. Send admin broadcast notification
+    await sendAdminNotification({
+      type: 'PACKAGE_PURCHASE',
+      title: '🎌 Анимэ эрх амжилттай олгогдлоо',
+      message: `${updatedUser?.name || 'Хэрэглэгч'} (${updatedUser?.phone || updatedUser?.email || userId})-д Анимэ үзэх эрх (${durationDays} хоног) олгогдлоо. Дуусах: ${expiryStr}`,
+      userName: updatedUser?.name,
+      userEmail: updatedUser?.email,
+      userPhone: updatedUser?.phone,
+    });
+
+    return {
+      success: true,
+      expiryDate: expiryStr,
+      user: updatedUser,
+      message: `✓ ${updatedUser?.name || 'Хэрэглэгч'}-д ${durationDays} хоногийн Анимэ эрх амжилттай олгогдлоо! (Дуусах: ${expiryStr})`,
+    };
+  } catch (err: any) {
+    console.error('Error granting anime access:', err);
+    return {
+      success: false,
+      expiryDate: '',
+      message: '⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
+    };
+  }
+}
+
+/**
+ * Revoke user package and return to Free tier
+ */
+export async function revokeUserPackage(userId: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, 'users', userId);
+    await setDoc(
+      docRef,
+      {
+        packageType: 'free',
+        packageExpiry: '-',
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+      if (Array.isArray(list)) {
+        list = list.map((u) => {
+          if (u.id === userId) {
+            return {
+              ...u,
+              packageType: 'free',
+              packageExpiry: '-',
+            };
+          }
+          return u;
+        });
+        localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
+      }
+    } catch {}
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -230,12 +406,14 @@ export async function saveUserToFirestore(
     const rawId = (user.id || (user.email ? user.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now())).trim();
     const docRef = doc(db, 'users', rawId);
 
+    const nowTimestamp = Date.now();
     const userPayload: UserDetail = {
       id: rawId,
       name: user.name || 'Хэрэглэгч',
       email: user.email || '',
       phone: user.phone || '',
-      registeredAt: user.registeredAt || new Date().toLocaleDateString('mn-MN'),
+      registeredAt: user.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      registeredTimestamp: (user as UserDetail).registeredTimestamp || (user as any).registeredTimestamp || nowTimestamp,
       role: (user as UserDetail).role || (user.email === 'tamir91441299@gmail.com' ? 'admin' : 'user'),
       status: (user as UserDetail).status || 'active',
       packageType: (user as UserDetail).packageType || 'free',
@@ -244,6 +422,7 @@ export async function saveUserToFirestore(
       lastLogin: (user as UserDetail).lastLogin || new Date().toLocaleString('mn-MN'),
       watchedCount: (user as UserDetail).watchedCount ?? 0,
       favoriteCount: (user as UserDetail).favoriteCount ?? 0,
+      isMockUser: false,
       ...extraData,
     };
 
@@ -265,7 +444,7 @@ export async function saveUserToFirestore(
         list.unshift(userPayload);
       }
 
-      list = deduplicateUserList(list);
+      list = sortUsersByNewest(deduplicateUserList(list));
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
 
       // Send real-time notification to Firebase if new user
@@ -273,7 +452,7 @@ export async function saveUserToFirestore(
         sendAdminNotification({
           type: 'NEW_USER',
           title: '🎉 Шинэ хэрэглэгч бүртгэгдлээ',
-          message: `${userPayload.name} (${userPayload.email || userPayload.phone}) системд шинээр бүртгэгдлээ.`,
+          message: `${userPayload.name} (${userPayload.phone || userPayload.email}) системд шинээр бүртгэгдлээ.`,
           userName: userPayload.name,
           userEmail: userPayload.email,
           userPhone: userPayload.phone,
@@ -300,8 +479,17 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       (snapshot) => {
         const rawList: UserDetail[] = [];
 
-        // 1. Preload initial demo users
-        INITIAL_USERS.forEach((u) => rawList.push(u));
+        // 1. Preload real-time Firestore docs first (highest authority)
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data() as UserDetail;
+          if (d) {
+            rawList.push({
+              ...d,
+              id: docSnap.id || d.id,
+              isMockUser: false,
+            });
+          }
+        });
 
         // 2. Preload localStorage registered users list
         try {
@@ -310,7 +498,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
             const parsed: UserDetail[] = JSON.parse(savedList);
             if (Array.isArray(parsed)) {
               parsed.forEach((u) => {
-                if (u) rawList.push(u);
+                if (u) rawList.push({ ...u, isMockUser: false });
               });
             }
           }
@@ -329,54 +517,50 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
                 email: u.email || 'user@ioio.mn',
                 phone: u.phone || '99110000',
                 registeredAt: u.registeredAt || new Date().toLocaleDateString('mn-MN'),
+                registeredTimestamp: u.registeredTimestamp || Date.now(),
                 role: u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
                 status: 'active',
-                packageType: 'free',
-                packageExpiry: 'Идэвхгүй',
-                walletBalance: 0,
+                packageType: u.packageType || 'free',
+                packageExpiry: u.packageExpiry || 'Идэвхгүй',
+                walletBalance: u.walletBalance ?? 0,
                 lastLogin: 'Идэвхтэй одоо',
                 watchedCount: 1,
                 favoriteCount: 0,
+                isMockUser: false,
               });
             }
           }
         } catch (e) {}
 
-        // 4. Merge with real-time Firestore docs
-        snapshot.forEach((docSnap) => {
-          const d = docSnap.data() as UserDetail;
-          if (d) {
-            rawList.push({
-              ...d,
-              id: docSnap.id || d.id,
-            });
-          }
-        });
+        // 4. Fallback demo users appended at the end
+        INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
 
         const deduplicated = deduplicateUserList(rawList);
-        callback(deduplicated);
+        const sorted = sortUsersByNewest(deduplicated);
+        callback(sorted);
       },
       (err) => {
         console.error('Error listening to users from Firestore:', err);
         // Fallback to local
-        const rawList: UserDetail[] = [...INITIAL_USERS];
+        const rawList: UserDetail[] = [];
         try {
           const savedList = localStorage.getItem('ioio_registered_users_list');
           if (savedList) {
             const parsed: UserDetail[] = JSON.parse(savedList);
             if (Array.isArray(parsed)) {
               parsed.forEach((u) => {
-                if (u) rawList.push(u);
+                if (u) rawList.push({ ...u, isMockUser: false });
               });
             }
           }
         } catch (e) {}
-        callback(deduplicateUserList(rawList));
+        INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
+        callback(sortUsersByNewest(deduplicateUserList(rawList)));
       }
     );
   } catch (err) {
     console.error('Firestore users subscription failed:', err);
-    callback(INITIAL_USERS);
+    callback(sortUsersByNewest(INITIAL_USERS));
     return () => {};
   }
 }
@@ -388,7 +572,7 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
   try {
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
-    const rawList: UserDetail[] = [...INITIAL_USERS];
+    const rawList: UserDetail[] = [];
 
     snapshot.forEach((docSnap) => {
       const d = docSnap.data() as UserDetail;
@@ -396,14 +580,29 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
         rawList.push({
           ...d,
           id: docSnap.id || d.id,
+          isMockUser: false,
         });
       }
     });
 
-    return deduplicateUserList(rawList);
+    try {
+      const savedList = localStorage.getItem('ioio_registered_users_list');
+      if (savedList) {
+        const parsed: UserDetail[] = JSON.parse(savedList);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u) => {
+            if (u) rawList.push({ ...u, isMockUser: false });
+          });
+        }
+      }
+    } catch {}
+
+    INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
+
+    return sortUsersByNewest(deduplicateUserList(rawList));
   } catch (err) {
     console.error('Error fetching users from Firestore:', err);
-    return INITIAL_USERS;
+    return sortUsersByNewest(INITIAL_USERS);
   }
 }
 

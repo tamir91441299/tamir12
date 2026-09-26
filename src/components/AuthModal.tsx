@@ -29,12 +29,14 @@ export interface UserAccount {
   email: string;
   phone: string;
   registeredAt: string;
+  registeredTimestamp?: number;
   role?: 'admin' | 'user' | 'vip';
   status?: 'active' | 'blocked';
   packageType?: 'full_vip' | 'movie' | 'anime' | 'free';
   packageExpiry?: string;
   walletBalance?: number;
   purchasedMovies?: string[];
+  isMockUser?: boolean;
 }
 
 interface AuthModalProps {
@@ -193,18 +195,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         const finalEmail = cleanEmail || `${cleanPhone || Date.now()}@flicknime.mn`;
         const newUserRole = finalEmail === 'tamir91441299@gmail.com' ? ('admin' as const) : ('user' as const);
+        const now = new Date();
+        const formattedRegisteredAt = `${now.toLocaleDateString('mn-MN')} ${now.toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' })}`;
+        const nowTimestamp = now.getTime();
+
         const newUser: UserAccount = {
-          id: 'user_' + Date.now(),
+          id: 'user_' + nowTimestamp,
           name: cleanName,
           email: finalEmail,
           phone: cleanPhone || '99110000',
-          registeredAt: new Date().toLocaleDateString('mn-MN'),
+          registeredAt: formattedRegisteredAt,
+          registeredTimestamp: nowTimestamp,
           role: newUserRole,
           status: 'active',
           packageType: 'free',
           packageExpiry: '-',
           walletBalance: 0,
           purchasedMovies: [],
+          isMockUser: false,
         };
 
         // Save credentials into both Firestore and LocalStorage
@@ -223,6 +231,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           packageExpiry: '-',
           walletBalance: 0,
           purchasedMovies: [],
+          registeredTimestamp: nowTimestamp,
+          isMockUser: false,
         });
 
         // Persist session securely so user never gets logged out on refresh

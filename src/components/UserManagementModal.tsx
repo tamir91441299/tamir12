@@ -53,7 +53,10 @@ import {
   subscribeNotificationsFromFirestore,
   deduplicateUserList,
   sendAdminNotification,
-  AppNotification
+  AppNotification,
+  grantAnimeAccessToUser,
+  revokeUserPackage,
+  sortUsersByNewest
 } from '../lib/userService';
 import {
   PromoCode,
@@ -82,6 +85,8 @@ export interface UserDetail extends UserAccount {
   lastLogin: string;
   watchedCount: number;
   favoriteCount: number;
+  registeredTimestamp?: number;
+  isMockUser?: boolean;
 }
 
 interface UserManagementModalProps {
@@ -105,7 +110,9 @@ export const INITIAL_USERS: UserDetail[] = [
     packageType: 'full_vip',
     packageExpiry: '2027-01-01',
     walletBalance: 0,
-    registeredAt: '2026-01-10',
+    registeredAt: '2026-01-10 12:00',
+    registeredTimestamp: new Date('2026-01-10').getTime(),
+    isMockUser: true,
     lastLogin: 'Өнөөдөр, 21:15',
     watchedCount: 42,
     favoriteCount: 15,
@@ -120,7 +127,9 @@ export const INITIAL_USERS: UserDetail[] = [
     packageType: 'full_vip',
     packageExpiry: '2026-10-15',
     walletBalance: 0,
-    registeredAt: '2026-02-01',
+    registeredAt: '2026-02-01 14:30',
+    registeredTimestamp: new Date('2026-02-01').getTime(),
+    isMockUser: true,
     lastLogin: 'Өчигдөр, 18:30',
     watchedCount: 28,
     favoriteCount: 8,
@@ -135,7 +144,9 @@ export const INITIAL_USERS: UserDetail[] = [
     packageType: 'anime',
     packageExpiry: '2026-09-01',
     walletBalance: 0,
-    registeredAt: '2026-03-12',
+    registeredAt: '2026-03-12 11:15',
+    registeredTimestamp: new Date('2026-03-12').getTime(),
+    isMockUser: true,
     lastLogin: 'Өнөөдөр, 14:20',
     watchedCount: 19,
     favoriteCount: 6,
@@ -150,7 +161,9 @@ export const INITIAL_USERS: UserDetail[] = [
     packageType: 'movie',
     packageExpiry: '2026-08-30',
     walletBalance: 0,
-    registeredAt: '2026-04-05',
+    registeredAt: '2026-04-05 09:40',
+    registeredTimestamp: new Date('2026-04-05').getTime(),
+    isMockUser: true,
     lastLogin: '3 хоногийн өмнө',
     watchedCount: 11,
     favoriteCount: 3,
@@ -165,7 +178,9 @@ export const INITIAL_USERS: UserDetail[] = [
     packageType: 'free',
     packageExpiry: '-',
     walletBalance: 0,
-    registeredAt: '2026-05-20',
+    registeredAt: '2026-05-20 16:50',
+    registeredTimestamp: new Date('2026-05-20').getTime(),
+    isMockUser: true,
     lastLogin: '2 долоо хоногийн өмнө',
     watchedCount: 2,
     favoriteCount: 0,
@@ -244,6 +259,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [promoCodesList, setPromoCodesList] = useState<PromoCode[]>(() => getAllPromoCodes());
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [animeGrantOpenUserId, setAnimeGrantOpenUserId] = useState<string | null>(null);
+  const [copiedPhoneUserId, setCopiedPhoneUserId] = useState<string | null>(null);
+  const [animeGrantLoading, setAnimeGrantLoading] = useState<boolean>(false);
 
   // New Window Security Passcode state
   const [currentPasscode, setCurrentPasscode] = useState<string>(() => getProtectedWindowPasscode());
@@ -569,12 +587,62 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const saveUsersState = (updatedUsers: UserDetail[]) => {
-    const deduplicated = deduplicateUserList(updatedUsers);
+    const deduplicated = sortUsersByNewest(deduplicateUserList(updatedUsers));
     setUsers(deduplicated);
     localStorage.setItem('ioio_registered_users_list', JSON.stringify(deduplicated));
     deduplicated.forEach((u) => {
       saveUserToFirestore(u);
     });
+  };
+
+  const isUserNew = (u: UserDetail): boolean => {
+    if (u.isMockUser) return false;
+    if (u.registeredTimestamp && Date.now() - u.registeredTimestamp < 7 * 86400 * 1000) {
+      return true;
+    }
+    if (u.registeredAt && (u.registeredAt.includes('2026-09') || u.registeredAt.includes('2026.09') || u.registeredAt.includes('2026/09'))) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleDirectGrantAnime = async (user: UserDetail, durationDays: number, customExpiry?: string) => {
+    setAnimeGrantLoading(true);
+    const res = await grantAnimeAccessToUser(user.id, durationDays, customExpiry);
+    setAnimeGrantLoading(false);
+    if (res.success && res.user) {
+      const updated = users.map((u) => (u.id === user.id ? res.user! : u));
+      saveUsersState(updated);
+      if (selectedUser && selectedUser.id === user.id) {
+        setSelectedUser(res.user);
+      }
+      alert(res.message);
+    } else {
+      alert(res.message);
+    }
+  };
+
+  const handleRevokeAnime = async (user: UserDetail) => {
+    if (!confirm(`${user.name} хэрэглэгчийн анимэ эрхийг цуцалж "Үнэгүй" төлөвт шилжүүлэх үү?`)) return;
+    setAnimeGrantLoading(true);
+    await revokeUserPackage(user.id);
+    setAnimeGrantLoading(false);
+    const updated = users.map((u) =>
+      u.id === user.id
+        ? {
+            ...u,
+            packageType: 'free' as const,
+            packageExpiry: '-',
+            role: (u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user') as const,
+          }
+        : u
+    );
+    saveUsersState(updated);
+    if (selectedUser && selectedUser.id === user.id) {
+      const updatedUser = updated.find((u) => u.id === user.id);
+      if (updatedUser) setSelectedUser(updatedUser);
+    }
+    alert(`✓ ${user.name} хэрэглэгчийн анимэ эрхийг цуцаллаа.`);
   };
 
   const handleToggleStatus = (id: string) => {

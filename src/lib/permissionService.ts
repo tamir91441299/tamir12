@@ -65,9 +65,25 @@ export interface AccessResult {
 }
 
 /**
+ * Helper to determine whether a given content is an anime or anime series.
+ * On FlickNime, almost all content (Hunter x Hunter, Korra, Spy x Family, Megalo Box, 91 Days, Kami Kuzu Idol, Monkart, etc.) are anime.
+ */
+export function isAnimeContent(movie: Movie | null | undefined): boolean {
+  if (!movie) return true; // Default to anime protection
+  if (movie.id === 'm_delhiin_suirel') return false; // Single standalone Zombie action movie
+  if (movie.type === 'anime') return true;
+  if (movie.type === 'series') return true;
+  if (Array.isArray(movie.genres) && movie.genres.some((g) => /anime|animation|анимэ/i.test(g))) return true;
+  if (Array.isArray(movie.episodes) && movie.episodes.length > 1) return true;
+  return movie.type !== 'movie';
+}
+
+/**
  * Centralized, authoritative access check for all media playback.
  * Enforces that unauthorized users (erh awaaguu hereglegch / tolbor toloogu hereglegch) CANNOT watch content.
  * CRITICAL RULE: If a user has sent a recharge request that is still pending, they CANNOT watch content until admin approves it.
+ * CRITICAL RULE: For Anime, users MUST have an active 'anime' or 'full_vip' package or be an Admin.
+ * Single movie purchases (1,000₮) DO NOT grant access to anime content!
  */
 export function checkUserContentAccess(
   user: UserAccount | null | undefined,
@@ -79,7 +95,7 @@ export function checkUserContentAccess(
     return {
       hasAccess: false,
       reason: 'UNAUTHENTICATED',
-      message: '🔒 Төлбөр төлөөгүй болон бүртгэлгүй хэрэглэгч үзэх боломжгүй. Эхлээд системд нэвтэрч эрхээ авна уу.',
+      message: '🔒 Бүртгэлгүй болон анимэ эрх аваагүй хэрэглэгч үзэх боломжгүй. Эхлээд системд нэвтэрч эрхээ авна уу.',
     };
   }
 
@@ -110,7 +126,56 @@ export function checkUserContentAccess(
     };
   }
 
-  // 4. Specifically purchased individual movie check
+  const isAnime = isAnimeContent(movie);
+  const packageType = (user as any).packageType;
+  const packageExpiry = (user as any).packageExpiry;
+
+  // 5. CRITICAL: Strict Anime Package Enforcement
+  // Anime content can ONLY be watched by users with an active 'anime' or 'full_vip' package.
+  if (isAnime) {
+    // Free or undefined package has NO access (Эрх аваагүй хэрэглэгч)
+    if (!packageType || packageType === 'free') {
+      return {
+        hasAccess: false,
+        reason: 'NO_PACKAGE',
+        message: '🔒 Анимэ үзэх эрх аваагүй байна! Та админаас Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.',
+      };
+    }
+
+    // Check expiration
+    if (isPackageExpired(packageExpiry)) {
+      return {
+        hasAccess: false,
+        reason: 'EXPIRED',
+        message: '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Анимэ эрхээ сунгаж үзнэ үү.',
+      };
+    }
+
+    // Full VIP has access
+    if (packageType === 'full_vip') {
+      return {
+        hasAccess: true,
+        reason: 'GRANTED',
+      };
+    }
+
+    // Anime package has access to anime content
+    if (packageType === 'anime') {
+      return {
+        hasAccess: true,
+        reason: 'GRANTED',
+      };
+    }
+
+    // Movie package or other package trying to watch anime
+    return {
+      hasAccess: false,
+      reason: 'NO_PACKAGE',
+      message: '🔒 Энэхүү анимэг үзэхийн тулд Анимэ багц эсвэл FULL VIP эрх шаардлагатай.',
+    };
+  }
+
+  // 6. Non-Anime Standalone Movie Check (e.g. single cinema film)
   if (isMoviePurchased) {
     return {
       hasAccess: true,
@@ -127,63 +192,34 @@ export function checkUserContentAccess(
     }
   }
 
-  // 5. Check Package Type and Expiration
-  const packageType = (user as any).packageType;
-  const packageExpiry = (user as any).packageExpiry;
-
-  // Free or undefined package has NO access (Төлбөр төлөөгүй хэрэглэгч)
+  // Check Package Type for non-anime
   if (!packageType || packageType === 'free') {
     return {
       hasAccess: false,
       reason: 'NO_PACKAGE',
-      message: movie?.type === 'anime'
-        ? '🔒 Төлбөр төлөөгүй хэрэглэгч анимэ үзэх боломжгүй! Та Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.'
-        : '🔒 Төлбөр төлөөгүй хэрэглэгч энэхүү контентыг үзэх боломжгүй. Та эрхээ идэвхжүүлнэ үү.',
+      message: '🔒 Энэхүү киног үзэхийн тулд Кино багц эсвэл VIP эрх авна уу.',
     };
   }
 
-  // Check expiration
   if (isPackageExpired(packageExpiry)) {
     return {
       hasAccess: false,
       reason: 'EXPIRED',
-      message: movie?.type === 'anime'
-        ? '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Багцын эрхээ сунгаж үзнэ үү.'
-        : '⏳ Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
+      message: '⏳ Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
     };
   }
 
-  // Full VIP has access to all content
-  if (packageType === 'full_vip') {
+  if (packageType === 'full_vip' || packageType === 'movie') {
     return {
       hasAccess: true,
       reason: 'GRANTED',
     };
   }
 
-  // Anime package has access to anime content (Granted for 1 month or longer by admin)
-  if (movie?.type === 'anime' && packageType === 'anime') {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
-  // Movie package has access to non-anime movies/series
-  if (movie?.type !== 'anime' && packageType === 'movie') {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
-  // Mismatched package (e.g. movie package trying to watch anime)
   return {
     hasAccess: false,
     reason: 'NO_PACKAGE',
-    message: movie?.type === 'anime'
-      ? '🔒 Админаас анимэ үзэх эрх аваагүй байна. Та админаас 1 сар буюу түүнээс дээш хугацааны Анимэ багцын эрх авна уу.'
-      : 'Энэ киног үзэхийн тулд Кино багц эсвэл VIP эрх шаардлагатай.',
+    message: 'Энэ киног үзэхийн тулд Кино багц эсвэл VIP эрх шаардлагатай.',
   };
 }
 
