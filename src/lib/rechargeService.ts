@@ -14,6 +14,7 @@ export interface RechargeRequest {
   planLabel: string;
   durationDays: number;
   amount: number;
+  packageType: 'anime'; // Зөвхөн анимэ эрх олгогдоно
   method: 'monpay' | 'qpay' | 'wallet' | 'bank';
   status: 'pending' | 'approved' | 'rejected';
   note?: string;
@@ -23,6 +24,67 @@ export interface RechargeRequest {
 }
 
 const STORAGE_KEY = 'ioio_recharge_requests';
+
+/**
+ * Check if the given user currently has an unapproved/pending recharge request.
+ * While pending, content must remain strictly locked until admin approval.
+ */
+export function hasUserPendingRechargeRequest(user?: { id?: string; phone?: string; email?: string } | null): boolean {
+  if (!user) return false;
+  try {
+    const localStr = localStorage.getItem(STORAGE_KEY);
+    if (!localStr) return false;
+    const list: RechargeRequest[] = JSON.parse(localStr);
+    if (!Array.isArray(list)) return false;
+
+    const cleanPhone = (user.phone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (user.email || '').trim().toLowerCase();
+    const userId = user.id || '';
+
+    return list.some((req) => {
+      if (req.status !== 'pending') return false;
+      const reqPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+      const reqEmail = (req.userEmail || '').trim().toLowerCase();
+      return (
+        (userId && req.userId === userId) ||
+        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanEmail && reqEmail === cleanEmail)
+      );
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Get user's latest recharge request if any
+ */
+export function getUserLatestRechargeRequest(user?: { id?: string; phone?: string; email?: string } | null): RechargeRequest | null {
+  if (!user) return null;
+  try {
+    const localStr = localStorage.getItem(STORAGE_KEY);
+    if (!localStr) return null;
+    const list: RechargeRequest[] = JSON.parse(localStr);
+    if (!Array.isArray(list)) return null;
+
+    const cleanPhone = (user.phone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (user.email || '').trim().toLowerCase();
+    const userId = user.id || '';
+
+    const found = list.find((req) => {
+      const reqPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+      const reqEmail = (req.userEmail || '').trim().toLowerCase();
+      return (
+        (userId && req.userId === userId) ||
+        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanEmail && reqEmail === cleanEmail)
+      );
+    });
+    return found || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function submitRechargeRequest(data: {
   userId: string;
@@ -48,6 +110,7 @@ export async function submitRechargeRequest(data: {
       planLabel: data.planLabel,
       durationDays: data.durationDays,
       amount: data.amount,
+      packageType: 'anime', // Цэнэглэлтийн хүсэлтээр зөвхөн анимэ эрх олгоно
       method: data.method,
       status: 'pending',
       note: data.note || '',
@@ -74,11 +137,11 @@ export async function submitRechargeRequest(data: {
       console.warn('Firestore setDoc recharge_requests warning:', fsErr);
     }
 
-    // Notify Admin
+    // Notify Admin (Explicitly mentions Anime only permission)
     sendAdminNotification({
       type: 'TOP_UP_REQUEST',
-      title: '💳 Цэнэглэлт & Анимэ эрх авах шинэ хүсэлт',
-      message: `${data.userName} (${data.userPhone || data.userEmail}) ${data.planLabel} (${data.amount.toLocaleString()}₮) багц авах хүсэлт илгээлээ.`,
+      title: '🎌 Зөвхөн Анимэ эрх авах шинэ цэнэглэлтийн хүсэлт',
+      message: `${data.userName} (${data.userPhone || data.userEmail}) ${data.planLabel} (${data.amount.toLocaleString()}₮) шилжүүлж ЗӨВХӨН АНИМЭ үзэх эрх авах хүсэлт илгээлээ.`,
       userName: data.userName,
       userEmail: data.userEmail,
       userPhone: data.userPhone,
@@ -87,7 +150,7 @@ export async function submitRechargeRequest(data: {
     return {
       success: true,
       id,
-      message: 'Таны цэнэглэлтийн хүсэлт амжилттай илгээгдлээ! Админ шалгаад эрх олгоно.',
+      message: 'Таны цэнэглэлтийн хүсэлт амжилттай илгээгдлээ! Админ шалгаад зөвхөн анимэ үзэх эрх олгоно.',
     };
   } catch (err: any) {
     console.error('Error submitting recharge request:', err);

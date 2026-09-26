@@ -52,6 +52,7 @@ import {
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
   deduplicateUserList,
+  sendAdminNotification,
   AppNotification
 } from '../lib/userService';
 import {
@@ -467,10 +468,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleApproveRecharge = async (req: RechargeRequest) => {
     if (!isAdmin) return;
-    const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн ${req.planLabel} (${req.amount.toLocaleString()}₮)-ийг баталгаажуулж анимэ үзэх эрхийг нээх үү?`;
+    const durationDays = req.durationDays || ((req.planId as string) === '15d' ? 15 : (req.planId as string) === '2m' ? 60 : (req.planId as string) === '3m' ? 90 : (req.planId as string) === '6m' ? 180 : (req.planId as string) === '1y' ? 365 : 30);
+    const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн ${req.planLabel} (${req.amount.toLocaleString()}₮)-ийн цэнэглэлтийг баталгаажуулж ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${durationDays} хоног) олгох уу?`;
     if (!confirm(confirmMsg)) return;
 
-    await updateRechargeRequestStatus(req.id, 'approved', 'Админ төлбөрийг шалгаж баталгаажууллаа.');
+    await updateRechargeRequestStatus(req.id, 'approved', 'Админ төлбөрийг шалгаж зөвхөн анимэ эрх олголоо.');
 
     // Find user by id, email, or phone
     const targetUser = users.find(
@@ -480,43 +482,81 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         (req.userPhone && u.phone && u.phone === req.userPhone)
     );
 
-    const durationDays = req.durationDays || ((req.planId as string) === '15d' ? 15 : (req.planId as string) === '2m' ? 60 : 30);
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + durationDays);
-    const expiryStr = expiryDate.toISOString().split('T')[0];
+    // If user already has an active anime package, extend from their current expiry date
+    let baseDate = new Date();
+    if (
+      targetUser &&
+      targetUser.packageType === 'anime' &&
+      targetUser.packageExpiry &&
+      targetUser.packageExpiry !== '-' &&
+      targetUser.packageExpiry !== 'Идэвхгүй'
+    ) {
+      const currentExpiry = new Date(targetUser.packageExpiry.replace(/\./g, '-').replace(/\//g, '-'));
+      if (!isNaN(currentExpiry.getTime()) && currentExpiry.getTime() > Date.now()) {
+        baseDate = currentExpiry;
+      }
+    }
+    baseDate.setDate(baseDate.getDate() + durationDays);
+    const expiryStr = baseDate.toISOString().split('T')[0];
+
+    const updatedUserDetail: UserDetail = {
+      ...(targetUser || {}),
+      id: targetUser ? targetUser.id : req.userId,
+      name: targetUser?.name || req.userName,
+      email: targetUser?.email || req.userEmail || `${req.userPhone}@user.ioio.mn`,
+      phone: targetUser?.phone || req.userPhone,
+      registeredAt: targetUser?.registeredAt || new Date().toISOString().split('T')[0],
+      role: targetUser?.role === 'admin' ? 'admin' : 'user',
+      status: 'active',
+      packageType: 'anime', // CRITICAL: Цэнэглэх хүсэлтээр ЗӨВХӨН анимэ эрх олгоно
+      packageExpiry: expiryStr,
+      walletBalance: targetUser?.walletBalance ?? 0,
+      lastLogin: targetUser?.lastLogin || 'Идэвхтэй',
+      watchedCount: targetUser?.watchedCount ?? 0,
+      favoriteCount: targetUser?.favoriteCount ?? 0,
+    };
 
     if (targetUser) {
       const updated = users.map((u) => {
         if (u.id === targetUser.id) {
-          return {
-            ...u,
-            packageType: 'anime' as const,
-            packageExpiry: expiryStr,
-          };
+          return updatedUserDetail;
         }
         return u;
       });
       saveUsersState(updated);
     } else {
-      const newUserRecord: UserDetail = {
-        id: req.userId,
-        name: req.userName,
-        email: req.userEmail || `${req.userPhone}@user.ioio.mn`,
-        phone: req.userPhone,
-        registeredAt: new Date().toISOString().split('T')[0],
-        role: 'user',
-        status: 'active',
-        packageType: 'anime',
-        packageExpiry: expiryStr,
-        walletBalance: 0,
-        lastLogin: 'Идэвхтэй',
-        watchedCount: 0,
-        favoriteCount: 0,
-      };
-      saveUsersState([...users, newUserRecord]);
+      saveUsersState([...users, updatedUserDetail]);
     }
 
-    alert(`🎉 ${req.userName} хэрэглэгчийн анимэ эрх (${req.planLabel}) амжилттай нээгдлээ! Хэрэглэгч одоо бүх анимэг үзэх боломжтой боллоо.`);
+    // If current logged-in user matches this user, update active session immediately
+    if (
+      currentUser &&
+      (currentUser.id === updatedUserDetail.id ||
+        (currentUser.email && currentUser.email.toLowerCase() === updatedUserDetail.email.toLowerCase()) ||
+        (currentUser.phone && currentUser.phone === updatedUserDetail.phone))
+    ) {
+      try {
+        const updatedSession = {
+          ...currentUser,
+          packageType: 'anime' as const,
+          packageExpiry: expiryStr,
+          status: 'active' as const,
+        };
+        localStorage.setItem('ioio_user', JSON.stringify(updatedSession));
+        localStorage.setItem('ioio_active_session', JSON.stringify(updatedSession));
+      } catch (e) {}
+    }
+
+    sendAdminNotification({
+      type: 'PACKAGE_PURCHASE',
+      title: '🎌 Зөвхөн Анимэ эрх нээгдлээ',
+      message: `${req.userName} хэрэглэгчийн хүсэлтийг баталгаажуулж зөвхөн АНИМЭ үзэх эрх (${req.planLabel}, ${durationDays} хоног, дуусах: ${expiryStr}) олголоо.`,
+      userName: req.userName,
+      userPhone: req.userPhone,
+      userEmail: req.userEmail,
+    });
+
+    alert(`🎉 ${req.userName} хэрэглэгчид ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${req.planLabel}, ${durationDays} хоног) амжилттай олгогдлоо!\n\nХүчинтэй хугацаа: ${expiryStr} хүртэл.`);
   };
 
   const handleRejectRecharge = async (req: RechargeRequest) => {
@@ -2029,10 +2069,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-                    💳 Хэрэглэгчдийн Төлбөр & Цэнэглэлтийн Хүсэлтүүд
+                    <span>💳 Цэнэглэлтийн Хүсэлтүүд</span>
+                    <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      🎌 Зөвхөн Анимэ Эрх
+                    </span>
                   </h3>
                   <p className="text-xs text-zinc-400">
-                    Эрх аваагүй хэрэглэгчид MonPay / Дансаар шилжүүлэг хийгээд энд хүсэлт илгээнэ. Админ шалгаад эрхийг нь шууд нээнэ.
+                    Эрх аваагүй хэрэглэгчид MonPay / Дансаар шилжүүлэг хийгээд энд хүсэлт илгээнэ. Админ шалгаад <strong>ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ</strong> олгоно.
                   </p>
                 </div>
               </div>
@@ -2061,6 +2104,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Exclusive Anime Permission Policy Banner */}
+            <div className="bg-gradient-to-r from-rose-950/40 via-zinc-900 to-rose-950/40 border border-rose-500/30 p-3 rounded-xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-rose-300">
+                <span className="text-base">🎌</span>
+                <span className="font-bold">Журам:</span>
+                <span className="text-zinc-300">
+                  Энэ хэсгийн хүсэлтийг баталгаажуулахад хэрэглэгчид <strong>зөвхөн Анимэ үзэх эрх (Anime Package)</strong> олгогдоно. Кино эсвэл бусад эрх олгогдохгүй.
+                </span>
+              </div>
+              <span className="bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[10px] font-black px-2.5 py-1 rounded-full shrink-0">
+                🎌 Зөвхөн Анимэ Эрх
+              </span>
             </div>
 
             {/* Filter and Search */}
@@ -2142,6 +2199,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             <Phone className="w-3 h-3 text-amber-400" />
                             {req.userPhone}
                           </span>
+                          <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1">
+                            🎌 Зөвхөн Анимэ эрх
+                          </span>
                           {req.status === 'pending' ? (
                             <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow">
                               ⏳ Хүлээгдэж байна
@@ -2159,7 +2219,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
                         <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-300">
                           <span className="font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
-                            {req.planLabel}
+                            {req.planLabel} ({req.durationDays || 30} хоног)
                           </span>
                           <span className="font-black text-rose-400 font-mono text-sm">
                             {req.amount.toLocaleString()} ₮
@@ -2204,13 +2264,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
                             >
                               <CheckCircle className="w-4 h-4" />
-                              <span>Шалгасан, Анимэ Эрх Нээх</span>
+                              <span>Шалгасан, Зөвхөн Анимэ Эрх Олгох</span>
                             </button>
                           </>
                         ) : req.status === 'approved' ? (
                           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
                             <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            <span>Эрх нээгдсэн ✓</span>
+                            <span>Зөвхөн Анимэ эрх нээгдсэн ✓</span>
                           </div>
                         ) : (
                           <div className="text-xs text-zinc-500 italic">

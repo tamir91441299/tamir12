@@ -22,7 +22,7 @@ export function formatHunterXHunterDriveLink(driveIdOrUrl: string): string {
  */
 export const HUNTER_X_HUNTER_EPISODE_LINKS: Record<number, string> = {
   // Arc 1: Хантерын Шалгалт (Hunter Exam Arc) - 1-21 анги
-  1: 'https://drive.google.com/file/d/1hunter_x_hunter_ep1/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZ1LU4JZCt8ilpcoo3mBgAjJBjcl0SxlPvk7',
   2: 'https://drive.google.com/file/d/1hunter_x_hunter_ep2/view?usp=drivesdk',
   3: 'https://drive.google.com/file/d/1hunter_x_hunter_ep3/view?usp=drivesdk',
   4: 'https://drive.google.com/file/d/1hunter_x_hunter_ep4/view?usp=drivesdk',
@@ -392,8 +392,8 @@ export const HUNTER_X_HUNTER: Movie = {
   title: 'Hunter x Hunter (2011)',
   titleMongolian: 'Хантэр х Хантэр (Hunter x Hunter)',
   type: 'anime',
-  poster: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=700&q=80',
-  backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80',
+  poster: 'https://tse3.mm.bing.net/th/id/OIP.Hs8e0KneebfdE-5KIZgQcAAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
+  backdrop: 'https://tse4.mm.bing.net/th/id/OIP.SSSsg3xpzlb87IlINixnCQHaDx?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2011,
   duration: '148 анги (Бүрэн цуврал)',
   rating: 9.8,

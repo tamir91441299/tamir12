@@ -197,9 +197,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
   // 2. Анимэ үзэх эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх анги ТҮГЖЭЭТЭЙ)
   // 3. Зөвхөн Анимэ багцын эрх, VIP эсвэл тухайн контентын эрхийг худалдан авсан хэрэглэгчид үзнэ
+  // 4. Шилжүүлгийн хүсэлт илгээсэн бол админ шалгаж баталгаажуулах хүртэл ТҮГЖЭЭТЭЙ байна
+  const accessResult = checkUserContentAccess(currentUser, movie, isPurchased);
   const userHasAccessToEpisode = (_epNumber: number = 1): boolean => {
-    const res = checkUserContentAccess(currentUser, movie, isPurchased);
-    return res.hasAccess;
+    return checkUserContentAccess(currentUser, movie, isPurchased).hasAccess;
   };
 
   const handleEpisodeSelect = (epNumber: number) => {
@@ -213,9 +214,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       return;
     }
 
-    const hasAccess = userHasAccessToEpisode(epNumber);
-    if (hasAccess) {
+    const currentAccess = checkUserContentAccess(currentUser, movie, isPurchased);
+    if (currentAccess.hasAccess) {
       onPlay(movie, epNumber);
+    } else if (currentAccess.reason === 'PENDING_APPROVAL') {
+      alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
     } else {
       // Анимэ эрхээ аваагүй тул уг анги түгжээтэй, төлбөр төлөх эсвэл багц авах цонх нээнэ
       if (onRequestPurchase) {
@@ -465,8 +468,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
                       return;
                     }
-                    if (!userHasAccessToEpisode(1)) {
-                      if (onRequestPurchase) {
+                    const chk = checkUserContentAccess(currentUser, movie, isPurchased);
+                    if (!chk.hasAccess) {
+                      if (chk.reason === 'PENDING_APPROVAL') {
+                        alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
+                      } else if (onRequestPurchase) {
                         onRequestPurchase(movie);
                       } else {
                         alert('🔒 Анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та Анимэ багцын эрхээ авна уу.');
@@ -624,8 +630,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
                         return;
                       }
-                      if (!userHasAccessToEpisode(1)) {
-                        if (onRequestPurchase) {
+                      const chk = checkUserContentAccess(currentUser, movie, isPurchased);
+                      if (!chk.hasAccess) {
+                        if (chk.reason === 'PENDING_APPROVAL') {
+                          alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
+                        } else if (onRequestPurchase) {
                           onRequestPurchase(movie);
                         } else {
                           alert('🔒 Анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та Анимэ багцын эрхээ авна уу.');

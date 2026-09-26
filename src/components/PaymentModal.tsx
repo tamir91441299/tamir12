@@ -95,7 +95,7 @@ const PLANS: PlanConfig[] = [
     durationDays: 365,
     durationMonths: 12,
     price: 40000,
-    badge: 'Бүтэн жил VIP',
+    badge: 'Бүтэн жил Анимэ',
     badgeStyle: 'bg-gradient-to-r from-amber-400 to-orange-500 text-black font-black',
   },
 ];
@@ -243,7 +243,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     if (res.success) {
       setTopUpRequestSent(true);
       setTopUpSuccessNotice(
-        `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах хүсэлт Админ Тамирт илгээгдлээ! Төлбөр шалгагдаж админ баталгаажуулмагц анимэ эрх тань автоматаар идэвхжинэ.`
+        `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах шилжүүлгийн хүсэлт Админ Тамирт илгээгдлээ! Админ Тамир шалгаж баталгаажуулах хүртэл анимэ ТҮГЖЭЭТЭЙ байх бөгөөд админ баталгаажуулсны дараа таны анимэ эрх автоматаар нээгдэнэ.`
       );
     } else {
       alert(res.message);
@@ -740,22 +740,29 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </span>
             </div>
           ) : topUpRequestSent ? (
-            <div className="bg-gradient-to-b from-rose-950/70 to-zinc-900 border border-rose-500/60 text-rose-200 text-xs p-4 rounded-xl space-y-3 animate-in zoom-in-95 shadow-xl">
+            <div className="bg-gradient-to-b from-amber-950/70 to-zinc-900 border border-amber-500/60 text-amber-200 text-xs p-4 rounded-xl space-y-3 animate-in zoom-in-95 shadow-xl">
               <div className="flex items-start gap-2.5">
-                <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="text-white font-black text-sm">
-                    📩 Цэнэглэлтийн хүсэлт Админ Тамирт илгээгдлээ!
+                  <p className="text-white font-black text-sm flex items-center gap-1.5">
+                    <span>📩 Шилжүүлгийн хүсэлт илгээгдлээ</span>
+                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      ⏳ Админ шалгаж байна
+                    </span>
                   </p>
                   <p className="text-[11px] text-zinc-300 leading-relaxed">
                     {topUpSuccessNotice ||
-                      `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах хүсэлт бүртгэгдлээ. Админ Тамир төлбөрийг шалгаад таны эрхийг системд баталгаажуулмагц анимэ шууд нээгдэнэ.`}
+                      `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах шилжүүлгийн хүсэлт бүртгэгдлээ. Админ Тамир төлбөрийг шалгаж системд БАТАЛГААЖУУЛАХ хүртэл анимэ ТҮГЖЭЭТЭЙ байна.`}
                   </p>
                 </div>
               </div>
-              <div className="p-2.5 bg-black/50 rounded-lg border border-zinc-800 text-[10px] text-zinc-400 space-y-0.5">
-                <p>• Админ баталгаажуулсан даруйд таны дэлгэцэнд мэдэгдэл ирж эрх шууд нээгдэнэ.</p>
-                <p>• Яаралтай бол Админ Тамиртай холбогдох: <span className="text-amber-400 font-bold">99106883518</span></p>
+              <div className="p-2.5 bg-black/60 rounded-lg border border-amber-500/30 text-[11px] text-amber-300 space-y-1">
+                <p className="font-bold flex items-center gap-1">
+                  <span>🔒 Одоохондоо анимэ үзэх боломжгүй:</span>
+                </p>
+                <p className="text-zinc-300 text-[10px]">
+                  Зөвхөн админ шалгаж хүсэлтийг зөвшөөрсний дараа анимэ эрх идэвхжинэ. Тэр хүртэл анимэ нээгдэхгүй.
+                </p>
               </div>
               <button
                 onClick={onClose}

@@ -1,5 +1,6 @@
 import { Movie } from '../types';
 import { UserAccount } from '../components/AuthModal';
+import { hasUserPendingRechargeRequest } from './rechargeService';
 
 /**
  * Checks if the given user is a system administrator
@@ -55,7 +56,7 @@ export function isPackageExpired(expiryStr?: string | null): boolean {
   }
 }
 
-export type AccessReason = 'UNAUTHENTICATED' | 'BLOCKED' | 'EXPIRED' | 'NO_PACKAGE' | 'GRANTED';
+export type AccessReason = 'UNAUTHENTICATED' | 'BLOCKED' | 'PENDING_APPROVAL' | 'EXPIRED' | 'NO_PACKAGE' | 'GRANTED';
 
 export interface AccessResult {
   hasAccess: boolean;
@@ -66,6 +67,7 @@ export interface AccessResult {
 /**
  * Centralized, authoritative access check for all media playback.
  * Enforces that unauthorized users (erh awaaguu hereglegch / tolbor toloogu hereglegch) CANNOT watch content.
+ * CRITICAL RULE: If a user has sent a recharge request that is still pending, they CANNOT watch content until admin approves it.
  */
 export function checkUserContentAccess(
   user: UserAccount | null | undefined,
@@ -81,20 +83,30 @@ export function checkUserContentAccess(
     };
   }
 
-  // 2. Administrators have unconditional access
-  if (isAdminUser(user)) {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
-  // 3. Blocked users cannot watch
+  // 2. Blocked users cannot watch
   if ((user as any).status === 'blocked') {
     return {
       hasAccess: false,
       reason: 'BLOCKED',
       message: 'Таны бүртгэл түр хаагдсан байна. Админтай холбогдоно уу.',
+    };
+  }
+
+  // 3. User has a pending recharge request waiting for admin approval
+  // Шилжүүлгийн хүсэлт илгээсэн бол админ шалгаж баталгаажуултал контент түгжээтэй байна!
+  if (hasUserPendingRechargeRequest(user)) {
+    return {
+      hasAccess: false,
+      reason: 'PENDING_APPROVAL',
+      message: '⏳ Таны анимэ эрх авах шилжүүлгийн хүсэлтийг админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэх тул түр хүлээнэ үү.',
+    };
+  }
+
+  // 4. Administrators have unconditional access (if not testing a pending recharge request)
+  if (isAdminUser(user)) {
+    return {
+      hasAccess: true,
+      reason: 'GRANTED',
     };
   }
 
