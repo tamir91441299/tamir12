@@ -121,25 +121,25 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 1,
         title: '1-р анги - Үдэшлэгийн шөнө (Night of the Murder)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1vJn-t0_68Z0PVFz2IaQeOV0ZmOpnxuhA/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZH37LJZFYjsnI2CNu5irw8OkzLyuy2a0eSy'
       },
       {
         episodeNumber: 2,
         title: '2-р анги - Хуурмаг дүр төрх (Phantom of Falsehood)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZH37LJZFYjsnI2CNu5irw8OkzLyuy2a0eSy'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQ37LJZBkqKkV3Hxl8AqSWz8xODEL54BOcy'
       },
       {
         episodeNumber: 3,
         title: '3-р анги - Хаашаа чиглэсэн буун дуу (Where the Footsteps Lead)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQ37LJZBkqKkV3Hxl8AqSWz8xODEL54BOcy'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZm37LJZdEU4k9BOf1Q3OFbCWQLomXWJipjX'
       },
       {
         episodeNumber: 4,
         title: '4-р анги - Ялагдал ба Холбоотон (Lose to Win, and What Comes After)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZm37LJZdEU4k9BOf1Q3OFbCWQLomXWJipjX'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZc37LJZbH8uXQFCdiFTVFnnGKXtczs4ALz7'
       },
       {
         episodeNumber: 5,
@@ -181,19 +181,19 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 11,
         title: '11-р анги - Бүх зүйл хоосон (All for Nothing)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1k8alH27GDARVtAZ6ggbyKZWnWK0TK3um/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZKG7LJZxF1AOGNKMG816dj4Uz4NyRuTf5Wk'
       },
       {
         episodeNumber: 12,
         title: '12-р анги - Салхи өнгөрөх мөч (Treading on Dirty Ground - Төгсгөл)',
         duration: '24 мин',
-        videoUrl: 'https://drive.google.com/file/d/1ZC6mn86ZQo4C9Vr7MJTDCII8JobUAuJa/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZqG7LJZq8xVnXUwEDBILudFxddQikTmJS97'
       },
       {
         episodeNumber: 13,
         title: '13-р анги - Гунигт бөгөөд богинохон (Shoe Sole Bottle - OVA)',
         duration: '25 мин',
-        videoUrl: 'https://drive.google.com/file/d/1ZuvAt1eMParGnQTD_WivW7D9C1ukNYmE/view?usp=drivesdk'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZEG7LJZVc30Hndkn4LFaX28ov2NXFPFxohX'
       }
     ]
   },
