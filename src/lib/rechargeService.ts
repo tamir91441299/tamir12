@@ -347,11 +347,19 @@ export async function updateRechargeRequestStatus(
 
     // Update Firestore
     const docRef = doc(db, 'recharge_requests', requestId);
-    await updateDoc(docRef, {
-      status,
-      processedAt: new Date().toISOString(),
-      processedBy: adminName,
-    });
+    await setDoc(
+      docRef,
+      {
+        status,
+        processedAt: new Date().toISOString(),
+        processedBy: adminName,
+      },
+      { merge: true }
+    );
+
+    try {
+      window.dispatchEvent(new CustomEvent('ioio_recharges_updated'));
+    } catch {}
   } catch (err) {
     console.error('Error updating recharge request status:', err);
   }

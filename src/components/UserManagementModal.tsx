@@ -57,7 +57,8 @@ import {
   grantAnimeAccessToUser,
   revokeUserPackage,
   sortUsersByNewest,
-  topUpUserBalanceInFirestore
+  topUpUserBalanceInFirestore,
+  approveAndCreditRechargeRequest
 } from '../lib/userService';
 import {
   PromoCode,
@@ -509,102 +510,45 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleApproveRecharge = async (req: RechargeRequest) => {
     if (!isAdmin) return;
     const durationDays = req.durationDays || ((req.planId as string) === '15d' ? 15 : (req.planId as string) === '2m' ? 60 : (req.planId as string) === '3m' ? 90 : (req.planId as string) === '6m' ? 180 : (req.planId as string) === '1y' ? 365 : 30);
-    const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн ${req.planLabel} (${req.amount.toLocaleString()}₮)-ийн цэнэглэлтийг баталгаажуулж ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${durationDays} хоног) олгох уу?`;
+    const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн цэнэглэлтийг баталгаажуулж:\n\n• Дансанд +${req.amount.toLocaleString()} ₮ ОНОО оруулах\n• ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${durationDays} хоног) олгох уу?`;
     if (!confirm(confirmMsg)) return;
 
-    await updateRechargeRequestStatus(req.id, 'approved', 'Админ төлбөрийг шалгаж зөвхөн анимэ эрх олголоо.');
+    const res = await approveAndCreditRechargeRequest(req, 'Админ Тамир');
 
-    // Find user by id, email, or phone
-    const targetUser = users.find(
-      (u) =>
-        u.id === req.userId ||
-        (req.userEmail && u.email?.toLowerCase() === req.userEmail.toLowerCase()) ||
-        (req.userPhone && u.phone && u.phone === req.userPhone)
-    );
-
-    // If user already has an active anime package, extend from their current expiry date
-    let baseDate = new Date();
-    if (
-      targetUser &&
-      targetUser.packageType === 'anime' &&
-      targetUser.packageExpiry &&
-      targetUser.packageExpiry !== '-' &&
-      targetUser.packageExpiry !== 'Идэвхгүй'
-    ) {
-      const currentExpiry = new Date(targetUser.packageExpiry.replace(/\./g, '-').replace(/\//g, '-'));
-      if (!isNaN(currentExpiry.getTime()) && currentExpiry.getTime() > Date.now()) {
-        baseDate = currentExpiry;
+    if (res.success) {
+      if (res.targetUser) {
+        setUsers((prev) => {
+          const filtered = prev.filter((u) => u.id !== res.targetUser!.id && u.phone !== res.targetUser!.phone);
+          return sortUsersByNewest(deduplicateUserList([res.targetUser!, ...filtered]));
+        });
       }
-    }
-    baseDate.setDate(baseDate.getDate() + durationDays);
-    const expiryStr = baseDate.toISOString().split('T')[0];
 
-    const calculatedBalance = (targetUser?.walletBalance ?? 0) + req.amount;
-    const updatedUserDetail: UserDetail = {
-      ...(targetUser || {}),
-      id: targetUser ? targetUser.id : req.userId,
-      name: targetUser?.name || req.userName,
-      email: targetUser?.email || req.userEmail || `${req.userPhone}@user.ioio.mn`,
-      phone: targetUser?.phone || req.userPhone,
-      registeredAt: targetUser?.registeredAt || new Date().toISOString().split('T')[0],
-      role: targetUser?.role === 'admin' ? 'admin' : 'user',
-      status: 'active',
-      packageType: 'anime', // Цэнэглэх хүсэлтээр анимэ эрх олгоно
-      packageExpiry: expiryStr,
-      walletBalance: calculatedBalance, // Хэрэглэгчийн дансанд оноо шууд нэмэгдэнэ
-      lastLogin: targetUser?.lastLogin || 'Идэвхтэй',
-      watchedCount: targetUser?.watchedCount ?? 0,
-      favoriteCount: targetUser?.favoriteCount ?? 0,
-      isMockUser: false,
-    };
+      // If current logged-in user matches this user, update active session immediately
+      if (
+        currentUser &&
+        (currentUser.id === req.userId ||
+          (currentUser.phone && currentUser.phone === req.userPhone) ||
+          (currentUser.email && currentUser.email.toLowerCase() === (req.userEmail || '').toLowerCase()))
+      ) {
+        try {
+          const updatedSession = {
+            ...currentUser,
+            packageType: 'anime' as const,
+            packageExpiry: res.expiryDate,
+            status: 'active' as const,
+            walletBalance: res.newBalance,
+          };
+          localStorage.setItem('ioio_user', JSON.stringify(updatedSession));
+          localStorage.setItem('ioio_active_session', JSON.stringify(updatedSession));
+          localStorage.setItem('ioio_balance', String(res.newBalance));
+          onUpdateBalance(res.newBalance);
+        } catch (e) {}
+      }
 
-    if (targetUser) {
-      const updated = users.map((u) => {
-        if (u.id === targetUser.id) {
-          return updatedUserDetail;
-        }
-        return u;
-      });
-      saveUsersState(updated);
+      alert(`🎉 АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n\n${req.userName} (${req.userPhone}) хэрэглэгчийн дансанд +${req.amount.toLocaleString()} ₮ оноо шууд орлоо!\n\nШинэ үлдэгдэл: ${res.newBalance.toLocaleString()} ₮\nАнимэ эрх дуусах хугацаа: ${res.expiryDate} хүртэл.`);
     } else {
-      saveUsersState([...users, updatedUserDetail]);
+      alert(`⚠️ Алдаа гарлаа: ${res.message}`);
     }
-
-    // Direct Firestore update for target user walletBalance and package
-    await topUpUserBalanceInFirestore(updatedUserDetail.id, 0); // triggers sync
-
-    // If current logged-in user matches this user, update active session immediately
-    if (
-      currentUser &&
-      (currentUser.id === updatedUserDetail.id ||
-        (currentUser.email && currentUser.email.toLowerCase() === updatedUserDetail.email.toLowerCase()) ||
-        (currentUser.phone && currentUser.phone === updatedUserDetail.phone))
-    ) {
-      try {
-        const updatedSession = {
-          ...currentUser,
-          packageType: 'anime' as const,
-          packageExpiry: expiryStr,
-          status: 'active' as const,
-          walletBalance: calculatedBalance,
-        };
-        localStorage.setItem('ioio_user', JSON.stringify(updatedSession));
-        localStorage.setItem('ioio_active_session', JSON.stringify(updatedSession));
-        localStorage.setItem('ioio_balance', String(calculatedBalance));
-        onUpdateBalance(calculatedBalance);
-      } catch (e) {}
-    }
-
-    sendAdminNotification({
-      type: 'PACKAGE_PURCHASE',
-      title: '🎌 Анимэ эрх болон оноо амжилттай орлоо',
-      message: `${req.userName} хэрэглэгчийн цэнэглэлтийг баталгаажуулж АНИМЭ үзэх эрх (${req.planLabel}, ${durationDays} хоног, дуусах: ${expiryStr}) болон дансанд +${req.amount.toLocaleString()}₮ оноо олголоо.`,
-      userName: req.userName,
-      userPhone: req.userPhone,
-      userEmail: req.userEmail,
-    });
-
-    alert(`🎉 ${req.userName} хэрэглэгчид АНИМЭ ҮЗЭХ ЭРХ (${req.planLabel}, ${durationDays} хоног) болон +${req.amount.toLocaleString()}₮ ОНОО амжилттай олгогдлоо!\n\nХүчинтэй хугацаа: ${expiryStr} хүртэл.\nШинэ үлдэгдэл: ${calculatedBalance.toLocaleString()}₮.`);
   };
 
   const handleRejectRecharge = async (req: RechargeRequest) => {
@@ -2501,13 +2445,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
                             >
                               <CheckCircle className="w-4 h-4" />
-                              <span>Шалгасан, Зөвхөн Анимэ Эрх Олгох</span>
+                              <span>Шалгасан, +{req.amount.toLocaleString()}₮ Оноо & Анимэ Эрх Олгох</span>
                             </button>
                           </>
                         ) : req.status === 'approved' ? (
                           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
                             <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            <span>Зөвхөн Анимэ эрх нээгдсэн ✓</span>
+                            <span>+{req.amount.toLocaleString()}₮ Оноо & Анимэ эрх олгогдсон ✓</span>
                           </div>
                         ) : (
                           <div className="text-xs text-zinc-500 italic">

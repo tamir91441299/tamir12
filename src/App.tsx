@@ -35,7 +35,7 @@ import {
   subscribeUserAccount,
   AppNotification
 } from './lib/userService';
-import { clearUserPendingRechargeRequests } from './lib/rechargeService';
+import { clearUserPendingRechargeRequests, subscribeRechargeRequests } from './lib/rechargeService';
 import {
   isAdminUser,
   isPackageExpired,
@@ -272,6 +272,52 @@ export default function App() {
     });
     return () => unsubscribe();
   }, [currentUser?.id]);
+
+  // Listen for recharge requests real-time status changes and automatically clear pending blocks
+  useEffect(() => {
+    if (!currentUser) return;
+    const cleanCurrentPhone = (currentUser.phone || '').trim().replace(/\s+/g, '');
+    const cleanCurrentEmail = (currentUser.email || '').trim().toLowerCase();
+    const currentId = (currentUser.id || '').trim();
+
+    const unsubscribe = subscribeRechargeRequests((requests) => {
+      // Sync local storage
+      try {
+        localStorage.setItem('ioio_recharge_requests', JSON.stringify(requests));
+      } catch {}
+
+      // Find any approved request for the current user
+      const myApproved = requests.filter((r) => {
+        if (r.status !== 'approved') return false;
+        const rPhone = (r.userPhone || '').trim().replace(/\s+/g, '');
+        const rEmail = (r.userEmail || '').trim().toLowerCase();
+        return (
+          (currentId && r.userId === currentId) ||
+          (cleanCurrentPhone && cleanCurrentPhone !== '99110000' && rPhone === cleanCurrentPhone) ||
+          (cleanCurrentEmail && rEmail === cleanCurrentEmail)
+        );
+      });
+
+      if (myApproved.length > 0) {
+        clearUserPendingRechargeRequests(currentUser);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
+
+  // Listen for global balance update events
+  useEffect(() => {
+    const handleBalanceEvent = (e: any) => {
+      if (e.detail && typeof e.detail.newBalance === 'number') {
+        const newBal = e.detail.newBalance;
+        setUserBalance(newBal);
+        setCurrentUser((prev) => (prev ? { ...prev, walletBalance: newBal } : null));
+      }
+    };
+    window.addEventListener('ioio_balance_updated', handleBalanceEvent);
+    return () => window.removeEventListener('ioio_balance_updated', handleBalanceEvent);
+  }, []);
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {

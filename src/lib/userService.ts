@@ -356,6 +356,11 @@ export async function topUpUserBalanceInFirestore(
       localStorage.setItem('ioio_balance', String(newBalance));
     } catch (e) {}
 
+    // Dispatch balance event
+    try {
+      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: rawId } }));
+    } catch (e) {}
+
     // 6. Broadcast top-up notification
     await sendAdminNotification({
       type: 'TOP_UP_REQUEST',
@@ -377,6 +382,344 @@ export async function topUpUserBalanceInFirestore(
     return {
       success: false,
       newBalance: 0,
+      message: '⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
+    };
+  }
+}
+
+/**
+ * Authoritative admin action: Approves a recharge request and delivers points (onoo)
+ * and anime access directly to the user in Firestore and across all sessions.
+ */
+export async function approveAndCreditRechargeRequest(
+  req: {
+    id: string;
+    userId: string;
+    userName: string;
+    userPhone: string;
+    userEmail?: string;
+    planId?: string;
+    planLabel?: string;
+    durationDays?: number;
+    amount: number;
+    packageType?: string;
+  },
+  adminName: string = 'Админ Тамир'
+): Promise<{
+  success: boolean;
+  newBalance: number;
+  expiryDate: string;
+  targetUser?: UserDetail;
+  message: string;
+}> {
+  try {
+    const cleanAmount = Math.max(0, Number(req.amount) || 0);
+    const cleanPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (req.userEmail || '').trim().toLowerCase();
+    const rawUserId = (req.userId || '').trim();
+    const durationDays = req.durationDays || (
+      (req.planId as string) === '15d' ? 15 :
+      (req.planId as string) === '2m' ? 60 :
+      (req.planId as string) === '3m' ? 90 :
+      (req.planId as string) === '6m' ? 180 :
+      (req.planId as string) === '1y' ? 365 : 30
+    );
+
+    // 1. Mark request as approved in Firestore `recharge_requests` collection
+    try {
+      const reqDocRef = doc(db, 'recharge_requests', req.id);
+      await setDoc(
+        reqDocRef,
+        {
+          status: 'approved',
+          processedAt: new Date().toISOString(),
+          processedBy: adminName,
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn('Error updating recharge_requests in Firestore:', e);
+    }
+
+    // 2. Mark request as approved in LocalStorage
+    try {
+      const localReqsStr = localStorage.getItem('ioio_recharge_requests');
+      if (localReqsStr) {
+        const list = JSON.parse(localReqsStr);
+        if (Array.isArray(list)) {
+          const idx = list.findIndex((r) => r.id === req.id);
+          if (idx >= 0) {
+            list[idx].status = 'approved';
+            list[idx].processedAt = new Date().toISOString();
+            list[idx].processedBy = adminName;
+            localStorage.setItem('ioio_recharge_requests', JSON.stringify(list));
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Locate existing user record and current balance
+    let currentBalance = 0;
+    let targetUser: UserDetail | undefined;
+    const matchingDocIds = new Set<string>();
+    if (rawUserId) matchingDocIds.add(rawUserId);
+
+    // A. Check registered users list in LocalStorage
+    const savedListStr = localStorage.getItem('ioio_registered_users_list');
+    let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+    if (Array.isArray(list)) {
+      targetUser = list.find((u) => {
+        if (!u) return false;
+        const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+        const uEmail = (u.email || '').trim().toLowerCase();
+        const uId = (u.id || '').trim();
+        return (
+          (rawUserId && uId === rawUserId) ||
+          (cleanPhone && cleanPhone !== '99110000' && uPhone && uPhone === cleanPhone) ||
+          (cleanEmail && uEmail && uEmail === cleanEmail)
+        );
+      });
+      if (targetUser && typeof targetUser.walletBalance === 'number') {
+        currentBalance = Math.max(currentBalance, targetUser.walletBalance);
+        if (targetUser.id) matchingDocIds.add(targetUser.id);
+      }
+    }
+
+    // B. Check active session
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const activeU = JSON.parse(activeStr);
+        const actPhone = (activeU.phone || '').trim().replace(/\s+/g, '');
+        const actEmail = (activeU.email || '').trim().toLowerCase();
+        if (
+          (rawUserId && activeU.id === rawUserId) ||
+          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone) ||
+          (cleanEmail && actEmail === cleanEmail)
+        ) {
+          if (typeof activeU.walletBalance === 'number') {
+            currentBalance = Math.max(currentBalance, activeU.walletBalance);
+          }
+          if (activeU.id) matchingDocIds.add(activeU.id);
+        }
+      }
+    } catch (e) {}
+
+    // C. Check Firestore documents by rawUserId
+    if (rawUserId) {
+      try {
+        const snap = await getDoc(doc(db, 'users', rawUserId));
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d) {
+            if (typeof d.walletBalance === 'number') {
+              currentBalance = Math.max(currentBalance, d.walletBalance);
+            }
+            if (!targetUser) targetUser = { ...d, id: snap.id } as UserDetail;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // D. If cleanPhone exists, query Firestore by phone
+    if (cleanPhone && cleanPhone !== '99110000') {
+      try {
+        const qPhone = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(3));
+        const phoneSnaps = await getDocs(qPhone);
+        phoneSnaps.forEach((docSnap) => {
+          matchingDocIds.add(docSnap.id);
+          const d = docSnap.data();
+          if (typeof d.walletBalance === 'number') {
+            currentBalance = Math.max(currentBalance, d.walletBalance);
+          }
+          if (!targetUser) targetUser = { ...d, id: docSnap.id } as UserDetail;
+        });
+      } catch (e) {}
+    }
+
+    // E. Query Firestore by email
+    if (cleanEmail) {
+      try {
+        const qEmail = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(3));
+        const emailSnaps = await getDocs(qEmail);
+        emailSnaps.forEach((docSnap) => {
+          matchingDocIds.add(docSnap.id);
+          const d = docSnap.data();
+          if (typeof d.walletBalance === 'number') {
+            currentBalance = Math.max(currentBalance, d.walletBalance);
+          }
+          if (!targetUser) targetUser = { ...d, id: docSnap.id } as UserDetail;
+        });
+      } catch (e) {}
+    }
+
+    // 4. Calculate new balance and extended package expiry
+    const newBalance = currentBalance + cleanAmount;
+
+    let baseDate = new Date();
+    if (
+      targetUser &&
+      (targetUser.packageType === 'anime' || targetUser.packageType === 'full_vip') &&
+      targetUser.packageExpiry &&
+      targetUser.packageExpiry !== '-' &&
+      targetUser.packageExpiry !== 'Идэвхгүй'
+    ) {
+      const currentExp = new Date(targetUser.packageExpiry.replace(/\./g, '-').replace(/\//g, '-'));
+      if (!isNaN(currentExp.getTime()) && currentExp.getTime() > Date.now()) {
+        baseDate = currentExp;
+      }
+    }
+    baseDate.setDate(baseDate.getDate() + durationDays);
+    const expiryStr = baseDate.toISOString().split('T')[0];
+
+    const resolvedRole = (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : (targetUser?.role || 'user');
+    const resolvedPackage = targetUser?.packageType === 'full_vip' ? 'full_vip' : 'anime';
+    const primaryId = rawUserId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
+
+    const updatedUserDetail: UserDetail = {
+      ...(targetUser || {}),
+      id: primaryId,
+      name: req.userName || targetUser?.name || 'Хэрэглэгч',
+      email: cleanEmail || targetUser?.email || (cleanPhone ? `${cleanPhone}@flicknime.mn` : ''),
+      phone: cleanPhone || targetUser?.phone || '',
+      registeredAt: targetUser?.registeredAt || new Date().toLocaleString('mn-MN'),
+      registeredTimestamp: targetUser?.registeredTimestamp || Date.now(),
+      role: resolvedRole,
+      status: 'active',
+      packageType: resolvedPackage,
+      packageExpiry: expiryStr,
+      walletBalance: newBalance,
+      lastLogin: targetUser?.lastLogin || 'Идэвхтэй одоо',
+      watchedCount: targetUser?.watchedCount ?? 0,
+      favoriteCount: targetUser?.favoriteCount ?? 0,
+      isMockUser: false,
+    };
+
+    // 5. Write to ALL matching Firestore document IDs so onSnapshot always triggers!
+    matchingDocIds.add(primaryId);
+    for (const docId of matchingDocIds) {
+      if (!docId) continue;
+      try {
+        await setDoc(
+          doc(db, 'users', docId),
+          {
+            id: docId,
+            name: updatedUserDetail.name,
+            phone: updatedUserDetail.phone,
+            email: updatedUserDetail.email,
+            role: updatedUserDetail.role,
+            status: 'active',
+            packageType: resolvedPackage,
+            packageExpiry: expiryStr,
+            walletBalance: newBalance,
+            updatedAt: new Date().toISOString(),
+            lastTopUpAmount: cleanAmount,
+            lastTopUpAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn(`Firestore setDoc users/${docId} error:`, err);
+      }
+    }
+
+    // 6. Update local storage list
+    let updatedList = list.filter((u) => {
+      if (!u) return false;
+      const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uId = (u.id || '').trim();
+      return !(
+        (primaryId && uId === primaryId) ||
+        (cleanPhone && cleanPhone !== '99110000' && uPhone && uPhone === cleanPhone) ||
+        (cleanEmail && uEmail && uEmail === cleanEmail)
+      );
+    });
+    updatedList.unshift(updatedUserDetail);
+    updatedList = sortUsersByNewest(deduplicateUserList(updatedList));
+    localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedList));
+
+    // 7. Update current active session if it matches
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const activeU = JSON.parse(activeStr);
+        const actPhone = (activeU.phone || '').trim().replace(/\s+/g, '');
+        const actEmail = (activeU.email || '').trim().toLowerCase();
+        if (
+          matchingDocIds.has(activeU.id) ||
+          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone) ||
+          (cleanEmail && actEmail === cleanEmail)
+        ) {
+          activeU.walletBalance = newBalance;
+          activeU.packageType = resolvedPackage;
+          activeU.packageExpiry = expiryStr;
+          activeU.status = 'active';
+          persistActiveSession(activeU, true);
+        }
+      }
+      localStorage.setItem('ioio_balance', String(newBalance));
+    } catch (e) {}
+
+    // 8. Clear pending recharge blocks in LocalStorage
+    try {
+      const reqsStr = localStorage.getItem('ioio_recharge_requests');
+      if (reqsStr) {
+        const listReqs = JSON.parse(reqsStr);
+        if (Array.isArray(listReqs)) {
+          let ch = false;
+          listReqs.forEach((r) => {
+            const rPhone = (r.userPhone || '').trim().replace(/\s+/g, '');
+            const rEmail = (r.userEmail || '').trim().toLowerCase();
+            if (
+              (r.userId && matchingDocIds.has(r.userId)) ||
+              (cleanPhone && cleanPhone !== '99110000' && rPhone === cleanPhone) ||
+              (cleanEmail && rEmail === cleanEmail)
+            ) {
+              if (r.status === 'pending') {
+                r.status = 'approved';
+                r.processedAt = new Date().toISOString();
+                r.processedBy = adminName;
+                ch = true;
+              }
+            }
+          });
+          if (ch) {
+            localStorage.setItem('ioio_recharge_requests', JSON.stringify(listReqs));
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 9. Dispatch custom events
+    try {
+      window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: updatedList }));
+      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: primaryId } }));
+    } catch (e) {}
+
+    // 10. Broadcast admin notification
+    await sendAdminNotification({
+      type: 'TOP_UP_REQUEST',
+      title: '🎉 Данс амжилттай цэнэглэгдлээ',
+      message: `${updatedUserDetail.name} (${cleanPhone || cleanEmail})-д +${cleanAmount.toLocaleString()}₮ ОНОО орлоо. Шинэ үлдэгдэл: ${newBalance.toLocaleString()}₮. Анимэ эрх дуусах: ${expiryStr}.`,
+      userName: updatedUserDetail.name,
+      userEmail: updatedUserDetail.email,
+      userPhone: updatedUserDetail.phone,
+    });
+
+    return {
+      success: true,
+      newBalance,
+      expiryDate: expiryStr,
+      targetUser: updatedUserDetail,
+      message: `✓ ${updatedUserDetail.name} хэрэглэгчид +${cleanAmount.toLocaleString()}₮ ОНОО амжилттай орлоо! Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮ (Анимэ эрх: ${expiryStr} хүртэл).`,
+    };
+  } catch (err: any) {
+    console.error('Error in approveAndCreditRechargeRequest:', err);
+    return {
+      success: false,
+      newBalance: 0,
+      expiryDate: '',
       message: '⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
     };
   }

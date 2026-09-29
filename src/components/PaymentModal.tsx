@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Copy, Check, Ticket, KeyRound, Send, Phone, Zap, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 import { redeemCode } from '../lib/codeService';
-import { submitRechargeRequest, clearUserPendingRechargeRequests, executeDirectInstantTopUp } from '../lib/rechargeService';
+import { submitRechargeRequest, clearUserPendingRechargeRequests, executeDirectInstantTopUp, subscribeRechargeRequests } from '../lib/rechargeService';
 import { getAnimeExpiryDetails, calculateExtendedExpiryDate, isAdminUser } from '../lib/permissionService';
 
 interface PaymentModalProps {
@@ -141,11 +141,48 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [successMsgText, setSuccessMsgText] = useState<string>('');
   const [topUpRequestSent, setTopUpRequestSent] = useState(false);
   const [topUpSuccessNotice, setTopUpSuccessNotice] = useState<string>('');
+  const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
   const [copiedMonpay, setCopiedMonpay] = useState(false);
 
   // User contact input for recharge confirmation
   const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
   const [userNoteInput, setUserNoteInput] = useState<string>('');
+
+  // Real-time listener for current user's recharge request approval
+  useEffect(() => {
+    if (!currentUser && !submittedRequestId) return;
+    const cleanPhone = (userPhoneInput || currentUser?.phone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (currentUser?.email || '').trim().toLowerCase();
+    const cId = (currentUser?.id || '').trim();
+
+    const unsubscribe = subscribeRechargeRequests((requests) => {
+      if (topUpRequestSent) {
+        const approved = requests.find((r) => {
+          if (r.status !== 'approved') return false;
+          if (submittedRequestId && r.id === submittedRequestId) return true;
+          const rPhone = (r.userPhone || '').trim().replace(/\s+/g, '');
+          const rEmail = (r.userEmail || '').trim().toLowerCase();
+          return (
+            (cId && r.userId === cId) ||
+            (cleanPhone && cleanPhone !== '99110000' && rPhone === cleanPhone) ||
+            (cleanEmail && rEmail === cleanEmail)
+          );
+        });
+
+        if (approved) {
+          setTopUpRequestSent(false);
+          setIsSuccess(true);
+          setSuccessMsgText(
+            `🎉 ТАНЫ ЦЭНЭГЛЭЛТ АМЖИЛТТАЙ БАТАЛГААЖЛАА!\n\n+${approved.amount.toLocaleString()} ₮ оноо таны дансанд амжилттай орлоо.\n\nАнимэ үзэх эрх нээгдлээ!`
+          );
+          onTopUpBalance(approved.amount);
+          clearUserPendingRechargeRequests(currentUser);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, topUpRequestSent, submittedRequestId, userPhoneInput]);
 
   // Activation Code States
   const [inputActivationCode, setInputActivationCode] = useState('');
@@ -281,7 +318,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(true);
 
     try {
-      await submitRechargeRequest({
+      const res = await submitRechargeRequest({
         userId: currentUser.id,
         userName: currentUser.name || 'Хэрэглэгч',
         userPhone: phone,
@@ -293,6 +330,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         method: paymentMethod === 'qpay' ? 'qpay' : 'monpay',
         note: userNoteInput.trim() || `${targetLabel} (${targetAmount.toLocaleString()}₮) шилжүүлэг илгээв`,
       });
+      if (res && res.id) {
+        setSubmittedRequestId(res.id);
+      }
     } catch (e) {
       console.error('Recharge request submission error:', e);
     }
