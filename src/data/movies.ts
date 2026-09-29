@@ -122,25 +122,25 @@ export const SAMPLE_MOVIES: Movie[] = [
         episodeNumber: 1,
         title: '1-р анги - Үдэшлэгийн шөнө (Night of the Murder)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZH37LJZFYjsnI2CNu5irw8OkzLyuy2a0eSy'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZYmr4JZBBmTUgz33440sFbKi9ibHH64qOOX'
       },
       {
         episodeNumber: 2,
         title: '2-р анги - Хуурмаг дүр төрх (Phantom of Falsehood)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZQ37LJZBkqKkV3Hxl8AqSWz8xODEL54BOcy'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZ71r4JZgzw31VYUooLbwyOg2peYDpvhTO4y'
       },
       {
         episodeNumber: 3,
         title: '3-р анги - Хаашаа чиглэсэн буун дуу (Where the Footsteps Lead)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZm37LJZdEU4k9BOf1Q3OFbCWQLomXWJipjX'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZH37LJZFYjsnI2CNu5irw8OkzLyuy2a0eSy'
       },
       {
         episodeNumber: 4,
         title: '4-р анги - Ялагдал ба Холбоотон (Lose to Win, and What Comes After)',
         duration: '24 мин',
-        videoUrl: 'https://u.pcloud.link/publink/show?code=XZc37LJZbH8uXQFCdiFTVFnnGKXtczs4ALz7'
+        videoUrl: 'https://u.pcloud.link/publink/show?code=XZm37LJZdEU4k9BOf1Q3OFbCWQLomXWJipjX'
       },
       {
         episodeNumber: 5,

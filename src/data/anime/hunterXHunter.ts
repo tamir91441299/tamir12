@@ -24,8 +24,8 @@ export const HUNTER_X_HUNTER_EPISODE_LINKS: Record<number, string> = {
   // Arc 1: Хантерын Шалгалт (Hunter Exam Arc) - 1-21 анги
   1: 'https://u.pcloud.link/publink/show?code=XZ1LU4JZCt8ilpcoo3mBgAjJBjcl0SxlPvk7',
   2: 'https://u.pcloud.link/publink/show?code=XZp4U4JZQWYXaLDx58fXm68jJaqqXyUANi9y',
-  3: 'https://drive.google.com/file/d/1hunter_x_hunter_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1hunter_x_hunter_ep4/view?usp=drivesdk',
+  3: 'https://u.pcloud.link/publink/show?code=XZG4U4JZSYTzO0EmWayYzGDSu2hWSuGSHrJX',
+  4: 'https://u.pcloud.link/publink/show?code=XZv4U4JZeXmMHM0XUsbMFlmi3nYHuktSwCiV',
   5: 'https://drive.google.com/file/d/1hunter_x_hunter_ep5/view?usp=drivesdk',
   6: 'https://drive.google.com/file/d/1hunter_x_hunter_ep6/view?usp=drivesdk',
   7: 'https://drive.google.com/file/d/1hunter_x_hunter_ep7/view?usp=drivesdk',

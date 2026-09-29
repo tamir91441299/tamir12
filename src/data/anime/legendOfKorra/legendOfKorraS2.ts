@@ -17,20 +17,20 @@ export function formatLegendOfKorraS2DriveLink(driveIdOrUrl: string): string {
  * Анги бүрийн линкийг доор шууд оруулах эсвэл Админ цонхоор тохируулж болно.
  */
 export const LEGEND_OF_KORRA_S2_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1rMcHRewZRVhCWRs45pHGz5UK8Bnl9dSc/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1WwpATNw1NgrluvsyRo_4lOTWjU0LGYfV/view?usp=drivesdk&usp=embed_facebook',
-  3: 'https://drive.google.com/file/d/1QuZPd3l-SHnmj2tIaGsfovr-4KwLIlHX/view?usp=drivesdk&usp=embed_facebook',
-  4: 'https://drive.google.com/file/d/1Bbu1k-6qDO3BuAaTi3966k1IoPjywh33/view?usp=drivesdk&usp=embed_facebook',
-  5: 'https://drive.google.com/file/d/1O_FcRypLfN7TNpDCjbr1Totn7lHMrBsT/view?usp=drivesdk&usp=embed_facebook',
-  6: 'https://drive.google.com/file/d/1hMwuhg8NQUL1t5XJBxlnK8u7nlAt11kA/view?usp=drivesdk&usp=embed_facebook',
-  7: 'https://drive.google.com/file/d/1p0PZgewuKJFt4W8_-4F0ech8USwGMi6r/view?usp=drivesdk&usp=embed_facebook',
-  8: 'https://drive.google.com/file/d/18X-k0aseNx1epxsU4GSjmmLziRFPXgZU/view?usp=drivesdk&usp=embed_facebook',
-  9: 'https://drive.google.com/file/d/1h-4GeQYB9_fDIMsHhwiKKu8n8XDMYTZT/view?usp=drivesdk&usp=embed_facebook',
-  10: 'https://drive.google.com/file/d/1qbhfFfT6z3GWW4SKXcauz6o-X2HYQRaI/view?usp=drivesdk&usp=embed_facebook',
-  11: 'https://drive.google.com/file/d/1TB2sll4EzSUKjP1JFP5PBR2xAPHTmQJm/view?usp=drivesdk&usp=embed_facebook',
-  12: 'https://drive.google.com/file/d/1z9KE68veuxa80ussXtK1Q1fwk7mPLUlC/view?usp=drivesdk&usp=embed_facebook',
-  13: 'https://drive.google.com/file/d/1a71zCfysrKk0GT9YNujzhYLy8Trt2KWn/view?usp=drivesdk&usp=embed_facebook',
-  14: 'https://drive.google.com/file/d/1fyZ-51GEytB4SNgoS4e4mSxI7wI6Qt2F/view?usp=drivesdk&usp=embed_facebookk',
+  1: 'https://u.pcloud.link/publink/show?code=XZ3Tr4JZXPfMie5WRKys2mShL09NFy4YNwx7',
+  2: 'https://u.pcloud.link/publink/show?code=XZrTr4JZm4OSXGn9XWXU460HQWTHf57zWHI7',
+  3: 'https://u.pcloud.link/publink/show?code=XZoTr4JZ4akFHGeqv4R1ccI6JNu6DBJ8rCuV',
+  4: 'https://u.pcloud.link/publink/show?code=XZFgr4JZpwvxD87vhd5SX8VxmfbSizxwXhJ7',
+  5: 'https://u.pcloud.link/publink/show?code=XZpgr4JZM5yBozLivjjqFjp9pXbMoVDAbsTX',
+  6: 'https://u.pcloud.link/publink/show?code=XZ8gr4JZb2ygpyxL0x0iROlD8kRMQm0NCLdV',
+  7: 'https://u.pcloud.link/publink/show?code=XZQgr4JZPCCnUpK1fqSR8XU0VrtCpfKvzyRX',
+  8: 'https://u.pcloud.link/publink/show?code=XZfgr4JZKhMzXhycpOmYhAeed2oeJBsl7iNX',
+  9: 'https://u.pcloud.link/publink/show?code=XZBgr4JZKIOvJgVfN9LIwEUzgH15KmL5Ah77',
+  10: 'https://u.pcloud.link/publink/show?code=XZMgr4JZrVbazH4STgRGNi9MLJmkSmxtCqKV',
+  11: 'https://u.pcloud.link/publink/show?code=XZCgr4JZPwXa3khkbmbT2tv3HtBFNQNGAgxy',
+  12: 'https://u.pcloud.link/publink/show?code=XZxgr4JZx94gyrEcjoScfXYOHgFT3LaDAyHV',
+  13: 'https://u.pcloud.link/publink/show?code=XZlgr4JZ7G17D8YVIgF09crzSzaNCYEqJiay',
+  14: 'https://u.pcloud.link/publink/show?code=XZdgr4JZ2FmXn1tfmrm74fcu6imL4FA04VV0',
 };
 
 export function setLegendOfKorraS2EpisodeLink(episodeNumber: number, link: string) {
@@ -145,7 +145,7 @@ export const LEGEND_OF_KORRA_S2: Movie = {
   titleMongolian: 'Коррагийн Домог Бүлэг 2: Сүнснүүд (The Legend of Korra: Book 2 Spirits)',
   type: 'anime',
   poster: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/aec7f81f-3693-46a2-af0d-61dcb6b6d0c2/df1x3pu-dd0d8142-adbc-4c61-a677-6f8c94924248.png/v1/fill/w_670,h_1192,q_70,strp/the_legend_of_korra_season_2__my_canon__by_dfrab_df1x3pu-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTM2NSIsInBhdGgiOiJcL2ZcL2FlYzdmODFmLTM2OTMtNDZhMi1hZjBkLTYxZGNiNmI2ZDBjMlwvZGYxeDNwdS1kZDBkODE0Mi1hZGJjLTRjNjEtYTY3Ny02ZjhjOTQ5MjQyNDgucG5nIiwid2lkdGgiOiI8PTc2OCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.RTyAZ5InmGEs-Dx_Ma4_K6kIeDwjjxcc-sQ7My2zJLM',
-  backdrop: '/images/korra_backdrop.jpg',
+  backdrop: 'https://comicvine.gamespot.com/a/uploads/scale_medium/6/67663/4108706-02.jpg',
   year: 2024,
   duration: '14 анги (Бүлэг 2)',
   rating: 9.9,
