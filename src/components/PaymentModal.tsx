@@ -4,7 +4,7 @@ import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 import { redeemCode } from '../lib/codeService';
 import { submitRechargeRequest, clearUserPendingRechargeRequests, executeDirectInstantTopUp } from '../lib/rechargeService';
-import { getAnimeExpiryDetails, calculateExtendedExpiryDate } from '../lib/permissionService';
+import { getAnimeExpiryDetails, calculateExtendedExpiryDate, isAdminUser } from '../lib/permissionService';
 
 interface PaymentModalProps {
   movie: Movie | null;
@@ -20,7 +20,8 @@ interface PaymentModalProps {
     packageType: 'anime' | 'movie' | 'full_vip',
     deductedAmount: number,
     durationMonths?: number,
-    durationDays?: number
+    durationDays?: number,
+    isCodeRedemption?: boolean
   ) => void;
   onTopUpBalance: (amount: number) => void;
 }
@@ -177,7 +178,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setSuccessMsgText(res.message);
 
         setTimeout(() => {
-          onSubscribePackage('anime', 0, res.durationDays ? Math.round(res.durationDays / 30) : 1);
+          onSubscribePackage('anime', 0, res.durationDays ? Math.round(res.durationDays / 30) : 1, res.durationDays, true);
           if (res.type === 'points' && res.pointsAdded) {
             onTopUpBalance(res.pointsAdded);
           }
@@ -188,6 +189,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }, 600);
   };
 
+  const isUserAdmin = isAdminUser(currentUser);
   const animeExpiryInfo = getAnimeExpiryDetails(currentUser);
   const projectedExpiryDate = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
 
@@ -198,11 +200,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return selectedTopUpAmount;
   };
 
-  // 1. Direct Instant Top-Up: Points go DIRECTLY to user's account immediately
+  // 1. Top-Up Points Handler: For non-admins, sends transfer request to Admin Tamir. Admin can instantly test.
   const handleInstantTopUpPoints = async (overrideAmount?: number) => {
     const amountToCredit = overrideAmount || getEffectiveTopUpAmount();
     if (amountToCredit <= 0) {
       alert('Цэнэглэх онооны дүнгээ зөв оруулна уу.');
+      return;
+    }
+
+    if (!isUserAdmin) {
+      // Non-admins must submit transfer request for Admin review
+      await handleSubmitPendingTransfer(amountToCredit, `${amountToCredit.toLocaleString()}₮ Данс цэнэглэлт`);
       return;
     }
 
@@ -216,7 +224,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           userEmail: currentUser.email || '',
           amount: amountToCredit,
           method: paymentMethod,
-          note: `Шууд данс цэнэглэлт (+${amountToCredit.toLocaleString()}₮)`,
+          note: `[Админ] Шууд данс цэнэглэлт (+${amountToCredit.toLocaleString()}₮)`,
         });
       }
     } catch (e) {
@@ -228,12 +236,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(false);
     setIsSuccess(true);
     setSuccessMsgText(
-      `🎉 ТАНЫ ДАНС АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n\n+${amountToCredit.toLocaleString()} ₮ оноо шууд таны дансанд орлоо.\nТаны шинэ үлдэгдэл: ${(userBalance + amountToCredit).toLocaleString()} ₮.\n\nОдоо та дурын анимэ үзэх эсвэл багцаа идэвхжүүлэх боломжтой!`
+      `🎉 [АДМИН] ТАНЫ ДАНС АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n\n+${amountToCredit.toLocaleString()} ₮ оноо шууд таны дансанд орлоо.\nТаны шинэ үлдэгдэл: ${(userBalance + amountToCredit).toLocaleString()} ₮.`
     );
   };
 
-  // 2. Direct Instant Anime Package Activation: Credits package immediately with exact expiry date
+  // 2. Direct Instant Anime Package Activation: Only available to Admin for testing. Non-admins CANNOT use this!
   const handleInstantActivatePackage = async () => {
+    if (!isUserAdmin) {
+      alert('⛔ Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд дансаа оноогоор цэнэглэнэ үү эсвэл шилжүүлгийн хүсэлтээ илгээнэ үү.');
+      return;
+    }
+
     setIsVerifying(true);
     const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
     clearUserPendingRechargeRequests(currentUser);
@@ -242,18 +255,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setIsVerifying(false);
       setIsSuccess(true);
       setSuccessMsgText(
-        `🎉 АНИМЭ БАГЦ ШУУД ИДЭВХЖИЛЭЭ!\n\n${currentPlan.label} (${currentPlan.durationDays} хоног) эрх амжилттай нээгдлээ.\nДуусах хугацаа: ${newExpiry} хүртэл.\n\nБүх анимэг хязгааргүй шууд үзээрэй!`
+        `🎉 [АДМИН ТЕСТ] АНИМЭ БАГЦ ШУУД ИДЭВХЖИЛЭЭ!\n\n${currentPlan.label} (${currentPlan.durationDays} хоног) эрх амжилттай нээгдлээ.\nДуусах хугацаа: ${newExpiry} хүртэл.`
       );
       setTimeout(() => {
-        onSubscribePackage('anime', 0, currentPlan.durationMonths, currentPlan.durationDays);
+        onSubscribePackage('anime', 0, currentPlan.durationMonths, currentPlan.durationDays, true);
       }, 1000);
     }, 600);
   };
 
-  // 3. Submit payment transfer request to Admin queue
+  // 3. Submit payment transfer request to Admin queue (Points are NOT credited until Admin Tamir approves!)
   const handleSubmitPendingTransfer = async (targetAmount: number, targetLabel: string) => {
     if (!currentUser) {
-      alert('Төлбөр төлж админаас цэнэглэлт авахын тулд эхлээд системд нэвтэрнэ үү.');
+      alert('⚠️ Анимэ эрх авах болон төлбөр төлөхийн тулд эхлээд системд нэвтэрнэ үү.');
       onClose();
       if (onOpenAuthModal) onOpenAuthModal();
       return;
@@ -261,32 +274,33 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     const phone = (userPhoneInput.trim() || currentUser.phone || '').trim();
     if (!phone) {
-      alert('Гүйлгээ шалгахад шаардлагатай утасны дугаараа оруулна уу.');
+      alert('⚠️ Гүйлгээ шалгахад шаардлагатай утасны дугаараа оруулна уу.');
       return;
     }
 
     setIsVerifying(true);
-    // Also directly credit points to user so user doesn't wait!
-    onTopUpBalance(targetAmount);
-    clearUserPendingRechargeRequests(currentUser);
 
-    const res = await submitRechargeRequest({
-      userId: currentUser.id,
-      userName: currentUser.name || 'Хэрэглэгч',
-      userPhone: phone,
-      userEmail: currentUser.email || '',
-      planId: currentPlan.id,
-      planLabel: targetLabel,
-      durationDays: currentPlan.durationDays,
-      amount: targetAmount,
-      method: paymentMethod === 'qpay' ? 'qpay' : 'monpay',
-      note: userNoteInput.trim() || `${targetLabel} (${targetAmount.toLocaleString()}₮) шилжүүлэг илгээв`,
-    });
+    try {
+      await submitRechargeRequest({
+        userId: currentUser.id,
+        userName: currentUser.name || 'Хэрэглэгч',
+        userPhone: phone,
+        userEmail: currentUser.email || '',
+        planId: currentPlan.id,
+        planLabel: targetLabel,
+        durationDays: currentPlan.durationDays,
+        amount: targetAmount,
+        method: paymentMethod === 'qpay' ? 'qpay' : 'monpay',
+        note: userNoteInput.trim() || `${targetLabel} (${targetAmount.toLocaleString()}₮) шилжүүлэг илгээв`,
+      });
+    } catch (e) {
+      console.error('Recharge request submission error:', e);
+    }
 
     setIsVerifying(false);
-    setIsSuccess(true);
-    setSuccessMsgText(
-      `🎉 ТӨЛБӨР БҮРТГЭГДЭЖ ТАНЫ ДАНСАНД ОНОО ШУУД ОРЛОО!\n\n+${targetAmount.toLocaleString()} ₮ оноо таны дансанд амжилттай нэмэгдлээ.\nТаны шинэ үлдэгдэл: ${(userBalance + targetAmount).toLocaleString()} ₮.`
+    setTopUpRequestSent(true);
+    setTopUpSuccessNotice(
+      `📩 Таны ${targetAmount.toLocaleString()} ₮ дүнтэй шилжүүлгийн хүсэлтийг Админ Тамирт амжилттай илгээлээ.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд оноо орж, анимэ үзэх эрх нээгдэнэ.\n\n⚠️ Админ шалгаж баталгаажуулах хүртэл оноогүй тул анимэ түр түгжээтэй байна.`
     );
   };
 
@@ -298,14 +312,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     if (mainTab === 'topup') {
-      handleInstantTopUpPoints();
+      handleSubmitPendingTransfer(effectiveTopUp, `${effectiveTopUp.toLocaleString()}₮ Данс цэнэглэлт`);
       return;
     }
 
     // Package mode with wallet points
     if (paymentMethod === 'wallet') {
       if (userBalance < activePrice) {
-        alert(`⚠️ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ байна. Энэ багцыг авахад ${activePrice.toLocaleString()}₮ шаардлагатай. "⚡ ОНОО ЦЭНЭГЛЭХ" цэснээс оноогоо шууд нэмнэ үү.`);
+        alert(
+          `⛔ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна. Энэ анимэ багцыг авахад ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\n\nОноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та "⚡ Оноо Цэнэглэх" цэснээс MonPay (${monpayNumber}) эсвэл QPay-ээр шилжүүлэг хийж дансаа цэнэглэнэ үү.`
+        );
         setMainTab('topup');
         return;
       }
@@ -316,7 +332,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         setIsVerifying(false);
         setIsSuccess(true);
         setSuccessMsgText(
-          `🎉 АНИМЭ БАГЦ ОНООГООР АМЖИЛТТАЙ ИДЭВХЖЛЭЭ!\n\n${currentPlan.label} (${activePrice.toLocaleString()}₮ оноо хасагдлаа).\nДуусах хугацаа: ${newExpiry} хүртэл сунгагдлаа.\n\nҮлдсэн үлдэгдэл: ${(userBalance - activePrice).toLocaleString()} ₮.`
+          `🎉 АНИМЭ БАГЦ ОНООГООР АМЖИЛТТАЙ ИДЭВХЖЛЭЭ!\n\n${currentPlan.label} (${activePrice.toLocaleString()}₮ оноо хасагдлаа).\nДуусах хугацаа: ${newExpiry} хүртэл сунгагдлаа.\n\nҮлдсэн онооны үлдэгдэл: ${(userBalance - activePrice).toLocaleString()} ₮.`
         );
 
         setTimeout(() => {
@@ -326,8 +342,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    // Instant activate package with MonPay / QPay
-    handleInstantActivatePackage();
+    // Package mode with MonPay / QPay transfer request
+    handleSubmitPendingTransfer(activePrice, currentPlan.label);
   };
 
   const effectiveTopUp = getEffectiveTopUpAmount();
@@ -919,82 +935,143 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           ) : (
             <div className="space-y-2 pt-2">
-              {/* PRIMARY ACTION BUTTON: DIRECT RECHARGE */}
+              {/* PRIMARY ACTION BUTTON: TOP-UP POINTS */}
               {mainTab === 'topup' && (
-                <button
-                  id="direct-instant-topup-btn"
-                  type="button"
-                  onClick={handleInstantTopUpPoints}
-                  disabled={isVerifying || effectiveTopUp <= 0}
-                  className="w-full bg-gradient-to-r from-amber-400 via-emerald-500 to-amber-400 hover:from-amber-300 hover:to-emerald-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                >
-                  {isVerifying ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Цэнэглэлт хийгдэж байна...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 fill-current" />
-                      <span>{`⚡ ШУУД ЦЭНЭГЛЭЖ ОНОО АВАХ (+${effectiveTopUp.toLocaleString()} ₮)`}</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              {mainTab === 'package' && paymentMethod === 'wallet' && (
-                <button
-                  id="confirm-payment-wallet-action"
-                  type="button"
-                  onClick={handleConfirmPayment}
-                  disabled={isVerifying || userBalance < activePrice}
-                  className="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                >
-                  {isVerifying ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Идэвхжүүлж байна...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4" />
-                      <span>{`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) АВАХ`}</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              {mainTab === 'package' && paymentMethod !== 'wallet' && paymentMethod !== 'code' && (
                 <div className="space-y-2">
                   <button
-                    id="instant-package-activate-btn"
+                    id="submit-topup-transfer-btn"
                     type="button"
-                    onClick={handleInstantActivatePackage}
-                    disabled={isVerifying}
-                    className="w-full bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 hover:from-rose-400 hover:to-amber-300 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                    onClick={() => handleSubmitPendingTransfer(effectiveTopUp, `${effectiveTopUp.toLocaleString()}₮ Данс цэнэглэлт`)}
+                    disabled={isVerifying || effectiveTopUp <= 0}
+                    className="w-full bg-gradient-to-r from-amber-400 via-emerald-500 to-amber-400 hover:from-amber-300 hover:to-emerald-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
                   >
                     {isVerifying ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Багц идэвхжүүлж байна...</span>
+                        <span>Хүсэлт илгээж байна...</span>
                       </>
                     ) : (
                       <>
-                        <Zap className="w-4 h-4 fill-current" />
-                        <span>{`⚡ ШУУД ЦЭНЭГЛЭЖ АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()}₮)`}</span>
+                        <Send className="w-4 h-4" />
+                        <span>{`📩 ШИЛЖҮҮЛЭГ ИЛГЭЭСНЭЭ МЭДЭГДЭХ (+${effectiveTopUp.toLocaleString()} ₮ оноо авах)`}</span>
                       </>
                     )}
                   </button>
 
+                  {isUserAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleInstantTopUpPoints()}
+                      disabled={isVerifying || effectiveTopUp <= 0}
+                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 flex items-center justify-center gap-1.5"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>[Админ тест] Шууд оноо олгох</span>
+                    </button>
+                  )}
+
+                  <p className="text-[10px] text-zinc-400 text-center">
+                    * Шилжүүлэг (MonPay: {monpayNumber}) хийсний дараа хүсэлт илгээнэ. Админ шалгаж баталгаажуулснаар оноо орно.
+                  </p>
+                </div>
+              )}
+
+              {/* PACKAGE PURCHASE WITH WALLET POINTS */}
+              {mainTab === 'package' && paymentMethod === 'wallet' && (
+                <div className="space-y-2">
+                  {userBalance < activePrice ? (
+                    <div className="space-y-2">
+                      <div className="p-3 bg-rose-950/80 border border-rose-500/60 rounded-xl text-center space-y-1">
+                        <p className="text-xs text-rose-300 font-extrabold flex items-center justify-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>ОНОО ХҮРЭЛЦЭХГҮЙ - ОНООГҮЙ БОЛ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</span>
+                        </p>
+                        <p className="text-[11px] text-zinc-300">
+                          Танд <strong>{userBalance.toLocaleString()} ₮</strong> оноо байна. Энэ багцыг авахад <strong>{activePrice.toLocaleString()} ₮</strong> шаардлагатай.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={true}
+                        className="w-full bg-zinc-800 text-zinc-500 font-black text-sm py-3.5 rounded-xl cursor-not-allowed border border-zinc-700 opacity-60 flex items-center justify-center gap-2"
+                      >
+                        <AlertCircle className="w-4 h-4 text-rose-500" />
+                        <span>{`⛔ ОНОО ХҮРЭЛЦЭХГҮЙ (${userBalance.toLocaleString()}₮ / ${activePrice.toLocaleString()}₮)`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setMainTab('topup')}
+                        className="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>⚡ Дутуу {(activePrice - userBalance).toLocaleString()} ₮ оноогоо цэнэглэх</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      id="confirm-payment-wallet-action"
+                      type="button"
+                      onClick={handleConfirmPayment}
+                      disabled={isVerifying}
+                      className="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Идэвхжүүлж байна...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="w-4 h-4" />
+                          <span>{`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) АВАХ`}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* PACKAGE PURCHASE WITH MONPAY / QPAY TRANSFER */}
+              {mainTab === 'package' && paymentMethod !== 'wallet' && paymentMethod !== 'code' && (
+                <div className="space-y-2">
                   <button
+                    id="submit-package-transfer-btn"
                     type="button"
                     onClick={() => handleSubmitPendingTransfer(activePrice, currentPlan.label)}
                     disabled={isVerifying}
-                    className="w-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 hover:from-rose-500 hover:to-amber-400 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>📩 Шилжүүлэг хийснээ админд мэдэгдэх (Шалгуулах)</span>
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Хүсэлт илгээж байна...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>{`📩 ШИЛЖҮҮЛЭГ ХИЙСНЭЭ АДМИНД МЭДЭГДЭХ (${activePrice.toLocaleString()}₮ ШАЛГУУЛАХ)`}</span>
+                      </>
+                    )}
                   </button>
+
+                  {isUserAdmin && (
+                    <button
+                      id="instant-package-activate-btn"
+                      type="button"
+                      onClick={handleInstantActivatePackage}
+                      disabled={isVerifying}
+                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 flex items-center justify-center gap-1.5"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>[Админ тест] Багц шууд идэвхжүүлэх</span>
+                    </button>
+                  )}
+
+                  <p className="text-[10px] text-zinc-400 text-center">
+                    * Та MonPay ({monpayNumber}) эсвэл QPay-ээр шилжүүлэг хийсний дараа хүсэлтээ илгээнэ. Админ шалгаж баталгаажуулснаар таны анимэ эрх идэвхжинэ.
+                  </p>
                 </div>
               )}
             </div>

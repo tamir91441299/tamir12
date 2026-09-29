@@ -22,7 +22,7 @@ import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
 import { ContinueWatching, WatchHistoryItem } from './components/ContinueWatching';
-import { SAMPLE_MOVIES } from './data/movies';
+import { SAMPLE_MOVIES, DEATH_NOTE } from './data/movies';
 import { Movie, TabType, MovieSubcategory } from './types';
 import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
@@ -61,8 +61,7 @@ export default function App() {
       'm_soul_eater',
       'm_chainsaw_man',
       'm_mha_s1',
-      'm_mha_s2',
-      'm_death_note'
+      'm_mha_s2'
     ]);
     let base = [...SAMPLE_MOVIES];
     try {
@@ -87,7 +86,12 @@ export default function App() {
     } catch (e) {
       console.error(e);
     }
-    return base.filter((m) => !DELETED_IDS.has(m.id));
+    const filtered = base.filter((m) => !DELETED_IDS.has(m.id));
+    // Ensure DEATH_NOTE is always included
+    if (!filtered.some((m) => m.id === DEATH_NOTE.id)) {
+      filtered.splice(1, 0, DEATH_NOTE);
+    }
+    return filtered;
   });
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
@@ -410,8 +414,7 @@ export default function App() {
       'm_soul_eater',
       'm_chainsaw_man',
       'm_mha_s1',
-      'm_mha_s2',
-      'm_death_note'
+      'm_mha_s2'
     ]);
     try {
       const saved = localStorage.getItem('ioio_watch_history');
@@ -425,6 +428,14 @@ export default function App() {
       console.error(e);
     }
     return [
+      {
+        movieId: 'm_death_note',
+        episodeNumber: 1,
+        progressPercent: 40,
+        currentTime: 550,
+        duration: 1380,
+        updatedAt: Date.now() - 1000 * 60 * 30,
+      },
       {
         movieId: 'm_91_days',
         episodeNumber: 1,
@@ -764,8 +775,27 @@ export default function App() {
     packageType: 'anime' | 'movie' | 'full_vip',
     deductedAmount: number = 0,
     durationMonths: number = 1,
-    durationDays?: number
+    durationDays?: number,
+    isCodeRedemption: boolean = false
   ) => {
+    const isAuthorizedAdmin =
+      currentUser?.email === 'tamir91441299@gmail.com' ||
+      (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+
+    // SECURITY GUARD: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!
+    if (!isCodeRedemption && !isAuthorizedAdmin) {
+      if (deductedAmount <= 0) {
+        alert('⛔ Алдаа: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд дансаа оноогоор цэнэглэнэ үү.');
+        return;
+      }
+      if (userBalance < deductedAmount) {
+        alert(
+          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!`
+        );
+        return;
+      }
+    }
+
     const newBalance = deductedAmount > 0 ? Math.max(0, userBalance - deductedAmount) : userBalance;
     if (deductedAmount > 0) {
       setUserBalance(newBalance);

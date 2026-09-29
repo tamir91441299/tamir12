@@ -77,7 +77,7 @@ export const MY_HERO_ACADEMIA_S1: Movie = {
   title: 'My Hero Academia (Season 1)',
   titleMongolian: 'Миний Баатрын Академи (1-р бүлэг)',
   type: 'anime',
-  poster: '/images/mha_poster.jpg',
+  poster: 'https://tse3.mm.bing.net/th/id/OIP.jkUO94drfoqspSdA6WAORAHaJ4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   backdrop: '/images/mha_backdrop.jpg',
   year: 2016,
   duration: '13 анги',

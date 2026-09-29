@@ -225,7 +225,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       if (onRequestPurchase) {
         onRequestPurchase(movie);
       } else {
-        alert('🔒 Анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та Анимэ багцын эрхээ авна уу.');
+        alert('🔒 Оноогүй болон анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та дансаа оноогоор цэнэглэж Анимэ багцын эрхээ авна уу.');
       }
     }
   };
