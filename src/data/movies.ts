@@ -1,5 +1,6 @@
 import { Movie, Comment, Episode } from '../types';
-import { MEGALO_BOX_S1 } from './anime/megaloBox';
+import { DEATH_NOTE } from './anime/deathNote';
+import { MY_HERO_ACADEMIA } from './anime/myHeroAcademia';
 import { KAMI_KUZU_IDOL } from './anime/kamiKuzuIdol';
 import {
   LEGEND_OF_KORRA,
@@ -197,7 +198,8 @@ export const SAMPLE_MOVIES: Movie[] = [
       }
     ]
   },
-  MEGALO_BOX_S1,
+  DEATH_NOTE,
+  MY_HERO_ACADEMIA,
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
   HUNTER_X_HUNTER,
@@ -208,6 +210,8 @@ export const SAMPLE_MOVIES: Movie[] = [
 ];
 
 export {
+  DEATH_NOTE,
+  MY_HERO_ACADEMIA,
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
   HUNTER_X_HUNTER,
@@ -362,13 +366,23 @@ export const SAMPLE_COMMENTS: Comment[] = [
     likes: 18
   },
   {
-    id: 'c5',
-    movieId: 'm_megalo_box_s1',
+    id: 'c_dn1',
+    movieId: 'm_death_note',
     userName: 'Билгүүн',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=100&q=80',
-    text: 'Мегало Бокс анимэ бол жинхэнэ эр зориг, хөлс хүч, боксын гал цогтой бүтээл! 13 анги бүгд дуу оруулгатай орсонд баярлалаа.',
+    text: 'Death Note бол анимэ ертөнцийн бүх цаг үеийн сод бүтээл! Лайт ба L хоёрын сэтгэл зүйн тулаан, оюуны шатар үнэхээр сэтгэл татлаа. 37 анги бүгд орсонд баярлалаа.',
     rating: 10,
     date: 'Өнөөдөр 19:20',
-    likes: 31
+    likes: 42
+  },
+  {
+    id: 'c_mha1',
+    movieId: 'm_my_hero_academia',
+    userName: 'Тэмүүлэн',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    text: 'My Hero Academia үнэхээр урам зориг өгсөн гайхалтай анимэ! Дэкү, Олл Майт хоёрын харилцаа, тулааны хэсгүүд супер байлаа. Plus Ultra!',
+    rating: 10,
+    date: 'Өнөөдөр 20:10',
+    likes: 38
   }
 ];

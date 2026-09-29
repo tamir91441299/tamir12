@@ -39,7 +39,7 @@ import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
 import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
-import { checkUserContentAccess } from '../lib/permissionService';
+import { checkUserContentAccess, getAnimeExpiryDetails } from '../lib/permissionService';
 import { generateEpisodeLinksCode } from '../lib/episodeLinkManager';
 import { HUNTER_X_HUNTER_EPISODE_LINKS } from '../data/anime/hunterXHunter';
 
@@ -187,7 +187,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   if (!movie) return null;
 
-  const isMegaloBox = movie.id === 'm_megalo_box' || movie.title.toLowerCase().includes('megalo');
+  const isDeathNote = movie.id === 'm_death_note' || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн дэвтэр');
+  const isMyHeroAcademia = movie.id === 'm_my_hero_academia' || movie.title.toLowerCase().includes('hero academia') || movie.titleMongolian.toLowerCase().includes('баатрын академи');
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
@@ -270,22 +271,62 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     // Parse lines or split by whitespace/commas
     const lines = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
-    const targetCount = Math.max(1, Math.min(148, Number(batchTotalEpCount) || (isHunterXHunter ? 148 : 13)));
+    const targetCount = Math.max(1, Math.min(148, Number(batchTotalEpCount) || (isHunterXHunter ? 148 : isDeathNote ? 37 : 13)));
 
-    const defaultMegaloTitles: Record<number, string> = {
-      1: '1-р анги - Хувь тавилан хуурамч биш (BUY OR DIE?)',
-      2: '2-р анги - Үхлийн өмнөх тулаан (THE MAN ONLY DIES ONCE)',
-      3: '3-р анги - Араатан ба төмөр (GEAR IS DEAD)',
-      4: '4-р анги - Жинхэнэ нэр: Junk Dog (LET\'S DANCE WITH DEATH)',
-      5: '5-р анги - Дээд түвшний өрсөлдөөн (THE MAN FROM UNDERWORLD)',
-      6: '6-р анги - Өнгөрсөн үеийн сүүдэр (UNTIL THE LAST SPARK)',
-      7: '7-р анги - Замналын эхлэл (THE ROAD TO DEATH)',
-      8: '8-р анги - Тэсвэр тэвчээр (DEADLINE)',
-      9: '9-р анги - Сүүлчийн найдварын оч (A DEAD FLOWER NEVER BLOOMS)',
-      10: '10-р анги - Их рингэнд гарах зам (THE DIE IS CAST)',
-      11: '11-р анги - Өшөө авалт ба нөхөрлөл (A DEAD MARCH)',
-      12: '12-р анги - Аваргын эсрэг тулаан (BITE THE DUST)',
-      13: '13-р анги - Төгсгөлийн тулаан (BORN TO DIE - ТӨГСГӨЛ)'
+    const defaultDeathNoteTitles: Record<number, string> = {
+      1: '1-р анги - Сэргэлт (Rebirth)',
+      2: '2-р анги - Сөргөлдөөн (Confrontation)',
+      3: '3-р анги - Гүйлгээ (Dealings)',
+      4: '4-р анги - Мөрдөлт (Pursuit)',
+      5: '5-р анги - Заль мэх (Tactics)',
+      6: '6-р анги - Сэтгэлийн шарх (Unraveling)',
+      7: '7-р анги - Үүлэрхэг тэнгэр (Overcast)',
+      8: '8-р анги - Харц (Gaze)',
+      9: '9-р анги - Уулзалт (Encounter)',
+      10: '10-р анги - Эргэлзээ (Doubt)',
+      11: '11-р анги - Дайралт (Assault)',
+      12: '12-р анги - Хайр (Love)',
+      13: '13-р анги - Илчлэлт (Confession)',
+      14: '14-р анги - Найз (Friend)',
+      15: '15-р анги - Бооцоо (Wager)',
+      16: '16-р анги - Шийдвэр (Decision)',
+      17: '17-р анги - Гүйцэтгэл (Execution)',
+      18: '18-р анги - Холбоотон (Ally)',
+      19: '19-р анги - Мацүда (Matsuda)',
+      20: '20-р анги - Түр аргацаалт (Makeshift)',
+      21: '21-р анги - Үзүүлбэр (Performance)',
+      22: '22-р анги - Удирдамж (Guidance)',
+      23: '23-р анги - Галзуурал (Frenzy)',
+      24: '24-р анги - Сэргэн мандалт (Revival)',
+      25: '25-р анги - Чимээгүй байдал (Silence)',
+      26: '26-р анги - Хойд дүр (Reincarnation)',
+      27: '27-р анги - Хулгай (Abduction)',
+      28: '28-р анги - Тэвчээргүй зан (Impatience)',
+      29: '29-р анги - Эцэг (Father)',
+      30: '30-р анги - Шударга ёс (Justice)',
+      31: '31-р анги - Шилжүүлэг (Transfer)',
+      32: '32-р анги - Сонголт (Selection)',
+      33: '33-р анги - Шоглоом (Scorn)',
+      34: '34-р анги - Сонор сэрэмж (Vigilance)',
+      35: '35-р анги - Хорсол (Malice)',
+      36: '36-р анги - 1-р сарын 28 (1.28)',
+      37: '37-р анги - Шинэ ертөнц (New World - Төгсгөл)'
+    };
+
+    const defaultMyHeroTitles: Record<number, string> = {
+      1: '1-р анги - Мидория Изүкү: Гарал үүсэл (Izuku Midoriya: Origin)',
+      2: '2-р анги - Баатар болохын тулд (What It Takes to Be a Hero)',
+      3: '3-р анги - Архирах булчингууд (Roaring Muscles)',
+      4: '4-р анги - Гарааны шугам (Start Line)',
+      5: '5-р анги - Миний одоо хийж чадах зүйл (What I Can Do For Now)',
+      6: '6-р анги - Уур хилэн, муу хог (Rage, You Damn Nerd)',
+      7: '7-р анги - Дэкү ба Каччан (Deku vs. Kacchan)',
+      8: '8-р анги - Бакугогийн гарааны шугам (Bakugo\'s Start Line)',
+      9: '9-р анги - Хичээгээрэй Ийда! (Yeah, Just Do Your Best, Iida!)',
+      10: '10-р анги - Үл мэдэгдэх дайсантай тулгарсан нь (Encounter with the Unknown)',
+      11: '11-р анги - Тоглоом дууслаа (Game Over)',
+      12: '12-р анги - Бүхний Дээд All Might (All Might)',
+      13: '13-р анги - Зүрх бүхэнд орших баатар (In Each of Our Hearts - Төгсгөл)'
     };
 
     const default91DaysTitles: Record<number, string> = {
@@ -344,10 +385,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
         isHunterXHunter ? `${i}-р анги` :
+        isDeathNote ? defaultDeathNoteTitles[i] || `${i}-р анги` :
+        isMyHeroAcademia ? defaultMyHeroTitles[i] || `${i}-р анги` :
         isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
         isKorra ? defaultKorraTitles[i] || `${i}-р анги` :
         is91Days ? default91DaysTitles[i] || `${i}-р анги` :
-        isMegaloBox ? defaultMegaloTitles[i] || `${i}-р анги` :
         `${i}-р анги`
       );
       const duration = existing?.duration || '22 мин';
@@ -619,6 +661,43 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     </span>
                   </div>
                 )}
+
+                {/* Anime Package Expiry / Access status indicator */}
+                {(() => {
+                  const expiryInfo = getAnimeExpiryDetails(currentUser);
+                  if (expiryInfo.hasAccess) {
+                    return (
+                      <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl p-2.5 flex items-center justify-between text-xs text-emerald-300">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>🎌 <strong>Анимэ эрх идэвхтэй</strong></span>
+                        </div>
+                        <span className="font-mono font-bold text-white bg-black/40 px-2 py-0.5 rounded">
+                          Дуусах: {expiryInfo.expiryDateStr} ({expiryInfo.countdownText})
+                        </span>
+                      </div>
+                    );
+                  } else if (currentUser && expiryInfo.isExpired) {
+                    return (
+                      <div className="bg-rose-950/60 border border-rose-500/40 rounded-xl p-2.5 flex items-center justify-between text-xs text-rose-300">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>⚠️ Анимэ эрх дууссан байна ({expiryInfo.expiryDateStr})</span>
+                        </div>
+                        {onRequestPurchase && (
+                          <button
+                            type="button"
+                            onClick={() => onRequestPurchase(movie)}
+                            className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2.5 py-1 rounded-lg cursor-pointer"
+                          >
+                            Эрх сунгах
+                          </button>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Main Action Buttons */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-3">

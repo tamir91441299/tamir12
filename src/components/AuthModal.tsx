@@ -13,7 +13,13 @@ import {
   Users, 
   Monitor, 
   Smartphone,
-  Laptop
+  Laptop,
+  Wallet,
+  Calendar,
+  Clock,
+  Zap,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   saveUserToFirestore, 
@@ -22,6 +28,7 @@ import {
   persistActiveSession,
   getLastSavedAccount 
 } from '../lib/userService';
+import { getAnimeExpiryDetails } from '../lib/permissionService';
 
 export interface UserAccount {
   id: string;
@@ -42,19 +49,23 @@ export interface UserAccount {
 interface AuthModalProps {
   currentUser: UserAccount | null;
   initialMode?: 'phone' | 'pc' | 'login' | 'register';
+  userBalance?: number;
   onClose: () => void;
   onLoginSuccess: (user: UserAccount) => void;
   onLogout: () => void;
   onOpenUserManagement?: () => void;
+  onOpenPaymentModal?: (tab?: 'topup' | 'package' | 'code') => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   currentUser,
   initialMode = 'login',
+  userBalance = 0,
   onClose,
   onLoginSuccess,
   onLogout,
   onOpenUserManagement,
+  onOpenPaymentModal,
 }) => {
   const [mode, setMode] = useState<'phone' | 'pc' | 'login' | 'register'>(
     currentUser ? 'login' : initialMode
@@ -203,7 +214,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           id: 'user_' + nowTimestamp,
           name: cleanName,
           email: finalEmail,
-          phone: cleanPhone || '99110000',
+          phone: cleanPhone || '',
           registeredAt: formattedRegisteredAt,
           registeredTimestamp: nowTimestamp,
           role: newUserRole,
@@ -220,7 +231,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           id: newUser.id,
           name: cleanName,
           email: finalEmail,
-          phone: cleanPhone || '99110000',
+          phone: cleanPhone || '',
           password: cleanPassword,
         });
 
@@ -315,36 +326,153 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* If user is already logged in -> Profile details View */}
         {currentUser ? (() => {
           const isAdmin = currentUser.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+          const animeExpiry = getAnimeExpiryDetails(currentUser);
+          const effectiveBalance = typeof userBalance === 'number' ? userBalance : (currentUser.walletBalance || 0);
+
           return (
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-zinc-900 rounded-2xl border border-zinc-800">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-black font-black text-2xl flex items-center justify-center shadow-lg uppercase">
+            <div className="p-5 sm:p-6 space-y-4">
+              {/* User Identity Header */}
+              <div className="flex items-center gap-3.5 p-3.5 bg-zinc-900 rounded-2xl border border-zinc-800">
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 via-rose-500 to-indigo-600 text-black font-black text-xl flex items-center justify-center shadow-lg uppercase shrink-0">
                   {currentUser.name.charAt(0)}
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-white flex items-center gap-1.5">
-                    {currentUser.name}
-                    <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-1.5 truncate">
+                    <span>{currentUser.name}</span>
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   </h3>
-                  <p className="text-xs text-zinc-400">{currentUser.email}</p>
-                  <span className="inline-block mt-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded">
-                    {isAdmin ? 'Админ Систем Удирдагч' : 'Баталгаажсан Хэрэглэгч'}
+                  <p className="text-xs text-zinc-400 truncate">{currentUser.email || currentUser.phone}</p>
+                  <span className="inline-block mt-1 bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded">
+                    {isAdmin ? '👑 Админ Систем Удирдагч' : '🎌 FlickNime Хэрэглэгч'}
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-2 text-xs text-zinc-300 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+              {/* CARD 1: WALLET POINTS (ХЭТЭВЧ & ҮЛДЭГДЭЛ) */}
+              <div className="p-3.5 bg-gradient-to-r from-amber-950/50 via-zinc-900 to-zinc-900 rounded-xl border border-amber-500/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-400 uppercase font-bold block">Дансны оноо (Хэтэвч):</span>
+                      <h4 className="font-mono text-base sm:text-lg font-black text-amber-300">
+                        {effectiveBalance.toLocaleString()} ₮ оноо
+                      </h4>
+                    </div>
+                  </div>
+
+                  {onOpenPaymentModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenPaymentModal('topup');
+                      }}
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      <span>Оноо цэнэглэх</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-400 italic">
+                  * 1₮ = 1 Оноо. Цэнэглэсэн оноо шууд таны дансанд орж анимэ үзэх боломжтой болно.
+                </p>
+              </div>
+
+              {/* CARD 2: ANIME SUBSCRIPTION & EXPIRATION (АНИМЭ ЭРХ & ДУУСАХ ХУГАЦАА) */}
+              <div className={`p-3.5 rounded-xl border space-y-2.5 transition-all ${
+                animeExpiry.hasAccess
+                  ? 'bg-gradient-to-r from-rose-950/60 via-zinc-900 to-zinc-900 border-rose-500/50'
+                  : 'bg-zinc-900/90 border-zinc-800'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shrink-0 ${
+                      animeExpiry.hasAccess ? 'bg-rose-600 text-white' : 'bg-zinc-800 text-zinc-400'
+                    }`}>
+                      🎌
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-400 uppercase font-bold block">Анимэ үзэх эрхийн төлөв:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-black text-xs sm:text-sm ${
+                          animeExpiry.hasAccess ? 'text-white' : 'text-zinc-400'
+                        }`}>
+                          {animeExpiry.hasAccess ? '🎌 Анимэ Багц' : 'Эрх аваагүй байна'}
+                        </span>
+                        {animeExpiry.hasAccess ? (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-black flex items-center gap-0.5">
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                            <span>Идэвхтэй</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded font-bold">
+                            Эрхгүй
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {onOpenPaymentModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenPaymentModal('package');
+                      }}
+                      className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 fill-current" />
+                      <span>{animeExpiry.hasAccess ? 'Эрх сунгах' : 'Эрх авах'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Expiry Details Box */}
+                <div className="bg-black/50 p-2.5 rounded-lg border border-white/[0.08] space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Дуусах огноо:</span>
+                    </span>
+                    <span className="font-mono font-black text-white">
+                      {animeExpiry.hasAccess ? animeExpiry.formattedExpiryDate : '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                    <span className="text-zinc-400 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Үлдсэн хугацаа:</span>
+                    </span>
+                    <span className={`font-bold ${
+                      animeExpiry.hasAccess
+                        ? animeExpiry.isExpiringSoon ? 'text-amber-400 animate-pulse' : 'text-emerald-400'
+                        : 'text-zinc-500'
+                    }`}>
+                      {animeExpiry.countdownText}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 3: ACCOUNT INFO */}
+              <div className="space-y-1.5 text-xs text-zinc-300 bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800">
                 <div className="flex justify-between py-1 border-b border-zinc-800/60">
                   <span className="text-zinc-400">Утасны дугаар:</span>
-                  <span className="font-bold text-white">{currentUser.phone}</span>
+                  <span className="font-bold text-white font-mono">{currentUser.phone || '-'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-zinc-800/60">
                   <span className="text-zinc-400">Бүртгүүлсэн огноо:</span>
                   <span className="font-bold text-white">{currentUser.registeredAt}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-zinc-400">Бүртгэлийн төлөв:</span>
-                  <span className="font-bold text-emerald-400">Идэвхтэй ✓</span>
+                  <span className="text-zinc-400">Системийн статус:</span>
+                  <span className="font-bold text-emerald-400">Хэвийн, идэвхтэй ✓</span>
                 </div>
               </div>
 
@@ -355,7 +483,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onClose();
                     onOpenUserManagement();
                   }}
-                  className="w-full bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Users className="w-4 h-4 text-cyan-400" />
                   <span>Системийн Удирдлага (Админ)</span>
@@ -368,7 +496,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onLogout();
                   onClose();
                 }}
-                className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer"
+                className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
               >
                 Системээс Гарах
               </button>

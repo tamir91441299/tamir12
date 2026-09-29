@@ -65,7 +65,7 @@ export const AiMoviesView: React.FC<AiMoviesViewProps> = ({
         m.title.toLowerCase().includes('creator') ||
         m.title.toLowerCase().includes('matrix') ||
         m.title.toLowerCase().includes('cyberpunk') ||
-        m.title.toLowerCase().includes('megalo') ||
+        m.title.toLowerCase().includes('death note') ||
         m.title.toLowerCase().includes('machina') ||
         m.title.toLowerCase().includes('dune');
 

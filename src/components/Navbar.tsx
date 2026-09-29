@@ -35,6 +35,7 @@ import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
 import { DeviceMode } from './DisplaySettingsModal';
 import { AppNotification } from '../lib/userService';
+import { getAnimeExpiryDetails } from '../lib/permissionService';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -528,38 +529,53 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right: Wallet + Pass + Search + Favorites */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-1 lg:flex-none justify-end min-w-0">
-          {/* Subscription Package Button */}
-          {isAnimePackage || isMonthlyVip ? (
-            <button
-              onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-amber-500 text-black px-2.5 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0"
-            >
-              <Sparkles className="w-3.5 h-3.5 fill-current shrink-0" />
-              <span className="hidden sm:inline">🎌 АНИМЭ БАГЦТАЙ</span>
-              <span className="sm:hidden">Эрхтэй</span>
-            </button>
-          ) : (
-            <button
-              id="vip-monthly-pass-btn"
-              onClick={onOpenVipModal}
-              className="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-              title="Анимэ багц идэвхжүүлэх"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">АНИМЭ БАГЦ (2,500 ₮-с)</span>
-              <span className="sm:hidden">Эрх (2.5k+)</span>
-            </button>
-          )}
+          {/* Subscription Package Button with Expiration Display */}
+          {(() => {
+            const animeExpiry = getAnimeExpiryDetails(currentUser);
+            if (isAnimePackage || isMonthlyVip) {
+              return (
+                <button
+                  id="vip-monthly-pass-btn"
+                  onClick={onOpenVipModal}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 hover:brightness-110 text-black px-2.5 py-1 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0 transition-transform active:scale-95"
+                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText})`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 fill-current shrink-0 text-zinc-950" />
+                  <div className="flex flex-col items-start leading-tight text-left">
+                    <span className="font-black text-[11px] sm:text-xs">🎌 АНИМЭ ЭРХТЭЙ</span>
+                    <span className="text-[9px] font-mono font-black text-zinc-900 opacity-90 truncate max-w-[130px] sm:max-w-[200px]">
+                      {animeExpiry.countdownText} ({animeExpiry.expiryDateStr})
+                    </span>
+                  </div>
+                </button>
+              );
+            }
+            return (
+              <button
+                id="vip-monthly-pass-btn"
+                onClick={onOpenVipModal}
+                className="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                title="Анимэ багц идэвхжүүлэх (15 хоног 2.5k, 1 сар 5k, 2 сар 8.5k)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="hidden sm:inline">АНИМЭ БАГЦ (2,500 ₮-с)</span>
+                <span className="sm:hidden">Эрх авах</span>
+              </button>
+            );
+          })()}
 
           {/* User Wallet Balance Badge */}
           <button
             id="wallet-balance-btn"
             onClick={onOpenWallet}
-            className="flex items-center gap-1.5 bg-black/60 hover:bg-black/90 border border-amber-500/30 text-amber-300 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
-            title="Дансны үлдэгдэл цэнэглэх"
+            className="flex items-center gap-1.5 bg-black/60 hover:bg-black/90 border border-amber-500/40 text-amber-300 hover:border-amber-400 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 shadow-sm"
+            title="Оноо шууд цэнэглэх (1₮ = 1 Оноо)"
           >
             <Wallet className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="font-mono">{userBalance.toLocaleString()} ₮</span>
+            <div className="flex flex-col items-start leading-tight text-left">
+              <span className="font-mono font-black text-amber-300">{userBalance.toLocaleString()} ₮</span>
+              <span className="text-[8px] text-emerald-400 font-bold hidden sm:inline">+Шууд оноо авах</span>
+            </div>
           </button>
 
           {/* User Registration / Login Button */}

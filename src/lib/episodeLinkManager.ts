@@ -37,6 +37,18 @@ import {
   setHunterXHunterEpisodeLink,
   batchSetHunterXHunterEpisodeLinks,
 } from '../data/anime/hunterXHunter';
+import {
+  DEATH_NOTE,
+  DEATH_NOTE_EPISODE_LINKS,
+  setDeathNoteEpisodeLink,
+  batchSetDeathNoteEpisodeLinks,
+} from '../data/anime/deathNote';
+import {
+  MY_HERO_ACADEMIA,
+  MY_HERO_ACADEMIA_EPISODE_LINKS,
+  setMyHeroAcademiaEpisodeLink,
+  batchSetMyHeroAcademiaEpisodeLinks,
+} from '../data/anime/myHeroAcademia';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -144,7 +156,11 @@ export function batchConnectEpisodes(
   movie: Movie,
   linksMap: Record<number, string>
 ): Episode[] {
-  if (movie.id === HUNTER_X_HUNTER.id || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр')) {
+  if (movie.id === DEATH_NOTE.id || movie.title.toLowerCase().includes('death note') || movie.titleMongolian.toLowerCase().includes('үхлийн дэвтэр')) {
+    batchSetDeathNoteEpisodeLinks(linksMap);
+  } else if (movie.id === MY_HERO_ACADEMIA.id || movie.title.toLowerCase().includes('hero academia') || movie.titleMongolian.toLowerCase().includes('миний баатрын')) {
+    batchSetMyHeroAcademiaEpisodeLinks(linksMap);
+  } else if (movie.id === HUNTER_X_HUNTER.id || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр')) {
     batchSetHunterXHunterEpisodeLinks(linksMap);
   } else if (movie.id === SPY_X_FAMILY.id || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл')) {
     batchSetSpyXFamilyEpisodeLinks(linksMap);
@@ -187,10 +203,14 @@ export function batchConnectEpisodes(
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
+  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
   links: Record<number, string>
 ): string {
-  const varName = seriesName === 'HunterXHunter'
+  const varName = seriesName === 'DeathNote'
+    ? 'DEATH_NOTE_EPISODE_LINKS'
+    : seriesName === 'MyHeroAcademia'
+    ? 'MY_HERO_ACADEMIA_EPISODE_LINKS'
+    : seriesName === 'HunterXHunter'
     ? 'HUNTER_X_HUNTER_EPISODE_LINKS'
     : seriesName === 'SpyXFamily'
     ? 'SPY_X_FAMILY_EPISODE_LINKS'

@@ -176,16 +176,19 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     if (!u) return;
     const cleanId = (u.id || '').trim() || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : `user_${idx}_${Date.now()}`);
     const cleanEmail = (u.email || '').trim().toLowerCase();
-    const cleanPhone = (u.phone || '').trim();
+    const cleanPhone = (u.phone || '').trim().replace(/\s+/g, '');
 
-    // Look for existing user with same ID, email or non-empty phone
+    // Look for existing user with same ID, email or non-empty phone (ignore default placeholder 99110000)
     let foundKey: string | null = null;
     for (const [key, existing] of map.entries()) {
+      const exEmail = (existing.email || '').trim().toLowerCase();
+      const exPhone = (existing.phone || '').trim().replace(/\s+/g, '');
+
       if (
         key === cleanId ||
         existing.id === cleanId ||
-        (cleanEmail && existing.email && existing.email.toLowerCase() === cleanEmail) ||
-        (cleanPhone && cleanPhone !== '99110000' && existing.phone && existing.phone === cleanPhone)
+        (cleanEmail && exEmail && exEmail === cleanEmail) ||
+        (cleanPhone && cleanPhone !== '99110000' && exPhone && exPhone === cleanPhone)
       ) {
         foundKey = key;
         break;
@@ -198,25 +201,61 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const parsedTimestamp =
       u.registeredTimestamp ||
       baseObj?.registeredTimestamp ||
-      (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-')).getTime())
-        ? new Date(u.registeredAt.replace(/\./g, '-')).getTime()
+      (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime())
+        ? new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime()
         : Date.now());
+
+    // 1. Resolve Package Type: Keep active paid package over 'free'
+    let resolvedPackage = u.packageType || baseObj?.packageType || 'free';
+    if (resolvedPackage === 'free' && baseObj?.packageType && baseObj.packageType !== 'free') {
+      resolvedPackage = baseObj.packageType;
+    } else if (u.packageType && u.packageType !== 'free') {
+      resolvedPackage = u.packageType;
+    }
+
+    // 2. Resolve Package Expiry: Keep valid date over '-' or 'Идэвхгүй'
+    let resolvedExpiry = u.packageExpiry || baseObj?.packageExpiry || 'Идэвхгүй';
+    if ((resolvedExpiry === 'Идэвхгүй' || resolvedExpiry === '-') && baseObj?.packageExpiry && baseObj.packageExpiry !== '-' && baseObj.packageExpiry !== 'Идэвхгүй') {
+      resolvedExpiry = baseObj.packageExpiry;
+    }
+
+    // 3. Resolve Wallet Balance: Keep the highest balance
+    const uBal = typeof u.walletBalance === 'number' ? u.walletBalance : undefined;
+    const baseBal = typeof baseObj?.walletBalance === 'number' ? baseObj.walletBalance : undefined;
+    const resolvedBalance = Math.max(uBal ?? 0, baseBal ?? 0);
+
+    // 4. Resolve isMockUser: If either is explicitly a real user, it's NOT a mock user!
+    const resolvedIsMock = (u.isMockUser === false || baseObj?.isMockUser === false)
+      ? false
+      : (u.isMockUser ?? baseObj?.isMockUser ?? false);
+
+    // 5. Phone and Email: Prefer non-empty values
+    const resolvedPhone = cleanPhone && cleanPhone !== '99110000'
+      ? cleanPhone
+      : (baseObj?.phone || cleanPhone || '');
+    const resolvedEmail = cleanEmail || baseObj?.email || '';
+
+    // 6. Name: Prefer real user's custom name over generic placeholder
+    let resolvedName = u.name || baseObj?.name || 'Хэрэглэгч';
+    if (resolvedName === 'Хэрэглэгч' && baseObj?.name && baseObj.name !== 'Хэрэглэгч') {
+      resolvedName = baseObj.name;
+    }
 
     const merged: UserDetail = {
       ...baseObj,
       ...u,
       id: targetKey,
-      email: u.email || baseObj?.email || '',
-      phone: u.phone || baseObj?.phone || '',
-      name: u.name || baseObj?.name || 'Хэрэглэгч',
-      walletBalance: u.walletBalance ?? baseObj?.walletBalance ?? 0,
-      packageType: u.packageType || baseObj?.packageType || 'free',
-      packageExpiry: u.packageExpiry || baseObj?.packageExpiry || 'Идэвхгүй',
-      role: (u.email === 'tamir91441299@gmail.com' || baseObj?.email === 'tamir91441299@gmail.com') ? 'admin' : (u.role || baseObj?.role || 'user'),
+      email: resolvedEmail,
+      phone: resolvedPhone,
+      name: resolvedName,
+      walletBalance: resolvedBalance,
+      packageType: resolvedPackage as any,
+      packageExpiry: resolvedExpiry,
+      role: (resolvedEmail === 'tamir91441299@gmail.com' || resolvedPhone === '91441299') ? 'admin' : (u.role || baseObj?.role || 'user'),
       status: u.status || baseObj?.status || 'active',
-      registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleDateString('mn-MN'),
+      registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       registeredTimestamp: parsedTimestamp,
-      isMockUser: u.isMockUser ?? baseObj?.isMockUser ?? false,
+      isMockUser: resolvedIsMock,
       lastLogin: u.lastLogin || baseObj?.lastLogin || 'Идэвхтэй одоо',
       watchedCount: Math.max(u.watchedCount ?? 0, baseObj?.watchedCount ?? 0),
       favoriteCount: Math.max(u.favoriteCount ?? 0, baseObj?.favoriteCount ?? 0),
@@ -240,6 +279,107 @@ export function sortUsersByNewest(users: UserDetail[]): UserDetail[] {
     const timeB = b.registeredTimestamp || 0;
     return timeB - timeA;
   });
+}
+
+/**
+ * Top up user balance in Firestore and local storage authoritative state.
+ * Directly increments wallet balance and triggers real-time updates.
+ */
+export async function topUpUserBalanceInFirestore(
+  userId: string,
+  pointsAmount: number,
+  note?: string
+): Promise<{ success: boolean; newBalance: number; user?: UserDetail; message: string }> {
+  try {
+    const rawId = userId.trim();
+    let currentBal = 0;
+    let targetUser: UserDetail | undefined;
+
+    // 1. Check local storage list
+    const savedListStr = localStorage.getItem('ioio_registered_users_list');
+    let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+    if (Array.isArray(list)) {
+      targetUser = list.find((u) => u.id === rawId || u.phone === rawId || (u.email && u.email.toLowerCase() === rawId.toLowerCase()));
+      if (targetUser && typeof targetUser.walletBalance === 'number') {
+        currentBal = targetUser.walletBalance;
+      }
+    }
+
+    // 2. Fetch from Firestore if available
+    const docRef = doc(db, 'users', rawId);
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const d = snap.data() as UserDetail;
+        if (d) {
+          if (!targetUser) targetUser = { ...d, id: snap.id };
+          if (typeof d.walletBalance === 'number') {
+            currentBal = Math.max(currentBal, d.walletBalance);
+          }
+        }
+      }
+    } catch (e) {}
+
+    const newBalance = currentBal + pointsAmount;
+
+    // 3. Persist to Firestore
+    await setDoc(
+      docRef,
+      {
+        id: targetUser?.id || rawId,
+        name: targetUser?.name || 'Хэрэглэгч',
+        phone: targetUser?.phone || '',
+        email: targetUser?.email || '',
+        walletBalance: newBalance,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    // 4. Update local storage users list
+    if (targetUser) {
+      targetUser.walletBalance = newBalance;
+      const updatedList = list.map((u) => (u.id === targetUser!.id ? { ...u, walletBalance: newBalance } : u));
+      localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedList));
+    }
+
+    // 5. Update active session if target matches current user
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const activeU = JSON.parse(activeStr);
+        if (activeU.id === rawId || activeU.phone === rawId || (activeU.email && activeU.email.toLowerCase() === rawId.toLowerCase())) {
+          activeU.walletBalance = newBalance;
+          persistActiveSession(activeU, true);
+        }
+      }
+      localStorage.setItem('ioio_balance', String(newBalance));
+    } catch (e) {}
+
+    // 6. Broadcast top-up notification
+    await sendAdminNotification({
+      type: 'TOP_UP_REQUEST',
+      title: '💰 Хэтэвч амжилттай цэнэглэгдлээ!',
+      message: `${targetUser?.name || 'Хэрэглэгч'} (${targetUser?.phone || targetUser?.email || rawId})-д +${pointsAmount.toLocaleString()}₮ оноо шууд орлоо. Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮.`,
+      userName: targetUser?.name,
+      userEmail: targetUser?.email,
+      userPhone: targetUser?.phone,
+    });
+
+    return {
+      success: true,
+      newBalance,
+      user: targetUser,
+      message: `✓ ${targetUser?.name || 'Хэрэглэгч'}-д +${pointsAmount.toLocaleString()}₮ оноо шууд амжилттай орлоо! Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮`,
+    };
+  } catch (err: any) {
+    console.error('Error in topUpUserBalanceInFirestore:', err);
+    return {
+      success: false,
+      newBalance: 0,
+      message: '⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
+    };
+  }
 }
 
 /**
@@ -407,21 +547,52 @@ export async function saveUserToFirestore(
     const docRef = doc(db, 'users', rawId);
 
     const nowTimestamp = Date.now();
+    const cleanEmail = (user.email || '').trim().toLowerCase();
+    const cleanPhone = (user.phone || '').trim().replace(/\s+/g, '');
+
+    // Check existing record from local storage to avoid erasing balance or active packages
+    let existingRecord: UserDetail | undefined;
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      const list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+      if (Array.isArray(list)) {
+        existingRecord = list.find((u) => u && (u.id === rawId || (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (cleanPhone && cleanPhone !== '99110000' && u.phone === cleanPhone)));
+      }
+    } catch {}
+
+    const resolvedBalance = typeof extraData?.walletBalance === 'number'
+      ? extraData.walletBalance
+      : typeof (user as UserDetail).walletBalance === 'number' && (user as UserDetail).walletBalance > 0
+      ? (user as UserDetail).walletBalance
+      : (existingRecord?.walletBalance ?? (user as UserDetail).walletBalance ?? 0);
+
+    const resolvedPackage = extraData?.packageType
+      ? extraData.packageType
+      : ((user as UserDetail).packageType && (user as UserDetail).packageType !== 'free')
+      ? (user as UserDetail).packageType
+      : (existingRecord?.packageType || (user as UserDetail).packageType || 'free');
+
+    const resolvedExpiry = extraData?.packageExpiry
+      ? extraData.packageExpiry
+      : ((user as UserDetail).packageExpiry && (user as UserDetail).packageExpiry !== '-' && (user as UserDetail).packageExpiry !== 'Идэвхгүй')
+      ? (user as UserDetail).packageExpiry
+      : (existingRecord?.packageExpiry || (user as UserDetail).packageExpiry || 'Идэвхгүй');
+
     const userPayload: UserDetail = {
       id: rawId,
-      name: user.name || 'Хэрэглэгч',
-      email: user.email || '',
-      phone: user.phone || '',
-      registeredAt: user.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      registeredTimestamp: (user as UserDetail).registeredTimestamp || (user as any).registeredTimestamp || nowTimestamp,
-      role: (user as UserDetail).role || (user.email === 'tamir91441299@gmail.com' ? 'admin' : 'user'),
-      status: (user as UserDetail).status || 'active',
-      packageType: (user as UserDetail).packageType || 'free',
-      packageExpiry: (user as UserDetail).packageExpiry || 'Идэвхгүй',
-      walletBalance: (user as UserDetail).walletBalance ?? 0,
+      name: user.name || existingRecord?.name || 'Хэрэглэгч',
+      email: cleanEmail || existingRecord?.email || '',
+      phone: cleanPhone || existingRecord?.phone || '',
+      registeredAt: user.registeredAt || existingRecord?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      registeredTimestamp: (user as UserDetail).registeredTimestamp || existingRecord?.registeredTimestamp || nowTimestamp,
+      role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : (user as UserDetail).role || existingRecord?.role || 'user',
+      status: (user as UserDetail).status || existingRecord?.status || 'active',
+      packageType: resolvedPackage,
+      packageExpiry: resolvedExpiry,
+      walletBalance: resolvedBalance,
       lastLogin: (user as UserDetail).lastLogin || new Date().toLocaleString('mn-MN'),
-      watchedCount: (user as UserDetail).watchedCount ?? 0,
-      favoriteCount: (user as UserDetail).favoriteCount ?? 0,
+      watchedCount: Math.max((user as UserDetail).watchedCount ?? 0, existingRecord?.watchedCount ?? 0),
+      favoriteCount: Math.max((user as UserDetail).favoriteCount ?? 0, existingRecord?.favoriteCount ?? 0),
       isMockUser: false,
       ...extraData,
     };
@@ -431,10 +602,9 @@ export async function saveUserToFirestore(
       const savedListStr = localStorage.getItem('ioio_registered_users_list');
       let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
       if (!Array.isArray(list)) list = [];
-      const cleanEmail = (userPayload.email || '').toLowerCase();
 
       const existingIndex = list.findIndex(
-        (u) => u && (u.id === rawId || (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail))
+        (u) => u && (u.id === rawId || (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (cleanPhone && cleanPhone !== '99110000' && u.phone === cleanPhone))
       );
       const isNew = existingIndex < 0;
 
@@ -509,20 +679,20 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
           const savedUser = localStorage.getItem('ioio_user');
           if (savedUser) {
             const u = JSON.parse(savedUser);
-            if (u && (u.email || u.id)) {
-              const uId = u.id || u.email.replace(/[^a-zA-Z0-9_-]/g, '_');
+            if (u && (u.email || u.id || u.phone)) {
+              const uId = u.id || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_active');
               rawList.push({
                 id: uId,
                 name: u.name || 'Хэрэглэгч',
-                email: u.email || 'user@ioio.mn',
-                phone: u.phone || '99110000',
-                registeredAt: u.registeredAt || new Date().toLocaleDateString('mn-MN'),
+                email: u.email || '',
+                phone: u.phone || '',
+                registeredAt: u.registeredAt || new Date().toLocaleString('mn-MN'),
                 registeredTimestamp: u.registeredTimestamp || Date.now(),
-                role: u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
-                status: 'active',
+                role: (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') ? 'admin' : (u.role || 'user'),
+                status: u.status || 'active',
                 packageType: u.packageType || 'free',
                 packageExpiry: u.packageExpiry || 'Идэвхгүй',
-                walletBalance: u.walletBalance ?? 0,
+                walletBalance: typeof u.walletBalance === 'number' ? u.walletBalance : 0,
                 lastLogin: 'Идэвхтэй одоо',
                 watchedCount: 1,
                 favoriteCount: 0,
@@ -532,7 +702,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
           }
         } catch (e) {}
 
-        // 4. Fallback demo users appended at the end
+        // 4. Fallback demo users appended only if no real users clash with them
         INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
 
         const deduplicated = deduplicateUserList(rawList);

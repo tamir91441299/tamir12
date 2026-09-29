@@ -27,6 +27,7 @@ import { Movie, TabType, MovieSubcategory } from './types';
 import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
   saveUserToFirestore,
+  topUpUserBalanceInFirestore,
   subscribeNotificationsFromFirestore,
   sendNewAnimeNotification,
   getPersistedActiveSession,
@@ -34,11 +35,13 @@ import {
   subscribeUserAccount,
   AppNotification
 } from './lib/userService';
+import { clearUserPendingRechargeRequests } from './lib/rechargeService';
 import {
   isAdminUser,
   isPackageExpired,
   checkUserContentAccess,
-  clearLegacyDevicePackages
+  clearLegacyDevicePackages,
+  calculateExtendedExpiryDate
 } from './lib/permissionService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
 
@@ -768,10 +771,8 @@ export default function App() {
       setUserBalance(newBalance);
     }
 
-    const expiryDate = new Date();
     const daysToAdd = durationDays ? durationDays : Math.round(durationMonths * 30);
-    expiryDate.setDate(expiryDate.getDate() + daysToAdd);
-    const expiryStr = expiryDate.toISOString().split('T')[0];
+    const expiryStr = calculateExtendedExpiryDate(currentUser?.packageExpiry, daysToAdd);
 
     if (currentUser) {
       const updatedUser: UserAccount = {
@@ -789,6 +790,7 @@ export default function App() {
         role: packageType === 'full_vip' ? 'vip' : (currentUser.role || 'user'),
         walletBalance: newBalance,
       });
+      clearUserPendingRechargeRequests(updatedUser);
     }
 
     setShowPaymentModal(false);
@@ -799,8 +801,29 @@ export default function App() {
     }
   };
 
-  const handleTopUpBalance = (amount: number) => {
-    setUserBalance((prev) => prev + amount);
+  const handleTopUpBalance = async (amount: number) => {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    const newBal = userBalance + safeAmount;
+    setUserBalance(newBal);
+
+    try {
+      localStorage.setItem('ioio_balance', String(newBal));
+    } catch {}
+
+    if (currentUser) {
+      const updatedUser: UserAccount = {
+        ...currentUser,
+        walletBalance: newBal,
+      };
+      setCurrentUser(updatedUser);
+      persistActiveSession(updatedUser, true);
+      clearUserPendingRechargeRequests(updatedUser);
+
+      await saveUserToFirestore(updatedUser, {
+        walletBalance: newBal,
+      });
+      await topUpUserBalanceInFirestore(currentUser.id, safeAmount, 'Шууд данс цэнэглэлт');
+    }
   };
 
   return (
@@ -1367,6 +1390,7 @@ export default function App() {
         <AuthModal
           currentUser={currentUser}
           initialMode={authModalInitialMode}
+          userBalance={userBalance}
           onClose={() => setShowAuthModal(false)}
           onLoginSuccess={(user) => {
             setCurrentUser(user);
@@ -1387,6 +1411,10 @@ export default function App() {
           onOpenUserManagement={() => {
             setShowAuthModal(false);
             setShowUserManagementModal(true);
+          }}
+          onOpenPaymentModal={() => {
+            setShowAuthModal(false);
+            setShowPaymentModal(true);
           }}
         />
       )}

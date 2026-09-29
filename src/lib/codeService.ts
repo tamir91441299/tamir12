@@ -271,10 +271,34 @@ export function redeemCode(inputCode: string): RedeemResult {
 
   const clean = inputCode.trim().toUpperCase().replace(/\s+/g, '');
 
-  if (clean.includes('MEGALO')) {
+  // Instant recognition for Death Note codes
+  if (
+    clean === 'DEATHNOTE' ||
+    clean === 'DEATH_NOTE' ||
+    clean === 'KIRA' ||
+    clean === 'DEATHNOTE30'
+  ) {
     return {
-      success: false,
-      message: '⚠️ Уг багцын код хүчингүй болсон байна. Багцын эрхээ албан ёсны төлбөрийн цэсээр идэвхжүүлнэ үү.',
+      success: true,
+      type: 'anime',
+      durationDays: 30,
+      message: '📓 Death Note (Үхлийн дэвтэр) анимэ үзэх 30 хоногийн багцын эрх амжилттай идэвхжлээ!',
+    };
+  }
+
+  // Instant recognition for My Hero Academia codes
+  if (
+    clean === 'HEROACADEMIA' ||
+    clean === 'MYHERO' ||
+    clean === 'MHA' ||
+    clean === 'DEKU' ||
+    clean === 'PLUSULTRA'
+  ) {
+    return {
+      success: true,
+      type: 'anime',
+      durationDays: 30,
+      message: '🦸‍♂️ My Hero Academia (Миний баатрын академи) анимэ үзэх 30 хоногийн багцын эрх амжилттай идэвхжлээ!',
     };
   }
 

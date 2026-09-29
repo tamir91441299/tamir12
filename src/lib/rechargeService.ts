@@ -1,6 +1,6 @@
 import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { sendAdminNotification } from './userService';
+import { sendAdminNotification, topUpUserBalanceInFirestore } from './userService';
 
 export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
@@ -54,6 +54,44 @@ export function hasUserPendingRechargeRequest(user?: { id?: string; phone?: stri
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Clear or mark all pending recharge requests as approved for a user
+ */
+export function clearUserPendingRechargeRequests(user?: { id?: string; phone?: string; email?: string } | null): void {
+  if (!user) return;
+  try {
+    const localStr = localStorage.getItem(STORAGE_KEY);
+    if (!localStr) return;
+    const list: RechargeRequest[] = JSON.parse(localStr);
+    if (!Array.isArray(list)) return;
+
+    const cleanPhone = (user.phone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (user.email || '').trim().toLowerCase();
+    const userId = user.id || '';
+
+    let changed = false;
+    list.forEach((req) => {
+      const reqPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+      const reqEmail = (req.userEmail || '').trim().toLowerCase();
+      if (
+        (userId && req.userId === userId) ||
+        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanEmail && reqEmail === cleanEmail)
+      ) {
+        if (req.status === 'pending') {
+          req.status = 'approved';
+          req.processedAt = new Date().toISOString();
+          req.processedBy = 'Шууд цэнэглэлт';
+          changed = true;
+        }
+      }
+    });
+    if (changed) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+  } catch (e) {}
 }
 
 /**
@@ -158,6 +196,80 @@ export async function submitRechargeRequest(data: {
       success: false,
       id: '',
       message: 'Хүсэлт илгээхэд алдаа гарлаа. Дахин оролдоно уу.',
+    };
+  }
+}
+
+/**
+ * Execute direct instant top-up: immediately credits points to user's wallet
+ * in Firestore and active session, clears pending flags, and logs approved transaction.
+ */
+export async function executeDirectInstantTopUp(data: {
+  userId: string;
+  userName: string;
+  userPhone: string;
+  userEmail?: string;
+  amount: number;
+  method?: 'monpay' | 'qpay' | 'wallet' | 'bank' | 'instant';
+  note?: string;
+}): Promise<{ success: boolean; newBalance: number; id: string; message: string }> {
+  try {
+    const id = 'req_instant_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const cleanAmount = Math.max(0, Number(data.amount) || 0);
+
+    // 1. Immediately credit points into Firestore and local store
+    const topUpRes = await topUpUserBalanceInFirestore(data.userId, cleanAmount, data.note || 'Шууд цэнэглэлт');
+
+    // 2. Clear any pending recharge block for this user
+    clearUserPendingRechargeRequests({ id: data.userId, phone: data.userPhone, email: data.userEmail });
+
+    // 3. Record transaction in recharge_requests with status 'approved'
+    const newReq: RechargeRequest = {
+      id,
+      userId: data.userId,
+      userName: data.userName || 'Хэрэглэгч',
+      userPhone: data.userPhone || '',
+      userEmail: data.userEmail || '',
+      planId: '1m',
+      planLabel: `Шууд цэнэглэлт (+${cleanAmount.toLocaleString()}₮)`,
+      durationDays: 30,
+      amount: cleanAmount,
+      packageType: 'anime',
+      method: (data.method as any) || 'monpay',
+      status: 'approved',
+      note: data.note || 'Шууд дансанд оноо орсон',
+      createdAt: new Date().toISOString(),
+      processedAt: new Date().toISOString(),
+      processedBy: 'Шууд Систем',
+    };
+
+    try {
+      const existingStr = localStorage.getItem(STORAGE_KEY);
+      const list: RechargeRequest[] = existingStr ? JSON.parse(existingStr) : [];
+      list.unshift(newReq);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch {}
+
+    try {
+      await setDoc(doc(db, 'recharge_requests', id), {
+        ...newReq,
+        timestamp: serverTimestamp(),
+      });
+    } catch {}
+
+    return {
+      success: true,
+      newBalance: topUpRes.newBalance,
+      id,
+      message: `🎉 ТАНЫ ДАНС АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n+${cleanAmount.toLocaleString()} ₮ оноо шууд таны дансанд орлоо. Шинэ үлдэгдэл: ${topUpRes.newBalance.toLocaleString()} ₮.`,
+    };
+  } catch (err: any) {
+    console.error('executeDirectInstantTopUp error:', err);
+    return {
+      success: false,
+      newBalance: 0,
+      id: '',
+      message: 'Цэнэглэлт хийхэд алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
     };
   }
 }

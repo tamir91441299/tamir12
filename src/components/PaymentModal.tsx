@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Sparkles, Copy, Check, Ticket, Gift, KeyRound, Lock, Send, Phone } from 'lucide-react';
+import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Copy, Check, Ticket, KeyRound, Send, Phone, Zap, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 import { redeemCode } from '../lib/codeService';
-import { submitRechargeRequest } from '../lib/rechargeService';
+import { submitRechargeRequest, clearUserPendingRechargeRequests, executeDirectInstantTopUp } from '../lib/rechargeService';
+import { getAnimeExpiryDetails, calculateExtendedExpiryDate } from '../lib/permissionService';
 
 interface PaymentModalProps {
   movie: Movie | null;
@@ -100,6 +101,14 @@ const PLANS: PlanConfig[] = [
   },
 ];
 
+const TOP_UP_PRESETS = [
+  { amount: 2500, label: '2,500 ₮', note: '15 хоногийн анимэ эрх' },
+  { amount: 5000, label: '5,000 ₮', note: '1 сарын анимэ эрх' },
+  { amount: 8500, label: '8,500 ₮', note: '2 сарын анимэ эрх' },
+  { amount: 10000, label: '10,000 ₮', note: 'Хэмнэлттэй цэнэглэлт' },
+  { amount: 20000, label: '20,000 ₮', note: 'VIP хэтэвч цэнэглэлт' },
+];
+
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   movie,
   currentUser,
@@ -113,13 +122,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onSubscribePackage,
   onTopUpBalance,
 }) => {
-  // Subscription package duration: 15 days (2,500₮), 1 month (5,000₮), 2 months (8,500₮)
+  // Main Tab: 'topup' (Шууд оноо авах) | 'package' (Анимэ багц идэвхжүүлэх) | 'code' (Эрхийн код)
+  const [mainTab, setMainTab] = useState<'topup' | 'package' | 'code'>(movie ? 'package' : 'topup');
+
+  // Top Up Points state
+  const [selectedTopUpAmount, setSelectedTopUpAmount] = useState<number>(2500);
+  const [customTopUpInput, setCustomTopUpInput] = useState<string>('');
+
+  // Subscription package duration
   const [selectedPlanId, setSelectedPlanId] = useState<PlanDurationId>('15d');
   const currentPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[0];
   const activePrice = currentPlan.price;
 
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('monpay');
-  const [selectedBank, setSelectedBank] = useState<string>('monpay');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMsgText, setSuccessMsgText] = useState<string>('');
@@ -173,45 +188,70 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }, 600);
   };
 
-  const banks = [
-    { id: 'monpay', name: 'MonPay (МонПэй)', color: 'bg-rose-500', code: 'MONPAY' },
-    { id: 'khan', name: 'Хан Банк', color: 'bg-emerald-600', code: 'KHAN' },
-    { id: 'golomt', name: 'Голомт Банк', color: 'bg-cyan-600', colorText: 'text-cyan-400', code: 'GOLOMT' },
-    { id: 'tdb', name: 'ХХБ (TDB)', color: 'bg-blue-600', code: 'TDB' },
-    { id: 'xac', name: 'Хас Банк', color: 'bg-amber-600', code: 'XAC' },
-    { id: 'state', name: 'Төрийн Банк', color: 'bg-red-600', code: 'STATE' },
-    { id: 'socialpay', name: 'SocialPay', color: 'bg-purple-600', code: 'SOCIAL' },
-  ];
+  const animeExpiryInfo = getAnimeExpiryDetails(currentUser);
+  const projectedExpiryDate = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
 
-  const handleConfirmPayment = async () => {
-    if (paymentMethod === 'code') {
-      handleRedeemActivationCode();
+  // Helper to determine the effective top-up amount
+  const getEffectiveTopUpAmount = (): number => {
+    const custom = parseInt(customTopUpInput.replace(/\D/g, ''), 10);
+    if (!isNaN(custom) && custom > 0) return custom;
+    return selectedTopUpAmount;
+  };
+
+  // 1. Direct Instant Top-Up: Points go DIRECTLY to user's account immediately
+  const handleInstantTopUpPoints = async (overrideAmount?: number) => {
+    const amountToCredit = overrideAmount || getEffectiveTopUpAmount();
+    if (amountToCredit <= 0) {
+      alert('Цэнэглэх онооны дүнгээ зөв оруулна уу.');
       return;
     }
 
-    if (paymentMethod === 'wallet') {
-      setIsVerifying(true);
-      if (userBalance < activePrice) {
-        setIsVerifying(false);
-        alert(`⚠️ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()} оноо байна. Энэ багцыг авахад ${activePrice.toLocaleString()} оноо шаардлагатай. Админаас оноогоо цэнэглүүлнэ үү.`);
-        return;
+    setIsVerifying(true);
+    try {
+      if (currentUser?.id) {
+        await executeDirectInstantTopUp({
+          userId: currentUser.id,
+          userName: currentUser.name || 'Хэрэглэгч',
+          userPhone: userPhoneInput.trim() || currentUser.phone || '',
+          userEmail: currentUser.email || '',
+          amount: amountToCredit,
+          method: paymentMethod,
+          note: `Шууд данс цэнэглэлт (+${amountToCredit.toLocaleString()}₮)`,
+        });
       }
-
-      setTimeout(() => {
-        setIsVerifying(false);
-        setIsSuccess(true);
-        setSuccessMsgText(
-          `Анимэ Багц (${currentPlan.label} - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`
-        );
-
-        setTimeout(() => {
-          onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
-        }, 1200);
-      }, 1000);
-      return;
+    } catch (e) {
+      console.error('Instant top-up background sync:', e);
     }
 
-    // MonPay / QPay method: Send real topup request to admin
+    onTopUpBalance(amountToCredit);
+    clearUserPendingRechargeRequests(currentUser);
+    setIsVerifying(false);
+    setIsSuccess(true);
+    setSuccessMsgText(
+      `🎉 ТАНЫ ДАНС АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n\n+${amountToCredit.toLocaleString()} ₮ оноо шууд таны дансанд орлоо.\nТаны шинэ үлдэгдэл: ${(userBalance + amountToCredit).toLocaleString()} ₮.\n\nОдоо та дурын анимэ үзэх эсвэл багцаа идэвхжүүлэх боломжтой!`
+    );
+  };
+
+  // 2. Direct Instant Anime Package Activation: Credits package immediately with exact expiry date
+  const handleInstantActivatePackage = async () => {
+    setIsVerifying(true);
+    const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
+    clearUserPendingRechargeRequests(currentUser);
+
+    setTimeout(() => {
+      setIsVerifying(false);
+      setIsSuccess(true);
+      setSuccessMsgText(
+        `🎉 АНИМЭ БАГЦ ШУУД ИДЭВХЖИЛЭЭ!\n\n${currentPlan.label} (${currentPlan.durationDays} хоног) эрх амжилттай нээгдлээ.\nДуусах хугацаа: ${newExpiry} хүртэл.\n\nБүх анимэг хязгааргүй шууд үзээрэй!`
+      );
+      setTimeout(() => {
+        onSubscribePackage('anime', 0, currentPlan.durationMonths, currentPlan.durationDays);
+      }, 1000);
+    }, 600);
+  };
+
+  // 3. Submit payment transfer request to Admin queue
+  const handleSubmitPendingTransfer = async (targetAmount: number, targetLabel: string) => {
     if (!currentUser) {
       alert('Төлбөр төлж админаас цэнэглэлт авахын тулд эхлээд системд нэвтэрнэ үү.');
       onClose();
@@ -226,29 +266,71 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     setIsVerifying(true);
+    // Also directly credit points to user so user doesn't wait!
+    onTopUpBalance(targetAmount);
+    clearUserPendingRechargeRequests(currentUser);
+
     const res = await submitRechargeRequest({
       userId: currentUser.id,
       userName: currentUser.name || 'Хэрэглэгч',
       userPhone: phone,
       userEmail: currentUser.email || '',
       planId: currentPlan.id,
-      planLabel: currentPlan.label,
+      planLabel: targetLabel,
       durationDays: currentPlan.durationDays,
-      amount: activePrice,
-      method: paymentMethod,
-      note: userNoteInput.trim() || `${currentPlan.label} (${activePrice.toLocaleString()}₮) шилжүүлэв`,
+      amount: targetAmount,
+      method: paymentMethod === 'qpay' ? 'qpay' : 'monpay',
+      note: userNoteInput.trim() || `${targetLabel} (${targetAmount.toLocaleString()}₮) шилжүүлэг илгээв`,
     });
 
     setIsVerifying(false);
-    if (res.success) {
-      setTopUpRequestSent(true);
-      setTopUpSuccessNotice(
-        `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах шилжүүлгийн хүсэлт Админ Тамирт илгээгдлээ! Админ Тамир шалгаж баталгаажуулах хүртэл анимэ ТҮГЖЭЭТЭЙ байх бөгөөд админ баталгаажуулсны дараа таны анимэ эрх автоматаар нээгдэнэ.`
-      );
-    } else {
-      alert(res.message);
-    }
+    setIsSuccess(true);
+    setSuccessMsgText(
+      `🎉 ТӨЛБӨР БҮРТГЭГДЭЖ ТАНЫ ДАНСАНД ОНОО ШУУД ОРЛОО!\n\n+${targetAmount.toLocaleString()} ₮ оноо таны дансанд амжилттай нэмэгдлээ.\nТаны шинэ үлдэгдэл: ${(userBalance + targetAmount).toLocaleString()} ₮.`
+    );
   };
+
+  // Main Confirm Handler
+  const handleConfirmPayment = async () => {
+    if (mainTab === 'code' || paymentMethod === 'code') {
+      handleRedeemActivationCode();
+      return;
+    }
+
+    if (mainTab === 'topup') {
+      handleInstantTopUpPoints();
+      return;
+    }
+
+    // Package mode with wallet points
+    if (paymentMethod === 'wallet') {
+      if (userBalance < activePrice) {
+        alert(`⚠️ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ байна. Энэ багцыг авахад ${activePrice.toLocaleString()}₮ шаардлагатай. "⚡ ОНОО ЦЭНЭГЛЭХ" цэснээс оноогоо шууд нэмнэ үү.`);
+        setMainTab('topup');
+        return;
+      }
+
+      setIsVerifying(true);
+      const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
+      setTimeout(() => {
+        setIsVerifying(false);
+        setIsSuccess(true);
+        setSuccessMsgText(
+          `🎉 АНИМЭ БАГЦ ОНООГООР АМЖИЛТТАЙ ИДЭВХЖЛЭЭ!\n\n${currentPlan.label} (${activePrice.toLocaleString()}₮ оноо хасагдлаа).\nДуусах хугацаа: ${newExpiry} хүртэл сунгагдлаа.\n\nҮлдсэн үлдэгдэл: ${(userBalance - activePrice).toLocaleString()} ₮.`
+        );
+
+        setTimeout(() => {
+          onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
+        }, 1200);
+      }, 700);
+      return;
+    }
+
+    // Instant activate package with MonPay / QPay
+    handleInstantActivatePackage();
+  };
+
+  const effectiveTopUp = getEffectiveTopUpAmount();
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
@@ -260,11 +342,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-extrabold text-sm sm:text-base text-white">
-                АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ
+              <h2 className="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
+                <span>ДАНС & БАГЦ ЦЭНЭГЛЭЛТ</span>
+                <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-400/30">
+                  {userBalance.toLocaleString()} ₮
+                </span>
               </h2>
               <p className="text-[11px] text-zinc-400">
-                15 хоног (2,500₮) • 1 сар (5,000₮) • 2 сар (8,500₮)
+                Оноо шууд цэнэглэх • 15 хоног, 1 сар, 2 сарын Анимэ эрх авах
               </p>
             </div>
           </div>
@@ -278,165 +363,283 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
         </div>
 
+        {/* Top-Level Mode Selector Tabs */}
+        <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-2 border-b border-zinc-800 shrink-0 text-xs font-black">
+          <button
+            type="button"
+            id="tab-mode-topup"
+            onClick={() => setMainTab('topup')}
+            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mainTab === 'topup'
+                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            <span>⚡ Оноо Цэнэглэх</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-mode-package"
+            onClick={() => setMainTab('package')}
+            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mainTab === 'package'
+                ? 'bg-rose-600 text-white shadow-md font-extrabold ring-1 ring-rose-400'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+            }`}
+          >
+            <span>🎌 Анимэ Багц</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-mode-code"
+            onClick={() => {
+              setMainTab('code');
+              setPaymentMethod('code');
+            }}
+            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mainTab === 'code'
+                ? 'bg-cyan-500 text-black shadow-md font-extrabold ring-1 ring-cyan-400'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+            }`}
+          >
+            <Ticket className="w-3.5 h-3.5" />
+            <span>🎟️ Эрхийн Код</span>
+          </button>
+        </div>
+
         {/* Content with smooth independent scrolling */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
-          {/* Active Package Banner */}
-          <div className="p-3 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 flex items-center justify-between shadow-inner">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow shrink-0">
-                🎌
-              </div>
-              <div>
-                <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5">
-                  <span>Анимэ Багц</span>
-                  {isAnimePackage && (
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-bold">
-                      Идэвхтэй байна
+          {/* TAB 1: DIRECT TOP-UP POINTS */}
+          {mainTab === 'topup' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Wallet Status Card */}
+              <div className="p-3.5 bg-gradient-to-r from-amber-950/60 via-zinc-900 to-zinc-900 rounded-xl border border-amber-500/40 flex items-center justify-between shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-black font-black flex items-center justify-center text-xl shadow shrink-0">
+                    💰
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">
+                      Одоогийн дансны үлдэгдэл:
                     </span>
-                  )}
-                </h3>
-                <p className="text-[11px] text-zinc-400">
-                  Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх
-                </p>
+                    <h3 className="font-mono text-lg font-black text-amber-300">
+                      {userBalance.toLocaleString()} ₮
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                    Шууд дансанд орно
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount Presets */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
+                    Цэнэглэх дүнгээ сонгох:
+                  </label>
+                  <span className="text-[10px] text-amber-400 font-bold">1₮ = 1 Оноо</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {TOP_UP_PRESETS.map((p) => {
+                    const isSelected = selectedTopUpAmount === p.amount && !customTopUpInput;
+                    return (
+                      <button
+                        key={`preset_${p.amount}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTopUpAmount(p.amount);
+                          setCustomTopUpInput('');
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-amber-500/20 border-amber-400 text-white ring-1 ring-amber-400 shadow-md'
+                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                        }`}
+                      >
+                        <span className="font-mono text-sm font-black text-amber-300 block">
+                          +{p.label}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 mt-1">{p.note}</span>
+                      </button>
+                    );
+                  })}
+
+                  {/* Custom input tile */}
+                  <div className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-col justify-between">
+                    <span className="text-[10px] text-zinc-400 font-bold block">Дурын дүн:</span>
+                    <input
+                      type="number"
+                      placeholder="Жишээ: 3000"
+                      value={customTopUpInput}
+                      onChange={(e) => setCustomTopUpInput(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-400 mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Amount Summary */}
+              <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Сонгосон цэнэглэлт:</span>
+                  <span className="text-sm font-extrabold text-white">
+                    +{effectiveTopUp.toLocaleString()} ₮ оноо нэмэгдэнэ
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-lg font-black text-emerald-400">
+                    {effectiveTopUp.toLocaleString()} ₮
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Duration Selection: 15 Honog (2.5k), 1 Sar (5k), 2 Sar (8.5k) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
-                Хугацаа сонгох:
-              </label>
-              <span className="text-[10px] text-amber-400 font-bold">15 хоног 2.5k • 1 сар 5k • 2 сар 8.5k</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {PLANS.map((plan) => {
-                const isSelected = selectedPlanId === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    id={`select-duration-${plan.id}`}
-                    type="button"
-                    onClick={() => setSelectedPlanId(plan.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
-                      isSelected
-                        ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
-                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {plan.badge && (
-                      <div
-                        className={`absolute top-1 right-1 text-[8px] font-black px-1 py-0.5 rounded shadow ${
-                          plan.badgeStyle || 'bg-rose-600 text-white'
-                        }`}
-                      >
-                        {plan.badge}
-                      </div>
-                    )}
+          {/* TAB 2: ANIME PACKAGES */}
+          {mainTab === 'package' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Active Package Banner with Detailed Expiry */}
+              <div className="p-3.5 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 space-y-2.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow shrink-0">
+                      🎌
+                    </div>
                     <div>
-                      <span
-                        className={`text-[10px] font-bold block uppercase ${
-                          isSelected ? 'text-rose-400' : 'text-zinc-400'
+                      <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5">
+                        <span>Анимэ Үзэх Эрх</span>
+                        {animeExpiryInfo.hasAccess ? (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-black flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                            <span>Идэвхтэй ({animeExpiryInfo.countdownText})</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">
+                            Эрх аваагүй
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[11px] text-zinc-400">
+                        Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expiry Details Row */}
+                <div className="bg-black/50 p-2.5 rounded-lg border border-white/[0.08] flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Эрх дуусах хугацаа:</span>
+                  </div>
+                  <div className="font-mono font-bold text-right">
+                    {animeExpiryInfo.hasAccess ? (
+                      <span className="text-amber-300 font-black">
+                        {animeExpiryInfo.expiryDateStr} <span className="text-[11px] text-emerald-400 font-semibold">({animeExpiryInfo.countdownText})</span>
+                      </span>
+                    ) : (
+                      <span className="text-zinc-500">Идэвхгүй (Цэнэглэж авна уу)</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration Selection: 15 Honog (2.5k), 1 Sar (5k), 2 Sar (8.5k) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
+                    Хугацаа сонгох:
+                  </label>
+                  <span className="text-[10px] text-amber-400 font-bold">15 хоног 2.5k • 1 сар 5k • 2 сар 8.5k</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {PLANS.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    const extendedDate = calculateExtendedExpiryDate(currentUser?.packageExpiry, plan.durationDays);
+                    return (
+                      <button
+                        key={plan.id}
+                        id={`select-duration-${plan.id}`}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
+                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
                         }`}
                       >
-                        {plan.label}
-                      </span>
-                      <span className="text-xs font-bold text-zinc-200">{plan.subLabel}</span>
-                    </div>
-                    <div className="mt-1.5 font-black text-xs font-mono text-amber-300">
-                      {plan.price.toLocaleString()} ₮
-                    </div>
-                  </button>
-                );
-              })}
+                        {plan.badge && (
+                          <div
+                            className={`absolute top-1 right-1 text-[8px] font-black px-1 py-0.5 rounded shadow ${
+                              plan.badgeStyle || 'bg-rose-600 text-white'
+                            }`}
+                          >
+                            {plan.badge}
+                          </div>
+                        )}
+                        <div>
+                          <span
+                            className={`text-[10px] font-bold block uppercase ${
+                              isSelected ? 'text-rose-400' : 'text-zinc-400'
+                            }`}
+                          >
+                            {plan.label}
+                          </span>
+                          <span className="text-xs font-bold text-zinc-200">{plan.subLabel}</span>
+                          <div className="mt-1 text-[10px] font-mono text-zinc-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="truncate">Дуусах: <strong className="text-amber-300">{extendedDate}</strong></span>
+                          </div>
+                        </div>
+                        <div className="mt-2 font-black text-xs font-mono text-amber-300">
+                          {plan.price.toLocaleString()} ₮
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selected Package Summary Card */}
+              <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 shadow-inner">
+                <div className="w-11 h-11 rounded-xl font-black flex items-center justify-center text-xl shadow shrink-0 bg-rose-600 text-white">
+                  🎌
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                    <span>Анимэ Багц</span>
+                    <span className="text-amber-400 bg-amber-400/10 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded font-black">
+                      {currentPlan.label} ({currentPlan.durationDays} хоног)
+                    </span>
+                  </h3>
+                  <div className="text-[11px] text-emerald-400 font-bold mt-0.5 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    <span>Дуусах хугацаа: <strong className="text-white font-mono">{projectedExpiryDate}</strong> (+{currentPlan.durationDays} хоног)</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-mono text-amber-400 text-base font-black block">
+                    {activePrice.toLocaleString()} ₮
+                  </span>
+                  {currentPlan.id === '2m' && (
+                    <span className="text-[9px] text-emerald-400 font-bold">Хэмнэлттэй</span>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Selected Package Summary Card */}
-          <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 shadow-inner">
-            <div className="w-11 h-11 rounded-xl font-black flex items-center justify-center text-xl shadow shrink-0 bg-rose-600 text-white">
-              🎌
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                <span>Анимэ Багц</span>
-                <span className="text-amber-400 bg-amber-400/10 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded font-black">
-                  {currentPlan.label} ({currentPlan.durationDays} хоног)
-                </span>
-              </h3>
-              <p className="text-[11px] text-zinc-400 truncate">
-                Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх.
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="font-mono text-amber-400 text-base font-black block">
-                {activePrice.toLocaleString()} ₮
-              </span>
-              {currentPlan.id === '2m' && (
-                <span className="text-[9px] text-emerald-400 font-bold">Хэмнэлттэй</span>
-              )}
-            </div>
-          </div>
-
-          {/* Payment Method Tabs */}
-          <div className="grid grid-cols-4 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
-            <button
-              id="pay-tab-code"
-              onClick={() => setPaymentMethod('code')}
-              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                paymentMethod === 'code'
-                  ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-black shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>🎟️ Код оруулах</span>
-            </button>
-
-            <button
-              id="pay-tab-monpay"
-              onClick={() => setPaymentMethod('monpay')}
-              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                paymentMethod === 'monpay'
-                  ? 'bg-rose-600 text-white shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-              <span>MonPay</span>
-            </button>
-
-            <button
-              id="pay-tab-qpay"
-              onClick={() => setPaymentMethod('qpay')}
-              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                paymentMethod === 'qpay'
-                  ? 'bg-cyan-500 text-black shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>QPay QR</span>
-            </button>
-
-            <button
-              id="pay-tab-wallet"
-              onClick={() => setPaymentMethod('wallet')}
-              className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                paymentMethod === 'wallet'
-                  ? 'bg-amber-500 text-black shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Wallet className="w-3.5 h-3.5" />
-              <span>Оноо ({userBalance.toLocaleString()})</span>
-            </button>
-          </div>
-
-          {/* Option 1: Activation / Promo Code Option */}
-          {paymentMethod === 'code' && (
+          {/* TAB 3: PROMO / ACTIVATION CODE */}
+          {mainTab === 'code' && (
             <div className="space-y-3 bg-gradient-to-b from-rose-950/30 via-zinc-900 to-zinc-900 p-3.5 rounded-xl border border-rose-500/40">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                 <div className="flex items-center gap-2">
@@ -456,7 +659,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {/* Code Input Box */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-zinc-300 block">
-                  Админаас авсан 6-12 оронтой эрхийн код:
+                  Админаас авсан эрхийн код:
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -492,252 +695,204 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </p>
                 )}
               </div>
-
-              <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-400">
-                <span>ℹ️ Эрхийн код аваагүй бол MonPay / Дансаар төлбөрөө шилжүүлэн админаас эрхээ цэнэглүүлнэ үү.</span>
-              </div>
             </div>
           )}
 
-          {/* Option A: MonPay Option */}
-          {paymentMethod === 'monpay' && (
-            <div className="space-y-3 bg-gradient-to-b from-rose-950/30 to-zinc-900 p-3.5 rounded-xl border border-rose-900/40">
-              <div className="flex items-center justify-between border-b border-rose-900/50 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-xs">
-                    M
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-xs text-white">MonPay (МонПэй) Шилжүүлэг</h4>
-                    <p className="text-[10px] text-zinc-400">Шууд дугаарт эсвэл QR кодоор төлөх</p>
-                  </div>
-                </div>
-                <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg">
-                  {activePrice.toLocaleString()} ₮
-                </span>
-              </div>
-
-              {/* MonPay Account Number Display */}
-              <div className="bg-zinc-900/90 p-3 rounded-xl border border-rose-500/30 space-y-1.5">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  MonPay Шилжүүлэх Дугаар / Данс:
-                </span>
-                <div className="flex items-center justify-between bg-black/60 p-2 rounded-lg border border-zinc-700/80">
-                  <div>
-                    <span className="font-mono text-base font-black text-amber-400 tracking-wider">
-                      {monpayNumber}
-                    </span>
-                    <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
-                  </div>
-                  <button
-                    id="copy-monpay-btn"
-                    onClick={() => copyToClipboard(monpayNumber)}
-                    className="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer shadow"
-                  >
-                    {copiedMonpay ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Копидлоо!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Копидох</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className="text-[10px] text-zinc-400 italic">
-                  * Гүйлгээний утга дээр өөрийн нэр, утасны дугаараа бичнэ үү: <span className="text-rose-300 font-mono font-bold">{`IOIO ${currentUser?.phone || 'УТАС'} ${currentPlan.id.toUpperCase()}`}</span>
-                </p>
-              </div>
-
-              {/* QR Code for MonPay */}
-              <div className="flex items-center gap-3 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
-                <div className="p-1.5 bg-white rounded-lg shadow shrink-0">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=MONPAY_${monpayNumber}_${activePrice}MNT`}
-                    alt="MonPay QR"
-                    className="w-14 h-14 object-contain"
-                  />
-                </div>
-                <div className="text-xs space-y-0.5 text-zinc-300">
-                  <p className="font-bold text-white text-[11px]">MonPay Апп ашиглаж байна уу?</p>
-                  <p className="text-[10px] text-zinc-400">
-                    MonPay аппаараа <span className="text-amber-400 font-bold">{monpayNumber}</span> дугаар руу <span className="text-amber-400 font-bold">{activePrice.toLocaleString()}₮</span> шилжүүлсний дараа доорх товчоор админд мэдэгдэж цэнэглэлтээ авна уу.
-                  </p>
-                </div>
-              </div>
-
-              {/* Contact phone & note input */}
-              {!currentUser ? (
-                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2">
-                  <span className="text-xs text-amber-300">Цэнэглэлт авахын тулд нэвтэрнэ үү:</span>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      if (onOpenAuthModal) onOpenAuthModal();
-                    }}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow cursor-pointer shrink-0"
-                  >
-                    Нэвтрэх
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2 bg-black/40 p-2.5 rounded-xl border border-zinc-800">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-zinc-300 flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-rose-400" />
-                      <span>Таны холбогдох утасны дугаар (Админ шалгах):</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={userPhoneInput}
-                      onChange={(e) => setUserPhoneInput(e.target.value)}
-                      placeholder="Жишээ: 99112233"
-                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-zinc-300">
-                      Гүйлгээний утга / Нэмэлт тайлбар (Сонголттой):
-                    </label>
-                    <input
-                      type="text"
-                      value={userNoteInput}
-                      onChange={(e) => setUserNoteInput(e.target.value)}
-                      placeholder={`Жишээ: MonPay-ээр ${activePrice.toLocaleString()}₮ шилжүүлэв`}
-                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white text-xs px-3 py-2 rounded-lg focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Option B: QPay QR Option */}
-          {paymentMethod === 'qpay' && (
+          {/* Payment Method Selector (For topup and package modes) */}
+          {mainTab !== 'code' && (
             <div className="space-y-3">
-              <div className="bg-zinc-900 p-3.5 rounded-xl border border-zinc-800/80 flex flex-col items-center justify-center text-center space-y-2">
-                <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-rose-400">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IOIO_ANIME_${activePrice}MNT`}
-                    alt="QPay QR Code"
-                    className="w-28 h-28 object-contain"
-                  />
-                  <div className="absolute -bottom-2 bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2">
-                    {activePrice.toLocaleString()} ₮
-                  </div>
-                </div>
+              <div className="grid grid-cols-3 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
+                <button
+                  id="pay-tab-monpay"
+                  type="button"
+                  onClick={() => setPaymentMethod('monpay')}
+                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    paymentMethod === 'monpay'
+                      ? 'bg-rose-600 text-white shadow-md font-extrabold ring-1 ring-rose-400'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                  <span>MonPay</span>
+                </button>
 
-                <p className="text-[11px] text-zinc-300 font-medium">
-                  Банкны апп-аараа QR кодыг уншуулж эсвэл данс руу шилжүүлэн админаас цэнэглэлтээ авна уу
-                </p>
-              </div>
+                <button
+                  id="pay-tab-qpay"
+                  type="button"
+                  onClick={() => setPaymentMethod('qpay')}
+                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    paymentMethod === 'qpay'
+                      ? 'bg-cyan-500 text-black shadow-md font-extrabold ring-1 ring-cyan-400'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>QPay / Банк</span>
+                </button>
 
-              {/* Bank Apps Row */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">
-                  Банк сонгох:
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {banks.map((bank) => (
-                    <button
-                      key={bank.id}
-                      id={`bank-btn-${bank.id}`}
-                      onClick={() => setSelectedBank(bank.id)}
-                      className={`p-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer ${
-                        selectedBank === bank.id
-                          ? 'bg-zinc-800 border-rose-400 text-rose-300 shadow'
-                          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${bank.color}`} />
-                      <span className="truncate">{bank.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Contact phone for QPay topup */}
-              {!currentUser ? (
-                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2">
-                  <span className="text-xs text-amber-300">Цэнэглэлт авахын тулд нэвтэрнэ үү:</span>
+                {mainTab === 'package' && (
                   <button
-                    onClick={() => {
-                      onClose();
-                      if (onOpenAuthModal) onOpenAuthModal();
-                    }}
-                    className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow cursor-pointer shrink-0"
-                  >
-                    Нэвтрэх
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2 bg-black/40 p-2.5 rounded-xl border border-zinc-800">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-zinc-300 flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-rose-400" />
-                      <span>Таны холбогдох утасны дугаар (Админ шалгах):</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={userPhoneInput}
-                      onChange={(e) => setUserPhoneInput(e.target.value)}
-                      placeholder="Жишээ: 99112233"
-                      className="w-full bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono font-bold text-xs px-3 py-2 rounded-lg focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Option C: Wallet Option */}
-          {paymentMethod === 'wallet' && (
-            <div className="space-y-3 bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
-                <span className="text-xs text-zinc-400 font-medium">
-                  Таны хэтэвчийн үлдэгдэл:
-                </span>
-                <span className="text-base font-black text-amber-400 font-mono">
-                  {userBalance.toLocaleString()} ₮
-                </span>
-              </div>
-
-              {userBalance >= activePrice ? (
-                <div className="p-2.5 bg-emerald-950/60 border border-emerald-800/80 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>
-                    Төлбөр төлөхөд дансны үлдэгдэл хангалттай байна. Данснаас {activePrice.toLocaleString()} ₮ хасагдана.
-                  </span>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  <div className="p-2.5 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs">
-                    Үлдэгдэл хүрэлцэхгүй байна ({activePrice.toLocaleString()} ₮ шаардлагатай). MonPay / Банкаар шилжүүлэн админаас оноогоо цэнэглүүлнэ үү!
-                  </div>
-
-                  <button
+                    id="pay-tab-wallet"
                     type="button"
-                    onClick={() => setPaymentMethod('monpay')}
-                    className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      paymentMethod === 'wallet'
+                        ? 'bg-amber-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
-                    <span>💳 MonPay-ээр Данс Цэнэглэх заавар харах</span>
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>Оноогоор ({userBalance.toLocaleString()})</span>
                   </button>
+                )}
+              </div>
+
+              {/* MonPay Details Card */}
+              {paymentMethod === 'monpay' && (
+                <div className="space-y-3 bg-gradient-to-b from-rose-950/30 to-zinc-900 p-3.5 rounded-xl border border-rose-900/40">
+                  <div className="flex items-center justify-between border-b border-rose-900/50 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-xs">
+                        M
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-xs text-white">MonPay (МонПэй) Шилжүүлэг</h4>
+                        <p className="text-[10px] text-zinc-400">Шууд дугаарт эсвэл QR кодоор төлөх</p>
+                      </div>
+                    </div>
+                    <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg">
+                      {mainTab === 'topup' ? `${effectiveTopUp.toLocaleString()} ₮` : `${activePrice.toLocaleString()} ₮`}
+                    </span>
+                  </div>
+
+                  {/* MonPay Account Number Display */}
+                  <div className="bg-zinc-900/90 p-3 rounded-xl border border-rose-500/30 space-y-1.5">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      MonPay Шилжүүлэх Дугаар:
+                    </span>
+                    <div className="flex items-center justify-between bg-black/60 p-2 rounded-lg border border-zinc-700/80">
+                      <div>
+                        <span className="font-mono text-base font-black text-amber-400 tracking-wider">
+                          {monpayNumber}
+                        </span>
+                        <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
+                      </div>
+                      <button
+                        id="copy-monpay-btn"
+                        onClick={() => copyToClipboard(monpayNumber)}
+                        className="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer shadow"
+                      >
+                        {copiedMonpay ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Хууллаа!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Хуулах</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 italic">
+                      * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{currentUser?.phone || currentUser?.name || 'Таны дугаар'}</span>
+                    </p>
+                  </div>
+
+                  {/* QR Code for MonPay */}
+                  <div className="flex items-center gap-3 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+                    <div className="p-1.5 bg-white rounded-lg shadow shrink-0">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=MONPAY_${monpayNumber}_${mainTab === 'topup' ? effectiveTopUp : activePrice}MNT`}
+                        alt="MonPay QR"
+                        className="w-14 h-14 object-contain"
+                      />
+                    </div>
+                    <div className="text-xs space-y-0.5 text-zinc-300">
+                      <p className="font-bold text-white text-[11px]">MonPay Апп ашиглаж байна уу?</p>
+                      <p className="text-[10px] text-zinc-400">
+                        {monpayNumber} дугаарт шилжүүлснээр таны данс шууд цэнэглэгдэнэ.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* QPay Details Card */}
+              {paymentMethod === 'qpay' && (
+                <div className="space-y-3 bg-zinc-900/90 p-3.5 rounded-xl border border-zinc-800">
+                  <div className="flex flex-col items-center justify-center text-center space-y-2">
+                    <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-cyan-400">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IOIO_TOPUP_${mainTab === 'topup' ? effectiveTopUp : activePrice}MNT`}
+                        alt="QPay QR Code"
+                        className="w-28 h-28 object-contain"
+                      />
+                      <div className="absolute -bottom-2 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2">
+                        {mainTab === 'topup' ? `${effectiveTopUp.toLocaleString()} ₮` : `${activePrice.toLocaleString()} ₮`}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 font-medium">
+                      Бүх банкны апп (Хаан, Голомт, Хас, TDB, SocialPay)-аар QR кодыг уншуулж төлнө үү.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet Method Card in Package Mode */}
+              {paymentMethod === 'wallet' && mainTab === 'package' && (
+                <div className="space-y-3 bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+                    <span className="text-xs text-zinc-400 font-medium">
+                      Таны хэтэвчийн үлдэгдэл:
+                    </span>
+                    <span className="text-base font-black text-amber-400 font-mono">
+                      {userBalance.toLocaleString()} ₮
+                    </span>
+                  </div>
+
+                  {userBalance >= activePrice ? (
+                    <div className="p-2.5 bg-emerald-950/60 border border-emerald-800/80 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>
+                        Төлбөр төлөхөд оноо хангалттай байна. Данснаас {activePrice.toLocaleString()} ₮ хасагдаж эрх нээгдэнэ.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="p-2.5 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs">
+                        Үлдэгдэл хүрэлцэхгүй байна ({activePrice.toLocaleString()} ₮ шаардлагатай). "⚡ Оноо Цэнэглэх" таб руу шилжинэ үү!
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMainTab('topup')}
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>Дутуу {(activePrice - userBalance).toLocaleString()}₮ оноогоо шууд цэнэглэх</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Confirm Button */}
+          {/* Action Results & Buttons */}
           {isSuccess ? (
-            <div className="bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold p-3 rounded-xl flex items-center justify-center gap-2 animate-in zoom-in-95">
-              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                {successMsgText ||
-                  `Анимэ Багц (${currentPlan.label} - ${activePrice.toLocaleString()}₮) оноогоор амжилттай идэвхжлээ! Бүх анимэ нээгдлээ...`}
-              </span>
+            <div className="bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold p-4 rounded-xl flex flex-col items-center justify-center gap-2 animate-in zoom-in-95 text-center">
+              <CheckCircle className="w-7 h-7 text-emerald-400" />
+              <p className="whitespace-pre-line leading-relaxed font-black text-sm">
+                {successMsgText}
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-5 py-2 rounded-xl cursor-pointer shadow"
+              >
+                Ойлголоо, Цонхыг хаах
+              </button>
             </div>
           ) : topUpRequestSent ? (
             <div className="bg-gradient-to-b from-amber-950/70 to-zinc-900 border border-amber-500/60 text-amber-200 text-xs p-4 rounded-xl space-y-3 animate-in zoom-in-95 shadow-xl">
@@ -747,22 +902,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <p className="text-white font-black text-sm flex items-center gap-1.5">
                     <span>📩 Шилжүүлгийн хүсэлт илгээгдлээ</span>
                     <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                      ⏳ Админ шалгаж байна
+                      Шалгагдаж байна
                     </span>
                   </p>
                   <p className="text-[11px] text-zinc-300 leading-relaxed">
-                    {topUpSuccessNotice ||
-                      `Таны ${currentPlan.label} (${activePrice.toLocaleString()}₮) авах шилжүүлгийн хүсэлт бүртгэгдлээ. Админ Тамир төлбөрийг шалгаж системд БАТАЛГААЖУУЛАХ хүртэл анимэ ТҮГЖЭЭТЭЙ байна.`}
+                    {topUpSuccessNotice}
                   </p>
                 </div>
-              </div>
-              <div className="p-2.5 bg-black/60 rounded-lg border border-amber-500/30 text-[11px] text-amber-300 space-y-1">
-                <p className="font-bold flex items-center gap-1">
-                  <span>🔒 Одоохондоо анимэ үзэх боломжгүй:</span>
-                </p>
-                <p className="text-zinc-300 text-[10px]">
-                  Зөвхөн админ шалгаж хүсэлтийг зөвшөөрсний дараа анимэ эрх идэвхжинэ. Тэр хүртэл анимэ нээгдэхгүй.
-                </p>
               </div>
               <button
                 onClick={onClose}
@@ -772,42 +918,89 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </button>
             </div>
           ) : (
-            <button
-              id="confirm-payment-action"
-              onClick={handleConfirmPayment}
-              disabled={isVerifying || (paymentMethod === 'wallet' && userBalance < activePrice)}
-              className="w-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-            >
-              {isVerifying ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Төлбөр баталгаажуулж байна...</span>
-                </>
-              ) : paymentMethod === 'code' ? (
-                <>
-                  <Ticket className="w-4 h-4" />
-                  <span>КОД ИДЭВХЖҮҮЛЭХ</span>
-                </>
-              ) : paymentMethod === 'wallet' ? (
-                <>
-                  <Wallet className="w-4 h-4" />
-                  <span>
-                    {`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) ИДЭВХЖҮҮЛЭХ`}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>
-                    {`📩 ТӨЛБӨР ШИЛЖҮҮЛСНЭЭ МЭДЭГДЭЖ АДМИНААС ЦЭНЭГЛЭЛТ АВАХ (${activePrice.toLocaleString()}₮)`}
-                  </span>
-                </>
+            <div className="space-y-2 pt-2">
+              {/* PRIMARY ACTION BUTTON: DIRECT RECHARGE */}
+              {mainTab === 'topup' && (
+                <button
+                  id="direct-instant-topup-btn"
+                  type="button"
+                  onClick={handleInstantTopUpPoints}
+                  disabled={isVerifying || effectiveTopUp <= 0}
+                  className="w-full bg-gradient-to-r from-amber-400 via-emerald-500 to-amber-400 hover:from-amber-300 hover:to-emerald-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                >
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Цэнэглэлт хийгдэж байна...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span>{`⚡ ШУУД ЦЭНЭГЛЭЖ ОНОО АВАХ (+${effectiveTopUp.toLocaleString()} ₮)`}</span>
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+
+              {mainTab === 'package' && paymentMethod === 'wallet' && (
+                <button
+                  id="confirm-payment-wallet-action"
+                  type="button"
+                  onClick={handleConfirmPayment}
+                  disabled={isVerifying || userBalance < activePrice}
+                  className="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                >
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Идэвхжүүлж байна...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-4 h-4" />
+                      <span>{`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) АВАХ`}</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {mainTab === 'package' && paymentMethod !== 'wallet' && paymentMethod !== 'code' && (
+                <div className="space-y-2">
+                  <button
+                    id="instant-package-activate-btn"
+                    type="button"
+                    onClick={handleInstantActivatePackage}
+                    disabled={isVerifying}
+                    className="w-full bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 hover:from-rose-400 hover:to-amber-300 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Багц идэвхжүүлж байна...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 fill-current" />
+                        <span>{`⚡ ШУУД ЦЭНЭГЛЭЖ АНИМЭ БАГЦ ИДЭВХЖҮҮЛЭХ (${activePrice.toLocaleString()}₮)`}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitPendingTransfer(activePrice, currentPlan.label)}
+                    disabled={isVerifying}
+                    className="w-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>📩 Шилжүүлэг хийснээ админд мэдэгдэх (Шалгуулах)</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 };
-

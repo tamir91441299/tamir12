@@ -43,7 +43,7 @@ import { UserAccount } from './AuthModal';
 import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { recordAnimeView } from '../lib/animeViewService';
-import { checkUserContentAccess } from '../lib/permissionService';
+import { checkUserContentAccess, getAnimeExpiryDetails } from '../lib/permissionService';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -1079,6 +1079,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
+          {/* Anime Subscription Expiry Pill */}
+          {(() => {
+            const animeExpiry = getAnimeExpiryDetails(currentUser);
+            if (animeExpiry.hasAccess) {
+              return (
+                <div 
+                  className="hidden md:flex items-center gap-1.5 bg-black/60 border border-emerald-500/40 text-emerald-300 px-2.5 py-1 rounded-xl text-[11px] font-bold shadow-sm"
+                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText})`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Эрхтэй:</span>
+                  <span className="font-mono text-white font-black">{animeExpiry.expiryDateStr}</span>
+                  <span className="text-[10px] text-zinc-400 font-normal">({animeExpiry.countdownText})</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
           <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
             <button

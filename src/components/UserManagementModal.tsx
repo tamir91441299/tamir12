@@ -56,7 +56,8 @@ import {
   AppNotification,
   grantAnimeAccessToUser,
   revokeUserPackage,
-  sortUsersByNewest
+  sortUsersByNewest,
+  topUpUserBalanceInFirestore
 } from '../lib/userService';
 import {
   PromoCode,
@@ -218,17 +219,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (currentUser) {
       rawList.unshift({
         ...currentUser,
-        role: currentUser.email === 'tamir91441299@gmail.com' ? 'admin' : 'user',
+        role: currentUser.email === 'tamir91441299@gmail.com' ? 'admin' : (currentUser.role || 'user'),
         status: 'active',
-        packageType: 'free',
-        packageExpiry: '-',
-        walletBalance: userBalance,
+        packageType: currentUser.packageType || 'free',
+        packageExpiry: currentUser.packageExpiry || '-',
+        walletBalance: typeof currentUser.walletBalance === 'number' ? currentUser.walletBalance : userBalance,
         lastLogin: 'Идэвхтэй одоо',
         watchedCount: 1,
         favoriteCount: 0,
+        isMockUser: false,
       });
     }
-    return deduplicateUserList(rawList);
+    return sortUsersByNewest(deduplicateUserList(rawList));
   });
 
   const [search, setSearch] = useState('');
@@ -461,8 +463,26 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   useEffect(() => {
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
-      setUsers(deduplicateUserList(list));
+      setUsers(sortUsersByNewest(deduplicateUserList(list)));
     });
+    const handleLocalUsersUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setUsers(sortUsersByNewest(deduplicateUserList(e.detail)));
+      }
+    };
+    window.addEventListener('ioio_users_updated', handleLocalUsersUpdated);
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (e.key === 'ioio_registered_users_list' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setUsers(sortUsersByNewest(deduplicateUserList(parsed)));
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+
     const unsubscribeNotifs = subscribeNotificationsFromFirestore((notifs) => {
       setNotifications(notifs);
     });
@@ -477,6 +497,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
     return () => {
       unsubscribeUsers();
+      window.removeEventListener('ioio_users_updated', handleLocalUsersUpdated);
+      window.removeEventListener('storage', handleStorageUpdate);
       unsubscribeNotifs();
       unsubscribeCodes();
       unsubscribePasscode();
@@ -517,6 +539,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     baseDate.setDate(baseDate.getDate() + durationDays);
     const expiryStr = baseDate.toISOString().split('T')[0];
 
+    const calculatedBalance = (targetUser?.walletBalance ?? 0) + req.amount;
     const updatedUserDetail: UserDetail = {
       ...(targetUser || {}),
       id: targetUser ? targetUser.id : req.userId,
@@ -526,12 +549,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       registeredAt: targetUser?.registeredAt || new Date().toISOString().split('T')[0],
       role: targetUser?.role === 'admin' ? 'admin' : 'user',
       status: 'active',
-      packageType: 'anime', // CRITICAL: Цэнэглэх хүсэлтээр ЗӨВХӨН анимэ эрх олгоно
+      packageType: 'anime', // Цэнэглэх хүсэлтээр анимэ эрх олгоно
       packageExpiry: expiryStr,
-      walletBalance: targetUser?.walletBalance ?? 0,
+      walletBalance: calculatedBalance, // Хэрэглэгчийн дансанд оноо шууд нэмэгдэнэ
       lastLogin: targetUser?.lastLogin || 'Идэвхтэй',
       watchedCount: targetUser?.watchedCount ?? 0,
       favoriteCount: targetUser?.favoriteCount ?? 0,
+      isMockUser: false,
     };
 
     if (targetUser) {
@@ -546,6 +570,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       saveUsersState([...users, updatedUserDetail]);
     }
 
+    // Direct Firestore update for target user walletBalance and package
+    await topUpUserBalanceInFirestore(updatedUserDetail.id, 0); // triggers sync
+
     // If current logged-in user matches this user, update active session immediately
     if (
       currentUser &&
@@ -559,22 +586,25 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           packageType: 'anime' as const,
           packageExpiry: expiryStr,
           status: 'active' as const,
+          walletBalance: calculatedBalance,
         };
         localStorage.setItem('ioio_user', JSON.stringify(updatedSession));
         localStorage.setItem('ioio_active_session', JSON.stringify(updatedSession));
+        localStorage.setItem('ioio_balance', String(calculatedBalance));
+        onUpdateBalance(calculatedBalance);
       } catch (e) {}
     }
 
     sendAdminNotification({
       type: 'PACKAGE_PURCHASE',
-      title: '🎌 Зөвхөн Анимэ эрх нээгдлээ',
-      message: `${req.userName} хэрэглэгчийн хүсэлтийг баталгаажуулж зөвхөн АНИМЭ үзэх эрх (${req.planLabel}, ${durationDays} хоног, дуусах: ${expiryStr}) олголоо.`,
+      title: '🎌 Анимэ эрх болон оноо амжилттай орлоо',
+      message: `${req.userName} хэрэглэгчийн цэнэглэлтийг баталгаажуулж АНИМЭ үзэх эрх (${req.planLabel}, ${durationDays} хоног, дуусах: ${expiryStr}) болон дансанд +${req.amount.toLocaleString()}₮ оноо олголоо.`,
       userName: req.userName,
       userPhone: req.userPhone,
       userEmail: req.userEmail,
     });
 
-    alert(`🎉 ${req.userName} хэрэглэгчид ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${req.planLabel}, ${durationDays} хоног) амжилттай олгогдлоо!\n\nХүчинтэй хугацаа: ${expiryStr} хүртэл.`);
+    alert(`🎉 ${req.userName} хэрэглэгчид АНИМЭ ҮЗЭХ ЭРХ (${req.planLabel}, ${durationDays} хоног) болон +${req.amount.toLocaleString()}₮ ОНОО амжилттай олгогдлоо!\n\nХүчинтэй хугацаа: ${expiryStr} хүртэл.\nШинэ үлдэгдэл: ${calculatedBalance.toLocaleString()}₮.`);
   };
 
   const handleRejectRecharge = async (req: RechargeRequest) => {
@@ -590,20 +620,26 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const deduplicated = sortUsersByNewest(deduplicateUserList(updatedUsers));
     setUsers(deduplicated);
     localStorage.setItem('ioio_registered_users_list', JSON.stringify(deduplicated));
+    try {
+      window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: deduplicated }));
+    } catch {}
     deduplicated.forEach((u) => {
-      saveUserToFirestore(u);
+      if (!u.isMockUser) {
+        saveUserToFirestore(u);
+      }
     });
   };
 
   const isUserNew = (u: UserDetail): boolean => {
     if (u.isMockUser) return false;
-    if (u.registeredTimestamp && Date.now() - u.registeredTimestamp < 7 * 86400 * 1000) {
+    if (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') return false;
+    if (u.registeredTimestamp && Date.now() - u.registeredTimestamp < 60 * 86400 * 1000) {
       return true;
     }
-    if (u.registeredAt && (u.registeredAt.includes('2026-09') || u.registeredAt.includes('2026.09') || u.registeredAt.includes('2026/09'))) {
+    if (u.registeredAt && (u.registeredAt.includes('2026') || u.registeredAt.includes('Саяхан') || u.registeredAt.includes('Өнөөдөр'))) {
       return true;
     }
-    return false;
+    return !u.isMockUser;
   };
 
   const handleDirectGrantAnime = async (user: UserDetail, durationDays: number, customExpiry?: string) => {
@@ -633,7 +669,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             ...u,
             packageType: 'free' as const,
             packageExpiry: '-',
-            role: (u.email === 'tamir91441299@gmail.com' ? 'admin' : 'user') as const,
+            role: (u.email === 'tamir91441299@gmail.com' ? ('admin' as const) : ('user' as const)),
           }
         : u
     );
@@ -815,6 +851,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
 
     saveUsersState(updated);
+    if (operation === 'add') {
+      topUpUserBalanceInFirestore(userId, safeAmt);
+    } else {
+      saveUserToFirestore({ id: userId, walletBalance: newBal } as any);
+    }
     setPointsModalUser(null);
 
     if (selectedUser && selectedUser.id === userId) {
@@ -823,15 +864,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const handleQuickPointsChange = (userId: string, delta: number) => {
+  const handleQuickPointsChange = async (userId: string, delta: number) => {
     const target = users.find((u) => u.id === userId);
     if (!target) return;
 
     const newBal = Math.max(0, target.walletBalance + delta);
     const updated = users.map((u) => {
       if (u.id === userId) {
-        const updatedU = { ...u, walletBalance: newBal };
-        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id)) {
+        const updatedU = { ...u, walletBalance: newBal, isMockUser: false };
+        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id || (u.phone && u.phone === currentUser.phone))) {
           onUpdateBalance(newBal);
           try {
             localStorage.setItem('ioio_balance', String(newBal));
@@ -843,6 +884,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
 
     saveUsersState(updated);
+
+    if (delta > 0) {
+      await topUpUserBalanceInFirestore(userId, delta);
+    } else {
+      await saveUserToFirestore({ id: userId, walletBalance: newBal } as any);
+    }
+
     if (selectedUser && selectedUser.id === userId) {
       const updatedUser = updated.find((u) => u.id === userId);
       if (updatedUser) setSelectedUser(updatedUser);
@@ -888,13 +936,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.phone.includes(search);
+  const newUsersCount = users.filter((u) => isUserNew(u)).length;
+  const animeUsersCount = users.filter((u) => u.packageType === 'anime').length;
+  const vipUsersCount = users.filter((u) => u.packageType === 'full_vip').length;
+  const freeUsersCount = users.filter((u) => u.packageType === 'free').length;
+  const totalBalance = users.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
 
-    const matchesPkg = filterPackage === 'all' || u.packageType === filterPackage;
+  const filteredUsers = users.filter((u) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.phone.includes(q) ||
+      (u.id && u.id.toLowerCase().includes(q));
+
+    let matchesPkg = true;
+    if (filterPackage === 'new') {
+      matchesPkg = isUserNew(u);
+    } else if (filterPackage !== 'all') {
+      matchesPkg = u.packageType === filterPackage;
+    }
 
     return matchesSearch && matchesPkg;
   });
@@ -1087,6 +1149,74 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
         {activeAdminTab === 'users' ? (
           <>
+            {/* Quick Stats Summary Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 sm:p-4 bg-zinc-950/70 border-b border-zinc-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setFilterPackage('all')}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filterPackage === 'all'
+                    ? 'bg-zinc-800/90 border-cyan-500/60 ring-1 ring-cyan-500/30'
+                    : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between text-zinc-400 text-[10px] font-bold uppercase">
+                  <span>Нийт хэрэглэгч</span>
+                  <Users className="w-3.5 h-3.5 text-cyan-400" />
+                </div>
+                <div className="text-base font-black text-white mt-0.5">{users.length}</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterPackage('new')}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  filterPackage === 'new'
+                    ? 'bg-emerald-950/70 border-emerald-400 ring-1 ring-emerald-500/40'
+                    : 'bg-zinc-900/60 border-emerald-900/50 hover:border-emerald-500/40'
+                }`}
+              >
+                <div className="flex items-center justify-between text-emerald-300 text-[10px] font-bold uppercase">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    Шинэ бүртгэл
+                  </span>
+                  {newUsersCount > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  )}
+                </div>
+                <div className="text-base font-black text-emerald-300 mt-0.5">
+                  {newUsersCount} <span className="text-[10px] text-emerald-400/80 font-normal">шинэ</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterPackage('anime')}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filterPackage === 'anime'
+                    ? 'bg-purple-950/70 border-purple-400 ring-1 ring-purple-500/40'
+                    : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between text-purple-300 text-[10px] font-bold uppercase">
+                  <span>Анимэ эрхтэй</span>
+                  <Crown className="w-3.5 h-3.5 text-purple-400" />
+                </div>
+                <div className="text-base font-black text-purple-300 mt-0.5">{animeUsersCount}</div>
+              </button>
+
+              <div className="p-2.5 rounded-xl border bg-zinc-900/60 border-zinc-800 text-left">
+                <div className="flex items-center justify-between text-amber-300 text-[10px] font-bold uppercase">
+                  <span>Хэтэвчний дүн</span>
+                  <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+                <div className="text-base font-mono font-black text-amber-400 mt-0.5 truncate">
+                  {totalBalance.toLocaleString()} ₮
+                </div>
+              </div>
+            </div>
+
             {/* Filters and Search Bar */}
             <div className="p-4 bg-zinc-900/80 border-b border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
               <div className="relative w-full sm:w-80">
@@ -1102,17 +1232,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
               <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
                 <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
-                <span className="text-xs text-zinc-400 shrink-0">Багцаар:</span>
+                <span className="text-xs text-zinc-400 shrink-0">Шүүлт:</span>
                 <select
                   value={filterPackage}
                   onChange={(e) => setFilterPackage(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-2 px-3 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-2 px-3 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
                 >
-                  <option value="all">Бүх багц</option>
-                  <option value="full_vip">FULL VIP</option>
-                  <option value="movie">Кино Багц</option>
-                  <option value="anime">Анимэ Багц</option>
-                  <option value="free">Үнэгүй</option>
+                  <option value="all">Бүх хэрэглэгч ({users.length})</option>
+                  <option value="new">🌟 Шинэ бүртгүүлсэн ({newUsersCount})</option>
+                  <option value="anime">🌸 Анимэ Багц ({animeUsersCount})</option>
+                  <option value="full_vip">👑 FULL VIP ({vipUsersCount})</option>
+                  <option value="free">Үнэгүй ({freeUsersCount})</option>
                 </select>
 
                 <button
@@ -1132,12 +1262,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
-              {filteredUsers.map((u, idx) => (
+              {filteredUsers.map((u, idx) => {
+                const isNew = isUserNew(u);
+                return (
                 <div
                   key={`user_row_${u.id}_${idx}`}
                   className={`bg-zinc-900/90 hover:bg-zinc-800/80 border rounded-2xl p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
                     u.status === 'blocked'
                       ? 'border-rose-900/50 opacity-60'
+                      : isNew
+                      ? 'border-emerald-500/50 bg-emerald-950/15 ring-1 ring-emerald-500/20 shadow-md'
                       : u.role === 'admin'
                       ? 'border-cyan-500/40 bg-cyan-950/10'
                       : 'border-zinc-800'
@@ -1146,20 +1280,31 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   {/* Left: User info */}
                   <div className="flex items-center gap-3 min-w-[240px]">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-md shrink-0 uppercase ${
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-md shrink-0 uppercase relative ${
                         u.role === 'admin'
                           ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-black'
+                          : isNew
+                          ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-black ring-2 ring-emerald-400/40'
                           : u.packageType === 'full_vip'
                           ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-black'
                           : 'bg-zinc-800 text-cyan-400 border border-zinc-700'
                       }`}
                     >
                       {u.name.charAt(0)}
+                      {isNew && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#141417]" />
+                      )}
                     </div>
 
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-extrabold text-sm text-white">{u.name}</span>
+                        {isNew && (
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                            ШИНЭ
+                          </span>
+                        )}
                         {u.role === 'admin' && (
                           <span className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-[9px] font-black px-1.5 py-0.2 rounded">
                             АДМИН
@@ -1169,16 +1314,39 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-zinc-400">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-zinc-500" /> {u.email}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-zinc-500" /> {u.phone}
-                        </span>
+                        {u.phone && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(u.phone);
+                              setCopiedPhoneUserId(u.id);
+                              setTimeout(() => setCopiedPhoneUserId(null), 2000);
+                            }}
+                            className="flex items-center gap-1 hover:text-cyan-300 transition-colors cursor-pointer"
+                            title="Утасны дугаар хуулах"
+                          >
+                            <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span className="font-mono font-bold text-white">{u.phone}</span>
+                            {copiedPhoneUserId === u.id ? (
+                              <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                            ) : (
+                              <Copy className="w-2.5 h-2.5 text-zinc-500 shrink-0" />
+                            )}
+                          </button>
+                        )}
+                        {u.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-zinc-500 shrink-0" />
+                            <span className="truncate max-w-[170px]">{u.email}</span>
+                          </span>
+                        )}
                       </div>
 
-                      <div className="text-[10px] text-zinc-500 flex items-center gap-2 pt-0.5">
-                        <span>Бүртгүүлсэн: {u.registeredAt}</span>
+                      <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-2 pt-0.5">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span>Бүртгүүлсэн: <strong className="text-zinc-200">{u.registeredAt}</strong></span>
+                        </span>
                         <span>•</span>
                         <span>Сүүлд: {u.lastLogin}</span>
                       </div>
@@ -1338,7 +1506,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           )}
         </div>

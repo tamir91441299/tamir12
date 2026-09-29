@@ -56,6 +56,196 @@ export function isPackageExpired(expiryStr?: string | null): boolean {
   }
 }
 
+export interface AnimeExpiryDetails {
+  hasAccess: boolean;
+  packageType: 'anime' | 'full_vip' | 'movie' | 'free';
+  expiryDateStr: string;
+  formattedExpiryDate: string;
+  daysRemaining: number;
+  hoursRemaining: number;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  countdownText: string;
+  statusBadge: 'active' | 'expiring_soon' | 'expired' | 'none';
+  statusLabel: string;
+}
+
+/**
+ * Calculates human-friendly detailed expiration info for user's anime access.
+ */
+export function getAnimeExpiryDetails(user?: UserAccount | null): AnimeExpiryDetails {
+  if (!user) {
+    return {
+      hasAccess: false,
+      packageType: 'free',
+      expiryDateStr: '-',
+      formattedExpiryDate: 'Бүртгэлгүй',
+      daysRemaining: 0,
+      hoursRemaining: 0,
+      isExpired: true,
+      isExpiringSoon: false,
+      countdownText: 'Эрх аваагүй',
+      statusBadge: 'none',
+      statusLabel: 'Эрх идэвхгүй',
+    };
+  }
+
+  if (isAdminUser(user)) {
+    return {
+      hasAccess: true,
+      packageType: 'full_vip',
+      expiryDateStr: '2030-01-01',
+      formattedExpiryDate: 'Байнгын эрх',
+      daysRemaining: 9999,
+      hoursRemaining: 9999,
+      isExpired: false,
+      isExpiringSoon: false,
+      countdownText: 'Админ эрх (Хязгааргүй)',
+      statusBadge: 'active',
+      statusLabel: 'Админ (Байнгын эрхтэй)',
+    };
+  }
+
+  const pkg = user.packageType || 'free';
+  const expiryRaw = user.packageExpiry;
+
+  if (pkg !== 'anime' && pkg !== 'full_vip') {
+    return {
+      hasAccess: false,
+      packageType: pkg,
+      expiryDateStr: expiryRaw || '-',
+      formattedExpiryDate: 'Эрх аваагүй',
+      daysRemaining: 0,
+      hoursRemaining: 0,
+      isExpired: true,
+      isExpiringSoon: false,
+      countdownText: 'Эрх аваагүй байна',
+      statusBadge: 'none',
+      statusLabel: 'Эрх идэвхгүй',
+    };
+  }
+
+  if (!expiryRaw || expiryRaw === '-' || expiryRaw === 'Идэвхгүй') {
+    return {
+      hasAccess: false,
+      packageType: pkg,
+      expiryDateStr: '-',
+      formattedExpiryDate: 'Хугацаа заагдаагүй',
+      daysRemaining: 0,
+      hoursRemaining: 0,
+      isExpired: true,
+      isExpiringSoon: false,
+      countdownText: 'Хугацаа дууссан',
+      statusBadge: 'expired',
+      statusLabel: 'Хугацаа дууссан',
+    };
+  }
+
+  try {
+    const normalized = expiryRaw.trim().replace(/\./g, '-').replace(/\//g, '-');
+    const expiryDate = new Date(normalized);
+    if (isNaN(expiryDate.getTime())) {
+      return {
+        hasAccess: false,
+        packageType: pkg,
+        expiryDateStr: expiryRaw,
+        formattedExpiryDate: expiryRaw,
+        daysRemaining: 0,
+        hoursRemaining: 0,
+        isExpired: true,
+        isExpiringSoon: false,
+        countdownText: 'Хугацаа дууссан',
+        statusBadge: 'expired',
+        statusLabel: 'Хугацаа дууссан',
+      };
+    }
+
+    expiryDate.setHours(23, 59, 59, 999);
+    const now = Date.now();
+    const diffMs = expiryDate.getTime() - now;
+    const isExpired = diffMs <= 0;
+
+    const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    const hoursRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
+
+    const year = expiryDate.getFullYear();
+    const month = String(expiryDate.getMonth() + 1).padStart(2, '0');
+    const day = String(expiryDate.getDate()).padStart(2, '0');
+    const cleanDateStr = `${year}-${month}-${day}`;
+    const formattedExpiryDate = `${year} оны ${month}-р сарын ${day}`;
+
+    if (isExpired) {
+      return {
+        hasAccess: false,
+        packageType: pkg,
+        expiryDateStr: cleanDateStr,
+        formattedExpiryDate,
+        daysRemaining: 0,
+        hoursRemaining: 0,
+        isExpired: true,
+        isExpiringSoon: false,
+        countdownText: `Хугацаа дууссан (${cleanDateStr})`,
+        statusBadge: 'expired',
+        statusLabel: 'Хугацаа дууссан',
+      };
+    }
+
+    const isExpiringSoon = daysRemaining <= 3;
+    let countdownText = `${daysRemaining} хоног үлдсэн`;
+    if (daysRemaining <= 1) {
+      countdownText = `Өнөөдөр дуусна (${hoursRemaining} цаг үлдсэн)`;
+    }
+
+    return {
+      hasAccess: true,
+      packageType: pkg,
+      expiryDateStr: cleanDateStr,
+      formattedExpiryDate,
+      daysRemaining,
+      hoursRemaining,
+      isExpired: false,
+      isExpiringSoon,
+      countdownText,
+      statusBadge: isExpiringSoon ? 'expiring_soon' : 'active',
+      statusLabel: isExpiringSoon ? `Дуусах дөхсөн (${daysRemaining} хоног)` : `Идэвхтэй (${daysRemaining} хоног)`,
+    };
+  } catch {
+    return {
+      hasAccess: false,
+      packageType: pkg,
+      expiryDateStr: expiryRaw,
+      formattedExpiryDate: expiryRaw,
+      daysRemaining: 0,
+      hoursRemaining: 0,
+      isExpired: true,
+      isExpiringSoon: false,
+      countdownText: 'Хугацаа дууссан',
+      statusBadge: 'expired',
+      statusLabel: 'Хугацаа дууссан',
+    };
+  }
+}
+
+/**
+ * Calculates new expiry date when extending current package
+ */
+export function calculateExtendedExpiryDate(currentExpiryStr: string | undefined | null, daysToAdd: number): string {
+  let baseDate = new Date();
+  if (currentExpiryStr && currentExpiryStr !== '-' && currentExpiryStr !== 'Идэвхгүй' && !isPackageExpired(currentExpiryStr)) {
+    try {
+      const parsed = new Date(currentExpiryStr.trim().replace(/\./g, '-').replace(/\//g, '-'));
+      if (!isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+        baseDate = parsed;
+      }
+    } catch {}
+  }
+  baseDate.setDate(baseDate.getDate() + daysToAdd);
+  const year = baseDate.getFullYear();
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const day = String(baseDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export type AccessReason = 'UNAUTHENTICATED' | 'BLOCKED' | 'PENDING_APPROVAL' | 'EXPIRED' | 'NO_PACKAGE' | 'GRANTED';
 
 export interface AccessResult {
@@ -66,7 +256,7 @@ export interface AccessResult {
 
 /**
  * Helper to determine whether a given content is an anime or anime series.
- * On FlickNime, almost all content (Hunter x Hunter, Korra, Spy x Family, Megalo Box, 91 Days, Kami Kuzu Idol, Monkart, etc.) are anime.
+ * On FlickNime, almost all content (Hunter x Hunter, Death Note, My Hero Academia, Korra, Spy x Family, 91 Days, Kami Kuzu Idol, Monkart, etc.) are anime.
  */
 export function isAnimeContent(movie: Movie | null | undefined): boolean {
   if (!movie) return true; // Default to anime protection
@@ -109,12 +299,16 @@ export function checkUserContentAccess(
   }
 
   // 3. User has a pending recharge request waiting for admin approval
-  // Шилжүүлгийн хүсэлт илгээсэн бол админ шалгаж баталгаажуултал контент түгжээтэй байна!
-  if (hasUserPendingRechargeRequest(user)) {
+  // Хэрэв хэрэглэгч аль хэдийн идэвхтэй багцтай бол түр хүлээгдэж буй хүсэлт анимэ үзэх эрхийг хаахгүй
+  const packageType = (user as any).packageType;
+  const packageExpiry = (user as any).packageExpiry;
+  const hasActiveAnimePackage = (packageType === 'anime' || packageType === 'full_vip') && !isPackageExpired(packageExpiry);
+
+  if (!hasActiveAnimePackage && hasUserPendingRechargeRequest(user)) {
     return {
       hasAccess: false,
       reason: 'PENDING_APPROVAL',
-      message: '⏳ Таны анимэ эрх авах шилжүүлгийн хүсэлтийг админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэх тул түр хүлээнэ үү.',
+      message: '⏳ Таны анимэ эрх авах шилжүүлгийн хүсэлтийг админ шалгаж байна. Төлбөр баталгаажтал түр хүлээнэ үү эсвэл оноогоороо шууд цэнэглэнэ үү.',
     };
   }
 
@@ -127,8 +321,6 @@ export function checkUserContentAccess(
   }
 
   const isAnime = isAnimeContent(movie);
-  const packageType = (user as any).packageType;
-  const packageExpiry = (user as any).packageExpiry;
 
   // 5. CRITICAL: Strict Anime Package Enforcement
   // Anime content can ONLY be watched by users with an active 'anime' or 'full_vip' package.
