@@ -5,13 +5,30 @@ import path from 'path';
 const router = Router();
 const USERS_FILE_PATH = path.join(process.cwd(), 'public', 'registered_users.json');
 
+// Helper to identify mock/bot users
+function isBotUser(u: any): boolean {
+  if (!u) return false;
+  if (u.isMockUser === true) return true;
+  const id = String(u.id || '').trim();
+  const email = String(u.email || '').trim().toLowerCase();
+  const name = String(u.name || '').trim();
+
+  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
+  const botEmails = ['admin@ioio.mn', 'bat.erdene@gmail.com', 'anujin.b@yahoo.com', 'ganzorig99@gmail.com', 'morko@mn.net'];
+  if (botEmails.includes(email)) return true;
+  if (['Бат-Эрдэнэ', 'Анужин', 'Ганзориг', 'Мөнх-Оргил'].includes(name)) return true;
+  if (name === 'Тамир (Админ)' && email === 'admin@ioio.mn') return true;
+
+  return false;
+}
+
 // Helper to safely read users from JSON file
 function readStoredUsers(): any[] {
   try {
     if (fs.existsSync(USERS_FILE_PATH)) {
       const content = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.filter((u) => !isBotUser(u)) : [];
     }
   } catch (err) {
     console.error('Error reading registered_users.json:', err);
@@ -137,6 +154,26 @@ router.post('/delete', (req: Request, res: Response) => {
     return res.json({ success: true, message: 'User deleted' });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Delete failed' });
+  }
+});
+
+// POST /api/users/cleanup-bots - Remove all bots from storage
+router.post('/cleanup-bots', (req: Request, res: Response) => {
+  try {
+    let raw: any[] = [];
+    if (fs.existsSync(USERS_FILE_PATH)) {
+      try {
+        const content = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) raw = parsed;
+      } catch {}
+    }
+    const initialCount = raw.length;
+    const cleaned = raw.filter((u) => !isBotUser(u));
+    writeStoredUsers(cleaned);
+    return res.json({ success: true, removedCount: initialCount - cleaned.length, remainingCount: cleaned.length });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message || 'Cleanup failed' });
   }
 });
 

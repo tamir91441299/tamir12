@@ -4,6 +4,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -13,6 +14,40 @@ import {
 import { db } from './firebase';
 import { UserDetail, INITIAL_USERS } from '../components/UserManagementModal';
 import { UserAccount } from '../components/AuthModal';
+
+/**
+ * Check if a user is a mock sample or bot user that should not appear in production management
+ */
+export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): boolean {
+  if (!u) return false;
+  if (u.isMockUser === true) return true;
+  const id = String(u.id || '').trim();
+  const email = String(u.email || '').trim().toLowerCase();
+  const phone = String(u.phone || '').trim().replace(/\s+/g, '');
+  const name = String(u.name || '').trim();
+
+  // Known sample / bot IDs
+  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
+
+  // Known sample / bot emails
+  const botEmails = [
+    'admin@ioio.mn',
+    'bat.erdene@gmail.com',
+    'anujin.b@yahoo.com',
+    'ganzorig99@gmail.com',
+    'morko@mn.net',
+  ];
+  if (botEmails.includes(email)) return true;
+
+  // Known sample bot names with their default test phones
+  if (name === 'Бат-Эрдэнэ' && (phone === '99112233' || !phone)) return true;
+  if (name === 'Анужин' && (phone === '88105544' || !phone)) return true;
+  if (name === 'Ганзориг' && (phone === '99087766' || !phone)) return true;
+  if (name === 'Мөнх-Оргил' && (phone === '95551212' || !phone)) return true;
+  if (name === 'Тамир (Админ)' && email === 'admin@ioio.mn') return true;
+
+  return false;
+}
 
 export interface AuthRecord {
   id: string;
@@ -177,10 +212,11 @@ const usersSyncChannel = typeof BroadcastChannel !== 'undefined' ? new Broadcast
 export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
   const map = new Map<string, UserDetail>();
 
+  // Filter out any mock/bot users first
+  const cleanSource = users.filter((u) => !isBotOrMockUser(u));
+
   // Sort input so non-mock / real users are processed first
-  const prioritized = [...users].sort((a, b) => {
-    if (a.isMockUser && !b.isMockUser) return 1;
-    if (!a.isMockUser && b.isMockUser) return -1;
+  const prioritized = [...cleanSource].sort((a, b) => {
     return (b.registeredTimestamp || 0) - (a.registeredTimestamp || 0);
   });
 
@@ -1133,14 +1169,14 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // 2. High-authority Server docs
     serverList.forEach((u) => rawList.push({ ...u, isMockUser: false }));
 
-    // 3. Local storage registered users list
+    // Local storage registered users list (clean bots out)
     try {
       const savedList = localStorage.getItem('ioio_registered_users_list');
       if (savedList) {
         const parsed: UserDetail[] = JSON.parse(savedList);
         if (Array.isArray(parsed)) {
           parsed.forEach((u) => {
-            if (u) rawList.push({ ...u, isMockUser: false });
+            if (u && !isBotOrMockUser(u)) rawList.push({ ...u, isMockUser: false });
           });
         }
       }
@@ -1151,7 +1187,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       const savedUser = localStorage.getItem('ioio_user');
       if (savedUser) {
         const u = JSON.parse(savedUser);
-        if (u && (u.email || u.id || u.phone)) {
+        if (u && (u.email || u.id || u.phone) && !isBotOrMockUser(u)) {
           const uId = u.id || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_active');
           rawList.push({
             id: uId,
@@ -1174,9 +1210,6 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       }
     } catch (e) {}
 
-    // 5. Fallback demo sample users appended only if no clash
-    INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
-
     const deduplicated = deduplicateUserList(rawList);
     const sorted = sortUsersByNewest(deduplicated);
     callback(sorted);
@@ -1193,7 +1226,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.users)) {
-            latestServerList = data.users;
+            latestServerList = data.users.filter((u: any) => !isBotOrMockUser(u));
             emitMerged(latestFirestoreList, latestServerList);
           }
         }
@@ -1206,7 +1239,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // BroadcastChannel listener
     const handleBroadcast = (ev: MessageEvent) => {
       if (ev.data?.type === 'USERS_UPDATED' && Array.isArray(ev.data?.users)) {
-        emitMerged(latestFirestoreList, ev.data.users);
+        emitMerged(latestFirestoreList, ev.data.users.filter((u: any) => !isBotOrMockUser(u)));
       }
     };
     usersSyncChannel?.addEventListener('message', handleBroadcast);
@@ -1214,7 +1247,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // Window event listener
     const handleWindowUsersUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
-        emitMerged(latestFirestoreList, e.detail);
+        emitMerged(latestFirestoreList, e.detail.filter((u: any) => !isBotOrMockUser(u)));
       }
     };
     window.addEventListener('ioio_users_updated', handleWindowUsersUpdated);
@@ -1229,7 +1262,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
         const list: UserDetail[] = [];
         snapshot.forEach((docSnap) => {
           const d = docSnap.data() as UserDetail;
-          if (d) {
+          if (d && !isBotOrMockUser(d) && !isBotOrMockUser({ id: docSnap.id })) {
             list.push({
               ...d,
               id: docSnap.id || d.id,
@@ -1255,7 +1288,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     };
   } catch (err) {
     console.error('Firestore users subscription failed:', err);
-    callback(sortUsersByNewest(INITIAL_USERS));
+    callback([]);
     return () => {};
   }
 }
@@ -1271,7 +1304,7 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
 
     snapshot.forEach((docSnap) => {
       const d = docSnap.data() as UserDetail;
-      if (d) {
+      if (d && !isBotOrMockUser(d) && !isBotOrMockUser({ id: docSnap.id })) {
         rawList.push({
           ...d,
           id: docSnap.id || d.id,
@@ -1286,19 +1319,112 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
         const parsed: UserDetail[] = JSON.parse(savedList);
         if (Array.isArray(parsed)) {
           parsed.forEach((u) => {
-            if (u) rawList.push({ ...u, isMockUser: false });
+            if (u && !isBotOrMockUser(u)) rawList.push({ ...u, isMockUser: false });
           });
         }
       }
     } catch {}
 
-    INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
-
     return sortUsersByNewest(deduplicateUserList(rawList));
   } catch (err) {
     console.error('Error fetching users from Firestore:', err);
-    return sortUsersByNewest(INITIAL_USERS);
+    return [];
   }
+}
+
+/**
+ * Delete a user from Firestore, REST Server, and LocalStorage permanently
+ */
+export async function deleteUserFromFirestoreAndServer(userId: string): Promise<boolean> {
+  try {
+    const cleanId = (userId || '').trim();
+    if (!cleanId) return false;
+
+    // 1. Remove from Firestore
+    try {
+      await deleteDoc(doc(db, 'users', cleanId));
+    } catch (e) {
+      console.warn(`Firestore deleteDoc failed for ${cleanId}:`, e);
+    }
+
+    // 2. Remove from Server
+    try {
+      await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: cleanId }),
+      });
+    } catch (e) {
+      console.warn(`Server user delete failed for ${cleanId}:`, e);
+    }
+
+    // 3. Remove from LocalStorage
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      if (savedListStr) {
+        const list: UserDetail[] = JSON.parse(savedListStr);
+        if (Array.isArray(list)) {
+          const updated = list.filter((u) => u && u.id !== cleanId && u.phone !== cleanId && u.email !== cleanId);
+          localStorage.setItem('ioio_registered_users_list', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: updated }));
+        }
+      }
+    } catch (e) {}
+
+    return true;
+  } catch (err) {
+    console.error('Error in deleteUserFromFirestoreAndServer:', err);
+    return false;
+  }
+}
+
+/**
+ * Remove all mock and bot users from Firestore, server, and local storage
+ */
+export async function cleanupAllBotUsers(): Promise<{ deletedCount: number; message: string }> {
+  const botIds = ['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'];
+  let deletedCount = 0;
+
+  // 1. Delete bot docs from Firestore
+  for (const botId of botIds) {
+    try {
+      await deleteDoc(doc(db, 'users', botId));
+      deletedCount++;
+    } catch (e) {}
+  }
+
+  // 2. Delete bot records on server
+  try {
+    await fetch('/api/users/cleanup-bots', { method: 'POST' }).catch(() => {});
+  } catch (e) {}
+
+  for (const botId of botIds) {
+    try {
+      await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: botId }),
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // 3. Clean local storage
+  try {
+    const savedListStr = localStorage.getItem('ioio_registered_users_list');
+    if (savedListStr) {
+      const list: UserDetail[] = JSON.parse(savedListStr);
+      if (Array.isArray(list)) {
+        const filtered = list.filter((u) => !isBotOrMockUser(u));
+        localStorage.setItem('ioio_registered_users_list', JSON.stringify(filtered));
+        window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: filtered }));
+      }
+    }
+  } catch (e) {}
+
+  return {
+    deletedCount,
+    message: 'Бүх бот хэрэглэгчдийг амжилттай устгаж цэвэрлэлээ.',
+  };
 }
 
 /**

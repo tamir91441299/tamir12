@@ -59,7 +59,10 @@ import {
   revokeUserPackage,
   sortUsersByNewest,
   topUpUserBalanceInFirestore,
-  approveAndCreditRechargeRequest
+  approveAndCreditRechargeRequest,
+  isBotOrMockUser,
+  deleteUserFromFirestoreAndServer,
+  cleanupAllBotUsers
 } from '../lib/userService';
 import {
   PromoCode,
@@ -102,93 +105,7 @@ interface UserManagementModalProps {
   onAddNewMovie?: (movie: Movie) => void;
 }
 
-export const INITIAL_USERS: UserDetail[] = [
-  {
-    id: 'usr_001',
-    name: 'Тамир (Админ)',
-    email: 'admin@ioio.mn',
-    phone: '91441299',
-    role: 'admin',
-    status: 'active',
-    packageType: 'full_vip',
-    packageExpiry: '2027-01-01',
-    walletBalance: 0,
-    registeredAt: '2026-01-10 12:00',
-    registeredTimestamp: new Date('2026-01-10').getTime(),
-    isMockUser: true,
-    lastLogin: 'Өнөөдөр, 21:15',
-    watchedCount: 42,
-    favoriteCount: 15,
-  },
-  {
-    id: 'usr_002',
-    name: 'Бат-Эрдэнэ',
-    email: 'bat.erdene@gmail.com',
-    phone: '99112233',
-    role: 'vip',
-    status: 'active',
-    packageType: 'full_vip',
-    packageExpiry: '2026-10-15',
-    walletBalance: 0,
-    registeredAt: '2026-02-01 14:30',
-    registeredTimestamp: new Date('2026-02-01').getTime(),
-    isMockUser: true,
-    lastLogin: 'Өчигдөр, 18:30',
-    watchedCount: 28,
-    favoriteCount: 8,
-  },
-  {
-    id: 'usr_003',
-    name: 'Анужин',
-    email: 'anujin.b@yahoo.com',
-    phone: '88105544',
-    role: 'user',
-    status: 'active',
-    packageType: 'anime',
-    packageExpiry: '2026-09-01',
-    walletBalance: 0,
-    registeredAt: '2026-03-12 11:15',
-    registeredTimestamp: new Date('2026-03-12').getTime(),
-    isMockUser: true,
-    lastLogin: 'Өнөөдөр, 14:20',
-    watchedCount: 19,
-    favoriteCount: 6,
-  },
-  {
-    id: 'usr_004',
-    name: 'Ганзориг',
-    email: 'ganzorig99@gmail.com',
-    phone: '99087766',
-    role: 'user',
-    status: 'active',
-    packageType: 'movie',
-    packageExpiry: '2026-08-30',
-    walletBalance: 0,
-    registeredAt: '2026-04-05 09:40',
-    registeredTimestamp: new Date('2026-04-05').getTime(),
-    isMockUser: true,
-    lastLogin: '3 хоногийн өмнө',
-    watchedCount: 11,
-    favoriteCount: 3,
-  },
-  {
-    id: 'usr_005',
-    name: 'Мөнх-Оргил',
-    email: 'morko@mn.net',
-    phone: '95551212',
-    role: 'user',
-    status: 'blocked',
-    packageType: 'free',
-    packageExpiry: '-',
-    walletBalance: 0,
-    registeredAt: '2026-05-20 16:50',
-    registeredTimestamp: new Date('2026-05-20').getTime(),
-    isMockUser: true,
-    lastLogin: '2 долоо хоногийн өмнө',
-    watchedCount: 2,
-    favoriteCount: 0,
-  },
-];
+export const INITIAL_USERS: UserDetail[] = [];
 
 export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   currentUser,
@@ -207,7 +124,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           parsed.forEach((u) => {
-            if (u) rawList.push(u);
+            if (u && !isBotOrMockUser(u)) rawList.push(u);
           });
         }
       } catch (e) {
@@ -215,10 +132,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       }
     }
 
-    INITIAL_USERS.forEach((u) => rawList.push(u));
-
-    // Include current user if exists
-    if (currentUser) {
+    // Include current user if exists and not a bot
+    if (currentUser && !isBotOrMockUser(currentUser)) {
       rawList.unshift({
         ...currentUser,
         role: currentUser.email === 'tamir91441299@gmail.com' ? 'admin' : (currentUser.role || 'user'),
@@ -232,7 +147,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         isMockUser: false,
       });
     }
-    return sortUsersByNewest(deduplicateUserList(rawList));
+
+    const cleanInitial = sortUsersByNewest(deduplicateUserList(rawList.filter((u) => !isBotOrMockUser(u))));
+    // Purge any stale bot records from local storage immediately
+    try {
+      localStorage.setItem('ioio_registered_users_list', JSON.stringify(cleanInitial));
+    } catch {}
+
+    return cleanInitial;
   });
 
   const [search, setSearch] = useState('');
@@ -493,8 +415,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   useEffect(() => {
+    // Automatically purge any bot/mock users when admin panel opens
+    cleanupAllBotUsers().then(() => {
+      setUsers((prev) => prev.filter((u) => !isBotOrMockUser(u)));
+    });
+
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
-      setUsers(sortUsersByNewest(deduplicateUserList(list)));
+      setUsers(sortUsersByNewest(deduplicateUserList(list.filter((u) => !isBotOrMockUser(u)))));
     });
     const handleLocalUsersUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
@@ -909,11 +836,21 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
   };
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (confirm('Та энэ хэрэглэгчийн бүртгэлийг устгахдаа итгэлтэй байна уу?')) {
       const updated = users.filter((u) => u.id !== id);
       saveUsersState(updated);
       if (selectedUser?.id === id) setSelectedUser(null);
+      await deleteUserFromFirestoreAndServer(id);
+    }
+  };
+
+  const handlePurgeBotUsers = async () => {
+    if (confirm('Системээс бүх бот болон туршилтын хэрэглэгчдийг устгаж цэвэрлэх үү?')) {
+      const res = await cleanupAllBotUsers();
+      const cleaned = users.filter((u) => !isBotOrMockUser(u));
+      saveUsersState(cleaned);
+      alert(res.message);
     }
   };
 
@@ -1233,6 +1170,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
                   <span>Шинэчлэх</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePurgeBotUsers}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-800/60 text-rose-300 text-xs font-bold transition-all cursor-pointer shrink-0"
+                  title="Бүх туршилтын / бот хэрэглэгчдийг устгаж цэвэрлэх"
+                >
+                  <UserX className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Бот цэвэрлэх</span>
                 </button>
 
                 <div className="flex items-center gap-1.5">
