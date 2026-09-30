@@ -743,7 +743,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     setSelectedGrantPkg('none');
   };
 
-  const handleAdjustUserPoints = (
+  const handleAdjustUserPoints = async (
     userId: string,
     operation: 'add' | 'subtract' | 'set',
     amount: number,
@@ -752,59 +752,56 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const target = users.find((u) => u.id === userId);
     if (!target) return;
 
-    let newBal = target.walletBalance;
+    let newBal = target.walletBalance || 0;
     const safeAmt = Math.max(0, Number(amount) || 0);
 
     if (operation === 'add') {
-      newBal = target.walletBalance + safeAmt;
+      newBal = (target.walletBalance || 0) + safeAmt;
     } else if (operation === 'subtract') {
-      newBal = Math.max(0, target.walletBalance - safeAmt);
+      newBal = Math.max(0, (target.walletBalance || 0) - safeAmt);
     } else if (operation === 'set') {
       newBal = safeAmt;
     }
 
-    const updated = users.map((u) => {
-      if (u.id === userId) {
-        let pkgUpdates: Partial<UserDetail> = {};
-        if (grantPkg && grantPkg !== 'none') {
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 30);
-          pkgUpdates = {
-            packageType: grantPkg,
-            packageExpiry: expiryDate.toISOString().split('T')[0],
-            role: grantPkg === 'full_vip' ? 'vip' : u.role,
-          };
-        }
-
-        const updatedU: UserDetail = {
-          ...u,
-          walletBalance: newBal,
-          ...pkgUpdates,
-        };
-
-        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id)) {
-          onUpdateBalance(newBal);
-          try {
-            localStorage.setItem('ioio_balance', String(newBal));
-          } catch (e) {}
-        }
-
-        return updatedU;
-      }
-      return u;
-    });
-
-    saveUsersState(updated);
-    if (operation === 'add') {
-      topUpUserBalanceInFirestore(userId, safeAmt);
-    } else {
-      saveUserToFirestore({ id: userId, walletBalance: newBal } as any);
+    let pkgUpdates: Partial<UserDetail> = {};
+    if (grantPkg && grantPkg !== 'none') {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      pkgUpdates = {
+        packageType: grantPkg,
+        packageExpiry: expiryDate.toISOString().split('T')[0],
+        role: grantPkg === 'full_vip' ? 'vip' : target.role,
+      };
     }
+
+    const updatedU: UserDetail = {
+      ...target,
+      walletBalance: newBal,
+      isMockUser: false,
+      ...pkgUpdates,
+    };
+
+    const updated = users.map((u) => (u.id === userId ? updatedU : u));
+    saveUsersState(updated);
+
+    if (currentUser && (target.email === currentUser.email || target.id === currentUser.id || (target.phone && target.phone === currentUser.phone))) {
+      onUpdateBalance(newBal);
+      try {
+        localStorage.setItem('ioio_balance', String(newBal));
+      } catch (e) {}
+    }
+
+    // Persist reliably to Firestore across all documents matching target
+    await topUpUserBalanceInFirestore(target, operation === 'subtract' ? -safeAmt : safeAmt, `Админ цэнэглэлт (${operation})`, newBal);
+
+    if (grantPkg && grantPkg !== 'none') {
+      await grantAnimeAccessToUser(target.id, 30);
+    }
+
     setPointsModalUser(null);
 
     if (selectedUser && selectedUser.id === userId) {
-      const updatedUser = updated.find((u) => u.id === userId);
-      if (updatedUser) setSelectedUser(updatedUser);
+      setSelectedUser(updatedU);
     }
   };
 
@@ -812,32 +809,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const target = users.find((u) => u.id === userId);
     if (!target) return;
 
-    const newBal = Math.max(0, target.walletBalance + delta);
-    const updated = users.map((u) => {
-      if (u.id === userId) {
-        const updatedU = { ...u, walletBalance: newBal, isMockUser: false };
-        if (currentUser && (u.email === currentUser.email || u.id === currentUser.id || (u.phone && u.phone === currentUser.phone))) {
-          onUpdateBalance(newBal);
-          try {
-            localStorage.setItem('ioio_balance', String(newBal));
-          } catch (e) {}
-        }
-        return updatedU;
-      }
-      return u;
-    });
+    const newBal = Math.max(0, (target.walletBalance || 0) + delta);
+    const updatedU = { ...target, walletBalance: newBal, isMockUser: false };
+    const updated = users.map((u) => (u.id === userId ? updatedU : u));
 
     saveUsersState(updated);
 
-    if (delta > 0) {
-      await topUpUserBalanceInFirestore(userId, delta);
-    } else {
-      await saveUserToFirestore({ id: userId, walletBalance: newBal } as any);
+    if (currentUser && (target.email === currentUser.email || target.id === currentUser.id || (target.phone && target.phone === currentUser.phone))) {
+      onUpdateBalance(newBal);
+      try {
+        localStorage.setItem('ioio_balance', String(newBal));
+      } catch (e) {}
     }
 
+    await topUpUserBalanceInFirestore(target, delta, delta > 0 ? `Хурдан цэнэглэлт (+${delta}₮)` : `Оноо хасалт (${delta}₮)`, newBal);
+
     if (selectedUser && selectedUser.id === userId) {
-      const updatedUser = updated.find((u) => u.id === userId);
-      if (updatedUser) setSelectedUser(updatedUser);
+      setSelectedUser(updatedU);
     }
   };
 

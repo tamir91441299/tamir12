@@ -260,8 +260,8 @@ export default function App() {
 
   // Listen for real-time changes to the current user's profile and permissions
   useEffect(() => {
-    if (!currentUser?.id) return;
-    const unsubscribe = subscribeUserAccount(currentUser.id, (updated) => {
+    if (!currentUser) return;
+    const unsubscribe = subscribeUserAccount(currentUser, (updated) => {
       setCurrentUser(updated);
       if (typeof updated.walletBalance === 'number') {
         setUserBalance(updated.walletBalance);
@@ -271,7 +271,7 @@ export default function App() {
       }
     });
     return () => unsubscribe();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
 
   // Listen for recharge requests real-time status changes and automatically clear pending blocks
   useEffect(() => {
@@ -817,7 +817,7 @@ export default function App() {
     }
   };
 
-  const handleSubscribePackage = (
+  const handleSubscribePackage = async (
     packageType: 'anime' | 'movie' | 'full_vip',
     deductedAmount: number = 0,
     durationMonths: number = 1,
@@ -836,7 +836,7 @@ export default function App() {
       }
       if (userBalance < deductedAmount) {
         alert(
-          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!`
+          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хүн анимэ үзэх эрх авах боломжгүй!`
         );
         return;
       }
@@ -845,6 +845,9 @@ export default function App() {
     const newBalance = deductedAmount > 0 ? Math.max(0, userBalance - deductedAmount) : userBalance;
     if (deductedAmount > 0) {
       setUserBalance(newBalance);
+      try {
+        localStorage.setItem('ioio_balance', String(newBalance));
+      } catch {}
     }
 
     const daysToAdd = durationDays ? durationDays : Math.round(durationMonths * 30);
@@ -860,12 +863,14 @@ export default function App() {
       };
       setCurrentUser(updatedUser);
       persistActiveSession(updatedUser, true);
-      saveUserToFirestore(updatedUser, {
+      await saveUserToFirestore(updatedUser, {
         packageType,
         packageExpiry: expiryStr,
         role: packageType === 'full_vip' ? 'vip' : (currentUser.role || 'user'),
         walletBalance: newBalance,
       });
+      // Synchronize across all matching docs in Firestore
+      await topUpUserBalanceInFirestore(currentUser, -deductedAmount, `Оноогоор анимэ эрх авсан (-${deductedAmount.toLocaleString()}₮)`, newBalance);
       clearUserPendingRechargeRequests(updatedUser);
     }
 
@@ -898,7 +903,7 @@ export default function App() {
       await saveUserToFirestore(updatedUser, {
         walletBalance: newBal,
       });
-      await topUpUserBalanceInFirestore(currentUser.id, safeAmount, 'Шууд данс цэнэглэлт');
+      await topUpUserBalanceInFirestore(currentUser, safeAmount, 'Шууд данс цэнэглэлт', newBal);
     }
   };
 

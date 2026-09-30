@@ -123,8 +123,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onSubscribePackage,
   onTopUpBalance,
 }) => {
-  // Main Tab: 'topup' (Шууд оноо авах) | 'package' (Анимэ багц идэвхжүүлэх) | 'code' (Эрхийн код)
-  const [mainTab, setMainTab] = useState<'topup' | 'package' | 'code'>(movie ? 'package' : 'topup');
+  // Main Tab: 'package' (Анимэ багц идэвхжүүлэх) | 'topup' (Шууд оноо авах) | 'code' (Эрхийн код)
+  const [mainTab, setMainTab] = useState<'topup' | 'package' | 'code'>('package');
 
   // Top Up Points state
   const [selectedTopUpAmount, setSelectedTopUpAmount] = useState<number>(2500);
@@ -135,7 +135,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const currentPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[0];
   const activePrice = currentPlan.price;
 
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('monpay');
+  // Primary payment method is Wallet / Points
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('wallet');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMsgText, setSuccessMsgText] = useState<string>('');
@@ -445,7 +446,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 : 'text-zinc-400 hover:text-white bg-zinc-900/60'
             }`}
           >
-            <span>🎌 Анимэ Багц</span>
+            <span>🎌 Анимэ Эрх (Оноогоор)</span>
           </button>
 
           <button
@@ -758,6 +759,22 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {mainTab !== 'code' && (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
+                {mainTab === 'package' && (
+                  <button
+                    id="pay-tab-wallet"
+                    type="button"
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      paymentMethod === 'wallet'
+                        ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Wallet className="w-3.5 h-3.5 fill-current" />
+                    <span>Оноогоор ({userBalance.toLocaleString()}₮)</span>
+                  </button>
+                )}
+
                 <button
                   id="pay-tab-monpay"
                   type="button"
@@ -785,22 +802,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <QrCode className="w-3.5 h-3.5" />
                   <span>QPay / Банк</span>
                 </button>
-
-                {mainTab === 'package' && (
-                  <button
-                    id="pay-tab-wallet"
-                    type="button"
-                    onClick={() => setPaymentMethod('wallet')}
-                    className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      paymentMethod === 'wallet'
-                        ? 'bg-amber-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <Wallet className="w-3.5 h-3.5" />
-                    <span>Оноогоор ({userBalance.toLocaleString()})</span>
-                  </button>
-                )}
               </div>
 
               {/* MonPay Details Card */}
@@ -901,7 +902,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="space-y-3 bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800">
                   <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                     <span className="text-xs text-zinc-400 font-medium">
-                      Таны хэтэвчийн үлдэгдэл:
+                      Таны хэтэвчийн үлдэгдэл оноо:
                     </span>
                     <span className="text-base font-black text-amber-400 font-mono">
                       {userBalance.toLocaleString()} ₮
@@ -909,24 +910,46 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </div>
 
                   {userBalance >= activePrice ? (
-                    <div className="p-2.5 bg-emerald-950/60 border border-emerald-800/80 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>
-                        Төлбөр төлөхөд оноо хангалттай байна. Данснаас {activePrice.toLocaleString()} ₮ хасагдаж эрх нээгдэнэ.
-                      </span>
+                    <div className="space-y-2">
+                      <div className="p-3 bg-emerald-950/70 border border-emerald-700/80 rounded-xl text-emerald-300 text-xs space-y-1.5 shadow-inner">
+                        <div className="flex items-center gap-2 font-bold text-emerald-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>✓ Оноо хангалттай байна! Данснаас оноо хасагдаж анимэ эрх нээгдэнэ.</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 bg-black/40 p-2 rounded-lg text-[11px] font-mono border border-emerald-500/20 text-center">
+                          <div>
+                            <span className="text-[9px] text-zinc-400 block">Одоогийн оноо</span>
+                            <span className="text-zinc-200 font-bold">{userBalance.toLocaleString()} ₮</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-zinc-400 block">Хасагдах</span>
+                            <span className="text-rose-400 font-bold">-{activePrice.toLocaleString()} ₮</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-zinc-400 block">Үлдэх оноо</span>
+                            <span className="text-emerald-400 font-black">{(userBalance - activePrice).toLocaleString()} ₮</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      <div className="p-2.5 bg-rose-950/60 border border-rose-800/80 rounded-xl text-rose-300 text-xs">
-                        Үлдэгдэл хүрэлцэхгүй байна ({activePrice.toLocaleString()} ₮ шаардлагатай). "⚡ Оноо Цэнэглэх" таб руу шилжинэ үү!
+                      <div className="p-3 bg-rose-950/80 border border-rose-600/80 rounded-xl text-rose-300 text-xs space-y-1">
+                        <div className="font-black text-rose-200 flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>ОНОО ХҮРЭЛЦЭХГҮЙ - ОНООГҮЙ ХҮН АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-300">
+                          Танд <strong>{userBalance.toLocaleString()} ₮</strong> оноо байна. Энэ багцыг авахад <strong>{activePrice.toLocaleString()} ₮</strong> оноо шаардлагатай (Дутуу: <strong>{(activePrice - userBalance).toLocaleString()} ₮</strong>).
+                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setMainTab('topup')}
-                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        className="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow"
                       >
                         <Zap className="w-3.5 h-3.5 fill-current" />
-                        <span>Дутуу {(activePrice - userBalance).toLocaleString()}₮ оноогоо шууд цэнэглэх</span>
+                        <span>⚡ Дутуу {(activePrice - userBalance).toLocaleString()}₮ оноогоо шууд цэнэглэх</span>
                       </button>
                     </div>
                   )}

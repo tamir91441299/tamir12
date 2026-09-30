@@ -286,69 +286,157 @@ export function sortUsersByNewest(users: UserDetail[]): UserDetail[] {
  * Directly increments wallet balance and triggers real-time updates.
  */
 export async function topUpUserBalanceInFirestore(
-  userId: string,
+  userIdOrTarget: string | { id?: string; phone?: string; email?: string; name?: string },
   pointsAmount: number,
-  note?: string
+  note?: string,
+  explicitNewBalance?: number
 ): Promise<{ success: boolean; newBalance: number; user?: UserDetail; message: string }> {
   try {
-    const rawId = userId.trim();
+    const rawId = typeof userIdOrTarget === 'string' ? userIdOrTarget.trim() : (userIdOrTarget.id || '').trim();
+    const phoneInput = typeof userIdOrTarget === 'object' ? userIdOrTarget.phone : '';
+    const emailInput = typeof userIdOrTarget === 'object' ? userIdOrTarget.email : '';
+
     let currentBal = 0;
     let targetUser: UserDetail | undefined;
+    const matchingDocIds = new Set<string>();
+    if (rawId) matchingDocIds.add(rawId);
 
     // 1. Check local storage list
     const savedListStr = localStorage.getItem('ioio_registered_users_list');
     let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
     if (Array.isArray(list)) {
-      targetUser = list.find((u) => u.id === rawId || u.phone === rawId || (u.email && u.email.toLowerCase() === rawId.toLowerCase()));
+      targetUser = list.find((u) => {
+        if (!u) return false;
+        const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+        const uEmail = (u.email || '').trim().toLowerCase();
+        const pPhone = (phoneInput || '').trim().replace(/\s+/g, '');
+        const pEmail = (emailInput || '').trim().toLowerCase();
+        return (
+          (rawId && u.id === rawId) ||
+          (pPhone && pPhone !== '99110000' && uPhone === pPhone) ||
+          (pEmail && uEmail === pEmail) ||
+          u.phone === rawId ||
+          (u.email && u.email.toLowerCase() === rawId.toLowerCase())
+        );
+      });
       if (targetUser && typeof targetUser.walletBalance === 'number') {
         currentBal = targetUser.walletBalance;
+        if (targetUser.id) matchingDocIds.add(targetUser.id);
       }
     }
 
-    // 2. Fetch from Firestore if available
-    const docRef = doc(db, 'users', rawId);
-    try {
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const d = snap.data() as UserDetail;
-        if (d) {
-          if (!targetUser) targetUser = { ...d, id: snap.id };
+    const cleanPhone = (phoneInput || targetUser?.phone || (rawId.match(/^[0-9]{8}$/) ? rawId : '')).trim().replace(/\s+/g, '');
+    const cleanEmail = (emailInput || targetUser?.email || (rawId.includes('@') ? rawId : '')).trim().toLowerCase();
+
+    // 2. Fetch from Firestore by ID if available
+    if (rawId) {
+      try {
+        const snap = await getDoc(doc(db, 'users', rawId));
+        if (snap.exists()) {
+          const d = snap.data() as UserDetail;
+          if (d) {
+            if (!targetUser) targetUser = { ...d, id: snap.id };
+            if (typeof d.walletBalance === 'number') {
+              currentBal = Math.max(currentBal, d.walletBalance);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 3. Query Firestore by phone
+    if (cleanPhone && cleanPhone !== '99110000') {
+      try {
+        const qPhone = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(5));
+        const phoneSnaps = await getDocs(qPhone);
+        phoneSnaps.forEach((docSnap) => {
+          matchingDocIds.add(docSnap.id);
+          const d = docSnap.data();
           if (typeof d.walletBalance === 'number') {
             currentBal = Math.max(currentBal, d.walletBalance);
           }
-        }
-      }
-    } catch (e) {}
-
-    const newBalance = currentBal + pointsAmount;
-
-    // 3. Persist to Firestore
-    await setDoc(
-      docRef,
-      {
-        id: targetUser?.id || rawId,
-        name: targetUser?.name || 'Хэрэглэгч',
-        phone: targetUser?.phone || '',
-        email: targetUser?.email || '',
-        walletBalance: newBalance,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-
-    // 4. Update local storage users list
-    if (targetUser) {
-      targetUser.walletBalance = newBalance;
-      const updatedList = list.map((u) => (u.id === targetUser!.id ? { ...u, walletBalance: newBalance } : u));
-      localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedList));
+          if (!targetUser) targetUser = { ...d, id: docSnap.id } as UserDetail;
+        });
+      } catch (e) {}
     }
 
-    // 5. Update active session if target matches current user
+    // 4. Query Firestore by email
+    if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.endsWith('@flicknime.mn')) {
+      try {
+        const qEmail = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(5));
+        const emailSnaps = await getDocs(qEmail);
+        emailSnaps.forEach((docSnap) => {
+          matchingDocIds.add(docSnap.id);
+          const d = docSnap.data();
+          if (typeof d.walletBalance === 'number') {
+            currentBal = Math.max(currentBal, d.walletBalance);
+          }
+          if (!targetUser) targetUser = { ...d, id: docSnap.id } as UserDetail;
+        });
+      } catch (e) {}
+    }
+
+    // Determine new balance
+    const newBalance = explicitNewBalance !== undefined ? Math.max(0, explicitNewBalance) : Math.max(0, currentBal + pointsAmount);
+
+    const primaryDocId = rawId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
+    matchingDocIds.add(primaryDocId);
+
+    // 5. Persist to ALL matching Firestore document IDs so listeners always fire!
+    for (const docId of matchingDocIds) {
+      if (!docId) continue;
+      try {
+        await setDoc(
+          doc(db, 'users', docId),
+          {
+            id: docId,
+            name: targetUser?.name || 'Хэрэглэгч',
+            phone: cleanPhone || targetUser?.phone || '',
+            email: cleanEmail || targetUser?.email || '',
+            walletBalance: newBalance,
+            updatedAt: new Date().toISOString(),
+            lastTopUpAmount: pointsAmount,
+            lastTopUpAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn(`Firestore setDoc error for ${docId}:`, err);
+      }
+    }
+
+    // 6. Update local storage registered users list
+    if (targetUser) {
+      targetUser.walletBalance = newBalance;
+      targetUser.isMockUser = false;
+    }
+    const updatedList = list.map((u) => {
+      const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+      const uEmail = (u.email || '').trim().toLowerCase();
+      if (
+        (primaryDocId && u.id === primaryDocId) ||
+        (rawId && u.id === rawId) ||
+        (cleanPhone && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
+        (cleanEmail && uEmail === cleanEmail)
+      ) {
+        return { ...u, walletBalance: newBalance, isMockUser: false };
+      }
+      return u;
+    });
+    localStorage.setItem('ioio_registered_users_list', JSON.stringify(sortUsersByNewest(deduplicateUserList(updatedList))));
+
+    // 7. Update active session if target matches current user
     try {
       const activeStr = localStorage.getItem('ioio_user');
       if (activeStr) {
         const activeU = JSON.parse(activeStr);
-        if (activeU.id === rawId || activeU.phone === rawId || (activeU.email && activeU.email.toLowerCase() === rawId.toLowerCase())) {
+        const actPhone = (activeU.phone || '').trim().replace(/\s+/g, '');
+        const actEmail = (activeU.email || '').trim().toLowerCase();
+        if (
+          matchingDocIds.has(activeU.id) ||
+          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone) ||
+          (cleanEmail && actEmail === cleanEmail)
+        ) {
           activeU.walletBalance = newBalance;
           persistActiveSession(activeU, true);
         }
@@ -358,24 +446,25 @@ export async function topUpUserBalanceInFirestore(
 
     // Dispatch balance event
     try {
-      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: rawId } }));
+      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: primaryDocId } }));
+      window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: updatedList }));
     } catch (e) {}
 
-    // 6. Broadcast top-up notification
+    // 8. Broadcast top-up notification
     await sendAdminNotification({
       type: 'TOP_UP_REQUEST',
       title: '💰 Хэтэвч амжилттай цэнэглэгдлээ!',
-      message: `${targetUser?.name || 'Хэрэглэгч'} (${targetUser?.phone || targetUser?.email || rawId})-д +${pointsAmount.toLocaleString()}₮ оноо шууд орлоо. Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮.`,
+      message: `${targetUser?.name || 'Хэрэглэгч'} (${cleanPhone || cleanEmail || primaryDocId})-д ${pointsAmount >= 0 ? '+' : ''}${pointsAmount.toLocaleString()}₮ оноо орлоо. Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮.`,
       userName: targetUser?.name,
-      userEmail: targetUser?.email,
-      userPhone: targetUser?.phone,
+      userEmail: cleanEmail,
+      userPhone: cleanPhone,
     });
 
     return {
       success: true,
       newBalance,
       user: targetUser,
-      message: `✓ ${targetUser?.name || 'Хэрэглэгч'}-д +${pointsAmount.toLocaleString()}₮ оноо шууд амжилттай орлоо! Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮`,
+      message: `✓ ${targetUser?.name || 'Хэрэглэгч'}-д ${pointsAmount >= 0 ? '+' : ''}${pointsAmount.toLocaleString()}₮ оноо амжилттай орлоо! Нийт үлдэгдэл: ${newBalance.toLocaleString()}₮`,
     };
   } catch (err: any) {
     console.error('Error in topUpUserBalanceInFirestore:', err);
@@ -1256,7 +1345,7 @@ export async function authenticateUserCredentials(
       const qPhone = query(usersCol, where('phone', '==', cleanPhone), limit(1));
       const snap = await getDocs(qPhone);
       if (!snap.empty) {
-        matchedDoc = snap.docs[0].data();
+        matchedDoc = { ...snap.docs[0].data(), id: snap.docs[0].id };
       }
     }
 
@@ -1264,7 +1353,7 @@ export async function authenticateUserCredentials(
       const qEmail = query(usersCol, where('email', '==', cleanLower), limit(1));
       const snap = await getDocs(qEmail);
       if (!snap.empty) {
-        matchedDoc = snap.docs[0].data();
+        matchedDoc = { ...snap.docs[0].data(), id: snap.docs[0].id };
       }
     }
 
@@ -1274,7 +1363,7 @@ export async function authenticateUserCredentials(
       }
 
       const userAcc: UserAccount = {
-        id: matchedDoc.id || 'usr_' + Date.now(),
+        id: matchedDoc.id || ('user_phone_' + cleanPhone),
         name: matchedDoc.name || 'Хэрэглэгч',
         email: matchedDoc.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
         phone: matchedDoc.phone || (isPhone ? cleanPhone : '99110000'),
@@ -1342,46 +1431,129 @@ export async function authenticateUserCredentials(
 
 /**
  * Real-time subscription to the current user's document in Firestore.
- * Automatically propagates admin package grants or revokes in real-time.
+ * Listens across primary ID, phone number, and email queries to ensure
+ * admin recharges, points updates, and package grants arrive immediately.
  */
 export function subscribeUserAccount(
-  userId: string,
+  userOrId: string | UserAccount,
   onUpdate: (user: UserAccount) => void
 ): () => void {
-  if (!userId) return () => {};
-  try {
-    const userDocRef = doc(db, 'users', userId);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const updatedUser: UserAccount = {
-            id: data.id || docSnap.id,
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            registeredAt: data.registeredAt,
-            role: data.role || 'user',
-            status: data.status || 'active',
-            packageType: data.packageType || 'free',
-            packageExpiry: data.packageExpiry || '-',
-            walletBalance: data.walletBalance ?? 0,
-            purchasedMovies: data.purchasedMovies || [],
-          };
-          persistActiveSession(updatedUser, true);
-          onUpdate(updatedUser);
-        }
-      },
-      (err) => {
-        console.error('Error listening to user account changes:', err);
+  let targetId = typeof userOrId === 'string' ? userOrId.trim() : ((userOrId as any).id || '').trim();
+  let targetPhone = typeof userOrId === 'object' ? (userOrId as any).phone : '';
+  let targetEmail = typeof userOrId === 'object' ? (userOrId as any).email : '';
+
+  if (!targetPhone || !targetEmail) {
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const u = JSON.parse(activeStr);
+        if (!targetPhone && u.phone) targetPhone = u.phone;
+        if (!targetEmail && u.email) targetEmail = u.email;
+        if (!targetId && u.id) targetId = u.id;
       }
-    );
-    return unsubscribe;
-  } catch (err) {
-    console.error('Failed to subscribe to user account:', err);
-    return () => {};
+    } catch {}
   }
+
+  const cleanPhone = (targetPhone || '').trim().replace(/\s+/g, '');
+  const cleanEmail = (targetEmail || '').trim().toLowerCase();
+
+  const unsubscribes: (() => void)[] = [];
+
+  const handleDocData = (data: any, docId: string) => {
+    if (!data) return;
+    const currentSession = getPersistedActiveSession();
+    const updatedUser: UserAccount = {
+      ...(currentSession || {}),
+      id: targetId || docId,
+      name: data.name || currentSession?.name || 'Хэрэглэгч',
+      email: data.email || currentSession?.email || (cleanPhone ? `${cleanPhone}@flicknime.mn` : ''),
+      phone: data.phone || currentSession?.phone || cleanPhone,
+      registeredAt: data.registeredAt || currentSession?.registeredAt || new Date().toLocaleString('mn-MN'),
+      role: (data.email === 'tamir91441299@gmail.com' || data.phone === '91441299') ? 'admin' : (data.role || currentSession?.role || 'user'),
+      status: data.status || currentSession?.status || 'active',
+      packageType: data.packageType || currentSession?.packageType || 'free',
+      packageExpiry: data.packageExpiry || currentSession?.packageExpiry || '-',
+      walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : (currentSession?.walletBalance ?? 0),
+      purchasedMovies: Array.isArray(data.purchasedMovies) ? data.purchasedMovies : (currentSession?.purchasedMovies || []),
+    };
+
+    persistActiveSession(updatedUser, true);
+    try {
+      localStorage.setItem('ioio_balance', String(updatedUser.walletBalance ?? 0));
+    } catch {}
+    onUpdate(updatedUser);
+  };
+
+  // 1. Direct document listener
+  if (targetId) {
+    try {
+      const userDocRef = doc(db, 'users', targetId);
+      const unsub = onSnapshot(
+        userDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            handleDocData(docSnap.data(), docSnap.id);
+          }
+        },
+        (err) => {
+          console.warn('Doc subscription warning:', err);
+        }
+      );
+      unsubscribes.push(unsub);
+    } catch (e) {
+      console.warn('Failed to listen to doc by ID:', e);
+    }
+  }
+
+  // 2. Real-time phone query listener
+  if (cleanPhone && cleanPhone !== '99110000') {
+    try {
+      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(2));
+      const unsub = onSnapshot(
+        qPhone,
+        (snapshot) => {
+          snapshot.forEach((docSnap) => {
+            if (docSnap.exists()) {
+              handleDocData(docSnap.data(), docSnap.id);
+            }
+          });
+        },
+        (err) => {
+          console.warn('Phone query subscription warning:', err);
+        }
+      );
+      unsubscribes.push(unsub);
+    } catch (e) {
+      console.warn('Failed to listen to phone query:', e);
+    }
+  }
+
+  // 3. Real-time email query listener
+  if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.endsWith('@flicknime.mn')) {
+    try {
+      const qEmail = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(2));
+      const unsub = onSnapshot(
+        qEmail,
+        (snapshot) => {
+          snapshot.forEach((docSnap) => {
+            if (docSnap.exists()) {
+              handleDocData(docSnap.data(), docSnap.id);
+            }
+          });
+        },
+        (err) => {
+          console.warn('Email query subscription warning:', err);
+        }
+      );
+      unsubscribes.push(unsub);
+    } catch (e) {
+      console.warn('Failed to listen to email query:', e);
+    }
+  }
+
+  return () => {
+    unsubscribes.forEach((unsub) => unsub());
+  };
 }
 
 /**
