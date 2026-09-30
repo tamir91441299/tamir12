@@ -105,15 +105,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
               Сошиал суваг & Холбоос
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
-              Албан ёсны сошиал хуудсуудыг дагаж шинэ нээлт, трэйлер болон тусгай хөнгөлөлтийн мэдээллийг цаг алдалгүй хүлээн аваарай.
+              Асуух юм байвал манай албан ёсны Facebook page-ээс мэдээлэл авч, шинэ анимэ, трэйлерийн мэдээллийг цаг алдалгүй хүлээн аваарай.
             </p>
             <a
-              href="https://www.facebook.com/share/r/17wruEiwvA/"
+              href="https://www.facebook.com/share/1LdgHqWqvz/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-blue-600/80 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md mt-1"
+              title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
             >
-              <span>Facebook хуудас үзэх 🔗</span>
+              <span className="w-4 h-4 rounded-full bg-white text-blue-600 font-black text-[10px] flex items-center justify-center">f</span>
+              <span>Facebook Page - Мэдээлэл авах 🔗</span>
             </a>
           </div>
         </div>

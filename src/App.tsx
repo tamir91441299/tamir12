@@ -607,6 +607,25 @@ export default function App() {
 
   // Real-time listener for notifications
   useEffect(() => {
+    const handleLocalNewUser = (e: any) => {
+      if (isAdmin && e.detail) {
+        const u = e.detail;
+        const newNotif: AppNotification = {
+          id: 'notif_local_' + Date.now(),
+          type: 'NEW_USER',
+          title: '🎉 Шинэ хэрэглэгч бүртгэгдлээ',
+          message: `${u.name} (${u.phone || u.email}) системд шинээр бүртгэгдлээ. Шууд Удирдах хэсэгт орлоо.`,
+          userName: u.name,
+          userEmail: u.email,
+          userPhone: u.phone,
+          createdAt: new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setLatestNotification(newNotif);
+        setShowNotifToast(true);
+      }
+    };
+    window.addEventListener('ioio_new_user_registered', handleLocalNewUser);
+
     const unsubscribe = subscribeNotificationsFromFirestore((notifs) => {
       setAllNotifications(notifs);
 
@@ -621,7 +640,10 @@ export default function App() {
         setShowNotifToast(true);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      window.removeEventListener('ioio_new_user_registered', handleLocalNewUser);
+      unsubscribe();
+    };
   }, [isAdmin]);
 
   // Track authenticated user session securely & permanently

@@ -49,6 +49,7 @@ import { Movie } from '../types';
 import { SAMPLE_MOVIES } from '../data/movies';
 import {
   subscribeUsersFromFirestore,
+  fetchUsersFromFirestore,
   saveUserToFirestore,
   subscribeNotificationsFromFirestore,
   deduplicateUserList,
@@ -462,6 +463,35 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     setTimeout(() => setPasscodeSaveSuccess(false), 3000);
   };
 
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
+
+  const handleManualSyncUsers = async () => {
+    setIsSyncing(true);
+    try {
+      let serverUsers: UserDetail[] = [];
+      try {
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.success && Array.isArray(d.users)) {
+            serverUsers = d.users;
+          }
+        }
+      } catch {}
+
+      const firestoreUsers = await fetchUsersFromFirestore();
+      const combined = sortUsersByNewest(deduplicateUserList([...serverUsers, ...firestoreUsers, ...users]));
+      setUsers(combined);
+      localStorage.setItem('ioio_registered_users_list', JSON.stringify(combined));
+      setLastSyncTime(new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e) {
+      console.error('Manual sync users error:', e);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 400);
+    }
+  };
+
   useEffect(() => {
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(sortUsersByNewest(deduplicateUserList(list)));
@@ -472,6 +502,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       }
     };
     window.addEventListener('ioio_users_updated', handleLocalUsersUpdated);
+
+    const handleNewUserEvent = (e: any) => {
+      if (e.detail) {
+        setUsers((prev) => sortUsersByNewest(deduplicateUserList([e.detail, ...prev])));
+      }
+    };
+    window.addEventListener('ioio_new_user_registered', handleNewUserEvent);
+
     const handleStorageUpdate = (e: StorageEvent) => {
       if (e.key === 'ioio_registered_users_list' && e.newValue) {
         try {
@@ -499,6 +537,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     return () => {
       unsubscribeUsers();
       window.removeEventListener('ioio_users_updated', handleLocalUsersUpdated);
+      window.removeEventListener('ioio_new_user_registered', handleNewUserEvent);
       window.removeEventListener('storage', handleStorageUpdate);
       unsubscribeNotifs();
       unsubscribeCodes();
@@ -577,13 +616,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const isUserNew = (u: UserDetail): boolean => {
     if (u.isMockUser) return false;
     if (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') return false;
-    if (u.registeredTimestamp && Date.now() - u.registeredTimestamp < 60 * 86400 * 1000) {
-      return true;
-    }
-    if (u.registeredAt && (u.registeredAt.includes('2026') || u.registeredAt.includes('Саяхан') || u.registeredAt.includes('Өнөөдөр'))) {
-      return true;
-    }
+    // Any real registered user is recognized as a new registration
     return !u.isMockUser;
+  };
+
+  const getRegisteredTimeLabel = (u: UserDetail): string => {
+    if (u.registeredTimestamp) {
+      const diffMs = Date.now() - u.registeredTimestamp;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 2) return '🟢 Саяхан бүртгүүлсэн';
+      if (diffMins < 60) return `⏱️ ${diffMins} минутын өмнө`;
+      if (diffHours < 24) return `🕒 ${diffHours} цагийн өмнө`;
+      if (diffDays < 7) return `📅 ${diffDays} өдрийн өмнө`;
+    }
+    return u.registeredAt || 'Бүртгэлтэй';
   };
 
   const handleDirectGrantAnime = async (user: UserDetail, durationDays: number, customExpiry?: string) => {
@@ -1003,6 +1052,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           >
             <Users className="w-4 h-4" />
             <span>Хэрэглэгчдийн Удирдлага ({users.length})</span>
+            {newUsersCount > 0 && (
+              <span className="bg-emerald-500 text-black px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse shadow">
+                {newUsersCount} ШИНЭ
+              </span>
+            )}
           </button>
 
           <button
@@ -1150,8 +1204,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
 
             {/* Filters and Search Bar */}
-            <div className="p-4 bg-zinc-900/80 border-b border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <div className="relative w-full sm:w-80">
+            <div className="p-3 sm:p-4 bg-zinc-900/80 border-b border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="relative w-full md:w-80">
                 <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -1162,24 +1216,43 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-                <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
-                <span className="text-xs text-zinc-400 shrink-0">Шүүлт:</span>
-                <select
-                  value={filterPackage}
-                  onChange={(e) => setFilterPackage(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-2 px-3 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                  <span className="hidden sm:inline">Шууд холболт идэвхтэй</span>
+                  <span className="sm:hidden">Шууд</span>
+                  {lastSyncTime && <span className="text-[10px] text-zinc-400 font-mono font-normal">({lastSyncTime})</span>}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleManualSyncUsers}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-cyan-300 text-xs font-bold transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                  title="Firestore болон серверээс шинээр бүртгүүлсэн хэрэглэгчдийг дахин татах"
                 >
-                  <option value="all">Бүх хэрэглэгч ({users.length})</option>
-                  <option value="new">🌟 Шинэ бүртгүүлсэн ({newUsersCount})</option>
-                  <option value="anime">🌸 Анимэ Багц ({animeUsersCount})</option>
-                  <option value="full_vip">👑 FULL VIP ({vipUsersCount})</option>
-                  <option value="free">Үнэгүй ({freeUsersCount})</option>
-                </select>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
+                  <span>Шинэчлэх</span>
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <select
+                    value={filterPackage}
+                    onChange={(e) => setFilterPackage(e.target.value)}
+                    className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-1.5 px-2.5 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
+                  >
+                    <option value="all">Бүх хэрэглэгч ({users.length})</option>
+                    <option value="new">🌟 Шинэ бүртгүүлсэн ({newUsersCount})</option>
+                    <option value="anime">🌸 Анимэ Багц ({animeUsersCount})</option>
+                    <option value="full_vip">👑 FULL VIP ({vipUsersCount})</option>
+                    <option value="free">Үнэгүй ({freeUsersCount})</option>
+                  </select>
+                </div>
 
                 <button
                   onClick={() => setShowAddUserModal(true)}
-                  className="sm:hidden flex items-center gap-1 bg-cyan-500 text-black font-extrabold text-xs px-3 py-2 rounded-xl shrink-0 ml-auto"
+                  className="sm:hidden flex items-center gap-1 bg-cyan-500 text-black font-extrabold text-xs px-3 py-1.5 rounded-xl shrink-0"
                 >
                   <Plus className="w-4 h-4" /> Нэмэх
                 </button>
@@ -1187,7 +1260,134 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
 
             {/* User Table List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* 🌟 ШИНЭЭР БҮРТГҮҮЛСЭН ХЭРЭГЛЭГЧДИЙН ШУУД УДИРДАХ САМБАР */}
+              {newUsersCount > 0 && (
+                <div className="bg-gradient-to-br from-emerald-950/70 via-zinc-900/90 to-teal-950/50 border-2 border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-3 border-b border-emerald-500/20 mb-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-inner">
+                        <Sparkles className="w-5 h-5 text-emerald-400 animate-spin" />
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-black text-white flex items-center gap-2">
+                          <span>ШИНЭ ХЭРЭГЛЭГЧДИЙН БҮРТГЭЛ ({newUsersCount})</span>
+                          <span className="bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow">
+                            ШУУД ОРЖ ИРСЭН
+                          </span>
+                        </h3>
+                        <p className="text-[11px] text-emerald-300/80">
+                          Системд бүртгүүлсэн шинэ хэрэглэгчид шууд энд цаг хугацааны дарааллаар гарч ирж байна. Нэг товшилтоор Анимэ эрх олгох эсвэл оноо нэмээрэй.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setFilterPackage(filterPackage === 'new' ? 'all' : 'new')}
+                        className={`text-[11px] font-extrabold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                          filterPackage === 'new'
+                            ? 'bg-emerald-500 text-black border-emerald-400 font-black shadow'
+                            : 'bg-emerald-950/80 text-emerald-300 border-emerald-600/50 hover:bg-emerald-900'
+                        }`}
+                      >
+                        {filterPackage === 'new' ? '✓ Бүх хэрэглэгчдийг харах' : '🌟 Зөвхөн шинэ хэрэглэгчдийг шүүх'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* New users quick cards grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {users.filter((u) => isUserNew(u)).slice(0, 6).map((nu) => (
+                      <div
+                        key={`hero_new_${nu.id}`}
+                        className="bg-black/60 hover:bg-black/80 border border-emerald-500/40 hover:border-emerald-400 rounded-xl p-3.5 flex flex-col justify-between gap-3 shadow-lg transition-all"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-black font-black text-base flex items-center justify-center shrink-0 uppercase shadow ring-2 ring-emerald-400/40">
+                              {nu.name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-extrabold text-sm text-white truncate">{nu.name}</span>
+                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                  ШИНЭ
+                                </span>
+                              </div>
+                              {nu.phone && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(nu.phone);
+                                    setCopiedPhoneUserId(nu.id);
+                                    setTimeout(() => setCopiedPhoneUserId(null), 2000);
+                                  }}
+                                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-200 font-mono font-bold mt-0.5 cursor-pointer"
+                                  title="Дугаар хуулах"
+                                >
+                                  <Phone className="w-3 h-3 shrink-0" />
+                                  <span>{nu.phone}</span>
+                                  {copiedPhoneUserId === nu.id ? (
+                                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <Copy className="w-2.5 h-2.5 text-zinc-500 shrink-0" />
+                                  )}
+                                </button>
+                              )}
+                              {nu.email && !nu.email.endsWith('@flicknime.mn') && (
+                                <span className="text-[10px] text-zinc-400 block truncate">{nu.email}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-1.5 py-0.5 rounded block">
+                              {getRegisteredTimeLabel(nu)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block mt-1">
+                              Үлдэгдэл: <strong className="text-emerald-400 font-mono">{nu.walletBalance.toLocaleString()}₮</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Quick Action buttons */}
+                        <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-zinc-800/80">
+                          <button
+                            type="button"
+                            onClick={() => handleDirectGrantAnime(nu, 30)}
+                            disabled={animeGrantLoading}
+                            className="bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-600/60 rounded-lg py-1 px-1 text-[10px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                            title="30 хоногийн Анимэ эрх олгох"
+                          >
+                            <Crown className="w-3 h-3 text-purple-400 shrink-0" />
+                            <span>+1 сар Эрх</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickPointsChange(nu.id, 2500)}
+                            className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-200 border border-emerald-600/60 rounded-lg py-1 px-1 text-[10px] font-extrabold flex items-center justify-center gap-0.5 transition-all cursor-pointer shadow-sm"
+                            title="+2,500₮ Оноо өгөх"
+                          >
+                            <Plus className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>2.5k Оноо</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickPointsChange(nu.id, 5000)}
+                            className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-200 border border-cyan-600/60 rounded-lg py-1 px-1 text-[10px] font-extrabold flex items-center justify-center gap-0.5 transition-all cursor-pointer shadow-sm"
+                            title="+5,000₮ Оноо өгөх"
+                          >
+                            <Plus className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span>5k Оноо</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-zinc-500 text-xs">
               Хайлтад тохирох хэрэглэгч олдсонгүй.

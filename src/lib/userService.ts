@@ -167,12 +167,24 @@ export function subscribeNotificationsFromFirestore(callback: (notifications: Ap
 }
 
 /**
+ * Broadcast channel for instant cross-tab / cross-window registration sync
+ */
+const usersSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('flicknime_users_channel') : null;
+
+/**
  * Helper to deduplicate users by ID, Email, and Phone
  */
 export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
   const map = new Map<string, UserDetail>();
 
-  users.forEach((u, idx) => {
+  // Sort input so non-mock / real users are processed first
+  const prioritized = [...users].sort((a, b) => {
+    if (a.isMockUser && !b.isMockUser) return 1;
+    if (!a.isMockUser && b.isMockUser) return -1;
+    return (b.registeredTimestamp || 0) - (a.registeredTimestamp || 0);
+  });
+
+  prioritized.forEach((u, idx) => {
     if (!u) return;
     const cleanId = (u.id || '').trim() || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : `user_${idx}_${Date.now()}`);
     const cleanEmail = (u.email || '').trim().toLowerCase();
@@ -198,12 +210,19 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const baseObj = foundKey ? map.get(foundKey) : null;
     const targetKey = foundKey || cleanId;
 
+    // Resolve isMockUser: If either is explicitly a real user (isMockUser === false), it is 100% a real user!
+    const resolvedIsMock = (u.isMockUser === false || baseObj?.isMockUser === false)
+      ? false
+      : (u.isMockUser ?? baseObj?.isMockUser ?? false);
+
     const parsedTimestamp =
-      u.registeredTimestamp ||
-      baseObj?.registeredTimestamp ||
-      (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime())
-        ? new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime()
-        : Date.now());
+      (!resolvedIsMock && u.isMockUser === false && u.registeredTimestamp)
+        ? u.registeredTimestamp
+        : (u.registeredTimestamp ||
+          baseObj?.registeredTimestamp ||
+          (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime())
+            ? new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime()
+            : Date.now()));
 
     // 1. Resolve Package Type: Keep active paid package over 'free'
     let resolvedPackage = u.packageType || baseObj?.packageType || 'free';
@@ -224,18 +243,13 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const baseBal = typeof baseObj?.walletBalance === 'number' ? baseObj.walletBalance : undefined;
     const resolvedBalance = Math.max(uBal ?? 0, baseBal ?? 0);
 
-    // 4. Resolve isMockUser: If either is explicitly a real user, it's NOT a mock user!
-    const resolvedIsMock = (u.isMockUser === false || baseObj?.isMockUser === false)
-      ? false
-      : (u.isMockUser ?? baseObj?.isMockUser ?? false);
-
-    // 5. Phone and Email: Prefer non-empty values
+    // 4. Phone and Email: Prefer non-empty values
     const resolvedPhone = cleanPhone && cleanPhone !== '99110000'
       ? cleanPhone
       : (baseObj?.phone || cleanPhone || '');
     const resolvedEmail = cleanEmail || baseObj?.email || '';
 
-    // 6. Name: Prefer real user's custom name over generic placeholder
+    // 5. Name: Prefer real user's custom name over generic placeholder
     let resolvedName = u.name || baseObj?.name || 'Хэрэглэгч';
     if (resolvedName === 'Хэрэглэгч' && baseObj?.name && baseObj.name !== 'Хэрэглэгч') {
       resolvedName = baseObj.name;
@@ -1030,6 +1044,7 @@ export async function saveUserToFirestore(
     };
 
     // Immediately persist into local storage registered users list so admin sees new user right away
+    let currentList: UserDetail[] = [];
     try {
       const savedListStr = localStorage.getItem('ioio_registered_users_list');
       let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
@@ -1047,10 +1062,25 @@ export async function saveUserToFirestore(
       }
 
       list = sortUsersByNewest(deduplicateUserList(list));
+      currentList = list;
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
 
-      // Send real-time notification to Firebase if new user
+      // 1. Immediately notify current window via CustomEvent
+      try {
+        window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: list }));
+      } catch {}
+
+      // 2. Immediately notify other tabs/windows via BroadcastChannel
+      try {
+        usersSyncChannel?.postMessage({ type: 'USERS_UPDATED', users: list, newUser: isNew ? userPayload : null });
+      } catch {}
+
+      // 3. Send real-time notification to Firebase & Admin Toast if new user
       if (isNew) {
+        try {
+          window.dispatchEvent(new CustomEvent('ioio_new_user_registered', { detail: userPayload }));
+        } catch {}
+
         sendAdminNotification({
           type: 'NEW_USER',
           title: '🎉 Шинэ хэрэглэгч бүртгэгдлээ',
@@ -1064,102 +1094,165 @@ export async function saveUserToFirestore(
       console.error('Error updating local registered users list:', e);
     }
 
+    // 4. Background sync with Server REST API
+    try {
+      fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userPayload),
+      }).catch((e) => console.warn('Server user sync error (non-fatal):', e));
+    } catch {}
+
+    // 5. Write primary doc to Firestore
     await setDoc(docRef, userPayload, { merge: true });
+
+    // 6. If phone exists, also alias under user_phone_{cleanPhone} so phone-based lookups are instantaneous
+    if (cleanPhone && cleanPhone !== '99110000' && rawId !== `user_phone_${cleanPhone}`) {
+      try {
+        await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userPayload, { merge: true });
+      } catch (e) {}
+    }
   } catch (err) {
     console.error('Error saving user to Firestore:', err);
   }
 }
 
 /**
- * Real-time listener for all users in Firestore "users" collection
+ * Real-time listener for all users in Firestore "users" collection with server & local fallbacks
  */
 export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => void) {
+  let isUnsubscribed = false;
+
+  const emitMerged = (firestoreList: UserDetail[], serverList: UserDetail[]) => {
+    if (isUnsubscribed) return;
+    const rawList: UserDetail[] = [];
+
+    // 1. High-authority Firestore docs
+    firestoreList.forEach((u) => rawList.push({ ...u, isMockUser: false }));
+
+    // 2. High-authority Server docs
+    serverList.forEach((u) => rawList.push({ ...u, isMockUser: false }));
+
+    // 3. Local storage registered users list
+    try {
+      const savedList = localStorage.getItem('ioio_registered_users_list');
+      if (savedList) {
+        const parsed: UserDetail[] = JSON.parse(savedList);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u) => {
+            if (u) rawList.push({ ...u, isMockUser: false });
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 4. Current user in active session
+    try {
+      const savedUser = localStorage.getItem('ioio_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        if (u && (u.email || u.id || u.phone)) {
+          const uId = u.id || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_active');
+          rawList.push({
+            id: uId,
+            name: u.name || 'Хэрэглэгч',
+            email: u.email || '',
+            phone: u.phone || '',
+            registeredAt: u.registeredAt || new Date().toLocaleString('mn-MN'),
+            registeredTimestamp: u.registeredTimestamp || Date.now(),
+            role: (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') ? 'admin' : (u.role || 'user'),
+            status: u.status || 'active',
+            packageType: u.packageType || 'free',
+            packageExpiry: u.packageExpiry || 'Идэвхгүй',
+            walletBalance: typeof u.walletBalance === 'number' ? u.walletBalance : 0,
+            lastLogin: 'Идэвхтэй одоо',
+            watchedCount: 1,
+            favoriteCount: 0,
+            isMockUser: false,
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 5. Fallback demo sample users appended only if no clash
+    INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
+
+    const deduplicated = deduplicateUserList(rawList);
+    const sorted = sortUsersByNewest(deduplicated);
+    callback(sorted);
+  };
+
   try {
+    let latestFirestoreList: UserDetail[] = [];
+    let latestServerList: UserDetail[] = [];
+
+    // Periodic Server Poller to guarantee cross-device registration sync
+    const fetchServerUsers = async () => {
+      try {
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.users)) {
+            latestServerList = data.users;
+            emitMerged(latestFirestoreList, latestServerList);
+          }
+        }
+      } catch (e) {}
+    };
+
+    fetchServerUsers();
+    const serverInterval = setInterval(fetchServerUsers, 12000);
+
+    // BroadcastChannel listener
+    const handleBroadcast = (ev: MessageEvent) => {
+      if (ev.data?.type === 'USERS_UPDATED' && Array.isArray(ev.data?.users)) {
+        emitMerged(latestFirestoreList, ev.data.users);
+      }
+    };
+    usersSyncChannel?.addEventListener('message', handleBroadcast);
+
+    // Window event listener
+    const handleWindowUsersUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        emitMerged(latestFirestoreList, e.detail);
+      }
+    };
+    window.addEventListener('ioio_users_updated', handleWindowUsersUpdated);
+
+    // Initial emit from local
+    emitMerged([], []);
+
     const usersCol = collection(db, 'users');
-    return onSnapshot(
+    const unsubFirestore = onSnapshot(
       usersCol,
       (snapshot) => {
-        const rawList: UserDetail[] = [];
-
-        // 1. Preload real-time Firestore docs first (highest authority)
+        const list: UserDetail[] = [];
         snapshot.forEach((docSnap) => {
           const d = docSnap.data() as UserDetail;
           if (d) {
-            rawList.push({
+            list.push({
               ...d,
               id: docSnap.id || d.id,
               isMockUser: false,
             });
           }
         });
-
-        // 2. Preload localStorage registered users list
-        try {
-          const savedList = localStorage.getItem('ioio_registered_users_list');
-          if (savedList) {
-            const parsed: UserDetail[] = JSON.parse(savedList);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((u) => {
-                if (u) rawList.push({ ...u, isMockUser: false });
-              });
-            }
-          }
-        } catch (e) {}
-
-        // 3. Preload current user in localStorage
-        try {
-          const savedUser = localStorage.getItem('ioio_user');
-          if (savedUser) {
-            const u = JSON.parse(savedUser);
-            if (u && (u.email || u.id || u.phone)) {
-              const uId = u.id || (u.email ? u.email.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_active');
-              rawList.push({
-                id: uId,
-                name: u.name || 'Хэрэглэгч',
-                email: u.email || '',
-                phone: u.phone || '',
-                registeredAt: u.registeredAt || new Date().toLocaleString('mn-MN'),
-                registeredTimestamp: u.registeredTimestamp || Date.now(),
-                role: (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') ? 'admin' : (u.role || 'user'),
-                status: u.status || 'active',
-                packageType: u.packageType || 'free',
-                packageExpiry: u.packageExpiry || 'Идэвхгүй',
-                walletBalance: typeof u.walletBalance === 'number' ? u.walletBalance : 0,
-                lastLogin: 'Идэвхтэй одоо',
-                watchedCount: 1,
-                favoriteCount: 0,
-                isMockUser: false,
-              });
-            }
-          }
-        } catch (e) {}
-
-        // 4. Fallback demo users appended only if no real users clash with them
-        INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
-
-        const deduplicated = deduplicateUserList(rawList);
-        const sorted = sortUsersByNewest(deduplicated);
-        callback(sorted);
+        latestFirestoreList = list;
+        emitMerged(latestFirestoreList, latestServerList);
       },
       (err) => {
         console.error('Error listening to users from Firestore:', err);
-        // Fallback to local
-        const rawList: UserDetail[] = [];
-        try {
-          const savedList = localStorage.getItem('ioio_registered_users_list');
-          if (savedList) {
-            const parsed: UserDetail[] = JSON.parse(savedList);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((u) => {
-                if (u) rawList.push({ ...u, isMockUser: false });
-              });
-            }
-          }
-        } catch (e) {}
-        INITIAL_USERS.forEach((u) => rawList.push({ ...u, isMockUser: true }));
-        callback(sortUsersByNewest(deduplicateUserList(rawList)));
+        emitMerged([], latestServerList);
       }
     );
+
+    return () => {
+      isUnsubscribed = true;
+      clearInterval(serverInterval);
+      usersSyncChannel?.removeEventListener('message', handleBroadcast);
+      window.removeEventListener('ioio_users_updated', handleWindowUsersUpdated);
+      unsubFirestore();
+    };
   } catch (err) {
     console.error('Firestore users subscription failed:', err);
     callback(sortUsersByNewest(INITIAL_USERS));
@@ -1393,19 +1486,22 @@ export async function authenticateUserCredentials(
   }
 
   // 3. Fallback: If not found in DB, allow seamless user experience if credentials provided
+  const nowTs = Date.now();
   const fallbackEmail = isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower;
   const fallbackUser: UserAccount = {
-    id: isPhone ? 'user_phone_' + cleanPhone : 'user_' + Date.now(),
+    id: isPhone ? 'user_phone_' + cleanPhone : 'user_' + nowTs,
     name: isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0],
     email: fallbackEmail,
     phone: isPhone ? cleanPhone : '99110000',
-    registeredAt: new Date().toLocaleDateString('mn-MN'),
+    registeredAt: new Date().toLocaleString('mn-MN'),
+    registeredTimestamp: nowTs,
     role: isAdmin ? 'admin' : 'user',
     status: 'active',
     packageType: isAdmin ? 'full_vip' : 'free',
     packageExpiry: isAdmin ? '2030-01-01' : '-',
     walletBalance: 0,
     purchasedMovies: [],
+    isMockUser: false,
   };
 
   saveUserAuthRecord({
@@ -1423,6 +1519,8 @@ export async function authenticateUserCredentials(
     packageExpiry: isAdmin ? '2030-01-01' : '-',
     walletBalance: 0,
     purchasedMovies: [],
+    registeredTimestamp: nowTs,
+    isMockUser: false,
   });
 
   persistActiveSession(fallbackUser, true);

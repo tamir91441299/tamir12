@@ -1079,23 +1079,41 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
         {/* Controls and Selectors Bar */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Anime Subscription Expiry Pill */}
+          {/* Anime Subscription Expiry & Points Pill */}
           {(() => {
             const animeExpiry = getAnimeExpiryDetails(currentUser);
+            const userPoints = typeof currentUser?.walletBalance === 'number'
+              ? currentUser.walletBalance
+              : (currentUser as any)?.balance ?? 0;
             if (animeExpiry.hasAccess) {
               return (
                 <div 
-                  className="hidden md:flex items-center gap-1.5 bg-black/60 border border-emerald-500/40 text-emerald-300 px-2.5 py-1 rounded-xl text-[11px] font-bold shadow-sm"
-                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText})`}
+                  className="hidden md:flex items-center gap-2 bg-black/70 border border-emerald-500/40 text-emerald-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
+                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText}) | Оноо: ${userPoints.toLocaleString()} ₮`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Эрхтэй:</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <span>Анимэ эрх:</span>
                   <span className="font-mono text-white font-black">{animeExpiry.expiryDateStr}</span>
                   <span className="text-[10px] text-zinc-400 font-normal">({animeExpiry.countdownText})</span>
+                  <span className="text-zinc-600">|</span>
+                  <span className="text-amber-300 font-mono font-bold">Оноо: {userPoints.toLocaleString()} ₮</span>
                 </div>
               );
             }
-            return null;
+            return (
+              <div 
+                className="hidden md:flex items-center gap-2 bg-black/70 border border-rose-500/30 text-rose-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
+                title={`Анимэ эрх: Идэвхгүй | Оноо: ${userPoints.toLocaleString()} ₮`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                <span>Эрх:</span>
+                <span className="font-mono text-zinc-300 font-bold">
+                  {animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-' ? `Дууссан (${animeExpiry.expiryDateStr})` : 'Аваагүй'}
+                </span>
+                <span className="text-zinc-600">|</span>
+                <span className="text-amber-300 font-mono font-bold">Оноо: {userPoints.toLocaleString()} ₮</span>
+              </div>
+            );
           })()}
 
           {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
@@ -1336,7 +1354,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               ) : (
                 /* Registered but No Anime Package */
                 <>
-                  <div className="space-y-2 max-w-md">
+                  <div className="space-y-2.5 max-w-md">
                     <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-amber-400" />
                       {currentEpisodeIndex + 1}-р анги түгжээтэй байна
@@ -1347,8 +1365,36 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
                       Эрх аваагүй хүмүүс энэхүү анимэг үзэх боломжгүй тул та Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.
                     </p>
+
+                    {/* Expiry and Points status box */}
+                    {(() => {
+                      const animeExpiry = getAnimeExpiryDetails(currentUser);
+                      const userPoints = typeof currentUser?.walletBalance === 'number'
+                        ? currentUser.walletBalance
+                        : (currentUser as any)?.balance ?? 0;
+                      return (
+                        <div className="p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl space-y-2 text-xs text-left">
+                          <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5">
+                            <span className="text-zinc-400">📅 Анимэ эрх дуусах хугацаа:</span>
+                            <span className="font-mono font-bold text-amber-300">
+                              {animeExpiry.hasAccess
+                                ? `${animeExpiry.expiryDateStr} (${animeExpiry.countdownText})`
+                                : animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-'
+                                  ? `Дууссан (${animeExpiry.expiryDateStr})`
+                                  : 'Эрх аваагүй'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-400">💰 Таны үлдэгдэл оноо:</span>
+                            <span className="font-mono font-black text-emerald-400">
+                              {userPoints.toLocaleString()} ₮ оноо
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
-                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                     {onRequestPurchase && (
                       <button
                         type="button"
@@ -1359,6 +1405,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                         <span>Анимэ багцын эрх авах / Төлбөр төлөх</span>
                       </button>
                     )}
+                    <a
+                      href="https://www.facebook.com/share/1LdgHqWqvz/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-3 bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                      title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+                    >
+                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">f</span>
+                      <span>Асуух зүйл (Facebook Page) ↗</span>
+                    </a>
                   </div>
                 </>
               )}

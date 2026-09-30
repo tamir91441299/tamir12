@@ -563,7 +563,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* TAB 2: ANIME PACKAGES */}
           {mainTab === 'package' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Active Package Banner with Detailed Expiry */}
+              {/* Active Package Banner with Detailed Expiry & Points */}
               <div className="p-3.5 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 space-y-2.5 shadow-inner">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -580,7 +580,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                           </span>
                         ) : (
                           <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">
-                            Эрх аваагүй
+                            {animeExpiryInfo.isExpired && animeExpiryInfo.expiryDateStr !== '-'
+                              ? `Хугацаа дууссан (${animeExpiryInfo.expiryDateStr})`
+                              : 'Эрх аваагүй'}
                           </span>
                         )}
                       </h3>
@@ -591,22 +593,57 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </div>
                 </div>
 
-                {/* Expiry Details Row */}
-                <div className="bg-black/50 p-2.5 rounded-lg border border-white/[0.08] flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-zinc-300">
-                    <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Эрх дуусах хугацаа:</span>
+                {/* Expiry Details & Points (Оноо) Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-black/60 p-2.5 rounded-lg border border-white/[0.08] text-xs">
+                  {/* Expiry Date */}
+                  <div className="flex items-center justify-between sm:justify-start sm:gap-2">
+                    <div className="flex items-center gap-1.5 text-zinc-300">
+                      <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="font-semibold text-zinc-300">Эрх дуусах хугацаа:</span>
+                    </div>
+                    <div className="font-mono font-bold text-right sm:text-left">
+                      {animeExpiryInfo.hasAccess ? (
+                        <span className="text-amber-300 font-black">
+                          {animeExpiryInfo.expiryDateStr} <span className="text-[10px] text-emerald-400 font-semibold">({animeExpiryInfo.countdownText})</span>
+                        </span>
+                      ) : (
+                        <span className="text-rose-400 font-semibold">
+                          {animeExpiryInfo.isExpired && animeExpiryInfo.expiryDateStr !== '-'
+                            ? `Дууссан (${animeExpiryInfo.expiryDateStr})`
+                            : 'Идэвхгүй / Дууссан'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="font-mono font-bold text-right">
-                    {animeExpiryInfo.hasAccess ? (
-                      <span className="text-amber-300 font-black">
-                        {animeExpiryInfo.expiryDateStr} <span className="text-[11px] text-emerald-400 font-semibold">({animeExpiryInfo.countdownText})</span>
-                      </span>
-                    ) : (
-                      <span className="text-zinc-500">Идэвхгүй (Цэнэглэж авна уу)</span>
-                    )}
+
+                  {/* Points (Оноо) */}
+                  <div className="flex items-center justify-between sm:justify-start sm:gap-2 sm:border-l sm:border-white/10 sm:pl-3">
+                    <div className="flex items-center gap-1.5 text-zinc-300">
+                      <Wallet className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="font-semibold text-zinc-300">Таны оноо:</span>
+                    </div>
+                    <div className="font-mono font-black text-amber-300 text-right sm:text-left">
+                      {userBalance.toLocaleString()} ₮ оноо
+                    </div>
                   </div>
                 </div>
+
+                {/* Facebook Inquiry / Help link */}
+                <a
+                  href="https://www.facebook.com/share/1LdgHqWqvz/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 rounded-lg text-xs text-blue-200 transition-all group cursor-pointer"
+                  title="Асуух зүйл байвал манай албан ёсны Facebook хуудаснаас мэдээлэл авах"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center shrink-0">f</span>
+                    <span className="text-[11px] font-medium">Асуух юм байвал энэ page-ээс мэдээлэл авах</span>
+                  </div>
+                  <span className="text-[10px] text-blue-400 group-hover:text-blue-200 font-bold flex items-center gap-1 shrink-0">
+                    Facebook хуудас ↗
+                  </span>
+                </a>
               </div>
 
               {/* Duration Selection: 15 Honog (2.5k), 1 Sar (5k), 2 Sar (8.5k) */}
@@ -989,6 +1026,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </p>
                 </div>
               </div>
+              {/* Facebook support link */}
+              <a
+                href="https://www.facebook.com/share/1LdgHqWqvz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all group"
+                title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">f</span>
+                  <span>Асуух юм байвал энэ page-ээс мэдээлэл авна уу</span>
+                </div>
+                <span className="text-blue-300 group-hover:text-white text-[11px]">Нээх ↗</span>
+              </a>
               <button
                 onClick={onClose}
                 className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2.5 rounded-xl border border-zinc-700 cursor-pointer transition-colors"
@@ -1135,6 +1186,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <p className="text-[10px] text-zinc-400 text-center">
                     * Та MonPay ({monpayNumber}) эсвэл QPay-ээр шилжүүлэг хийсний дараа хүсэлтээ илгээнэ. Админ шалгаж баталгаажуулснаар таны анимэ эрх идэвхжинэ.
                   </p>
+
+                  <a
+                    href="https://www.facebook.com/share/1LdgHqWqvz/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 hover:text-blue-100 font-semibold text-xs py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">f</span>
+                    <span>Асуух юм байвал энэ Facebook хуудаснаас мэдээлэл авах ↗</span>
+                  </a>
                 </div>
               )}
             </div>

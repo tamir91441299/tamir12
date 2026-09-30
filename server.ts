@@ -9,6 +9,7 @@ import paymentsRouter from "./server/routes/payments.js";
 import aiRouter from "./server/routes/ai.js";
 import seoRouter from "./server/routes/seo.js";
 import streamRouter from "./server/routes/stream.js";
+import usersRouter from "./server/routes/users.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/movies", moviesRouter);
 app.use("/api/packages", packagesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/users", usersRouter);
 app.use(streamRouter);
 
 // Static assets from public folder

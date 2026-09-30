@@ -665,34 +665,71 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 {/* Anime Package Expiry / Access status indicator */}
                 {(() => {
                   const expiryInfo = getAnimeExpiryDetails(currentUser);
+                  const effectiveBalance = typeof currentUser?.walletBalance === 'number'
+                    ? currentUser.walletBalance
+                    : (currentUser as any)?.balance ?? 0;
                   if (expiryInfo.hasAccess) {
                     return (
-                      <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl p-2.5 flex items-center justify-between text-xs text-emerald-300">
+                      <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-300">
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                           <span>🎌 <strong>Анимэ эрх идэвхтэй</strong></span>
                         </div>
-                        <span className="font-mono font-bold text-white bg-black/40 px-2 py-0.5 rounded">
-                          Дуусах: {expiryInfo.expiryDateStr} ({expiryInfo.countdownText})
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                          <span className="font-bold text-white bg-black/50 px-2 py-0.5 rounded border border-white/10">
+                            Дуусах хугацаа: <strong className="text-amber-300">{expiryInfo.expiryDateStr}</strong> ({expiryInfo.countdownText})
+                          </span>
+                          <span className="font-bold text-amber-300 bg-black/50 px-2 py-0.5 rounded border border-amber-500/30">
+                            Оноо: {effectiveBalance.toLocaleString()} ₮
+                          </span>
+                        </div>
                       </div>
                     );
                   } else if (currentUser && expiryInfo.isExpired) {
                     return (
-                      <div className="bg-rose-950/60 border border-rose-500/40 rounded-xl p-2.5 flex items-center justify-between text-xs text-rose-300">
+                      <div className="bg-rose-950/60 border border-rose-500/40 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-rose-300">
                         <div className="flex items-center gap-2">
                           <Lock className="w-4 h-4 text-rose-400 shrink-0" />
-                          <span>⚠️ Анимэ эрх дууссан байна ({expiryInfo.expiryDateStr})</span>
+                          <span>⚠️ Анимэ эрх дууссан байна (Хугацаа: {expiryInfo.expiryDateStr} • Оноо: {effectiveBalance.toLocaleString()} ₮)</span>
                         </div>
-                        {onRequestPurchase && (
-                          <button
-                            type="button"
-                            onClick={() => onRequestPurchase(movie)}
-                            className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2.5 py-1 rounded-lg cursor-pointer"
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href="https://www.facebook.com/share/1LdgHqWqvz/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 border border-blue-500/40 px-2 py-1 rounded-lg text-[11px] font-bold"
+                            title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
                           >
-                            Эрх сунгах
-                          </button>
-                        )}
+                            Асуух (FB)
+                          </a>
+                          {onRequestPurchase && (
+                            <button
+                              type="button"
+                              onClick={() => onRequestPurchase(movie)}
+                              className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2.5 py-1 rounded-lg cursor-pointer"
+                            >
+                              Эрх сунгах
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else if (currentUser) {
+                    return (
+                      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-300">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span>🎌 Анимэ эрх: <strong>Эрх аваагүй</strong> • Оноо: <strong className="text-amber-300 font-mono">{effectiveBalance.toLocaleString()} ₮</strong></span>
+                        </div>
+                        <a
+                          href="https://www.facebook.com/share/1LdgHqWqvz/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1"
+                          title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+                        >
+                          <span>Асуух зүйл (FB page) →</span>
+                        </a>
                       </div>
                     );
                   }
@@ -782,12 +819,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   </button>
 
                   <a
-                    href="https://www.facebook.com/share/r/17wruEiwvA/"
+                    href="https://www.facebook.com/share/1LdgHqWqvz/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-3.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-400/40 text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                    title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
                   >
-                    <span>FB Бичлэг 🎬</span>
+                    <span>FB Хуудас 💬</span>
                   </a>
 
                   <button

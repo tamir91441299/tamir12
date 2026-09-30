@@ -433,14 +433,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 {/* Expiry Details Box */}
-                <div className="bg-black/50 p-2.5 rounded-lg border border-white/[0.08] space-y-1 text-xs">
+                <div className="bg-black/50 p-2.5 rounded-lg border border-white/[0.08] space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-400 flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Дуусах огноо:</span>
+                      <span>Эрх дуусах хугацаа:</span>
                     </span>
                     <span className="font-mono font-black text-white">
-                      {animeExpiry.hasAccess ? animeExpiry.formattedExpiryDate : '-'}
+                      {animeExpiry.hasAccess ? `${animeExpiry.expiryDateStr} (${animeExpiry.countdownText})` : (animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-' ? `Дууссан (${animeExpiry.expiryDateStr})` : 'Эрх аваагүй')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                    <span className="text-zinc-400 flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Таны оноо (Хэтэвч):</span>
+                    </span>
+                    <span className="font-mono font-black text-amber-300">
+                      {effectiveBalance.toLocaleString()} ₮ оноо
                     </span>
                   </div>
 
@@ -458,6 +468,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* Facebook support link */}
+                <a
+                  href="https://www.facebook.com/share/1LdgHqWqvz/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 rounded-lg text-xs text-blue-200 transition-all group"
+                  title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">f</span>
+                    <span className="text-[11px]">Асуух юм байвал энэ page-ээс мэдээлэл авах</span>
+                  </div>
+                  <span className="text-[10px] text-blue-400 group-hover:text-blue-200 font-bold">
+                    Нээх ↗
+                  </span>
+                </a>
               </div>
 
               {/* CARD 3: ACCOUNT INFO */}

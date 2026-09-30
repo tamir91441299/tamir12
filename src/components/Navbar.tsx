@@ -99,6 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const animeDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
+  const newUsersNotifsCount = notifications.filter((n) => n.type === 'NEW_USER').length;
 
   const animeCategories: {
     id: MovieSubcategory;
@@ -290,12 +291,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <a
-            href="https://www.facebook.com/share/r/17wruEiwvA/"
+            href="https://www.facebook.com/share/1LdgHqWqvz/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-blue-300 hover:text-white transition-colors bg-blue-600/20 hover:bg-blue-600/30 px-2.5 py-0.5 rounded-full border border-blue-500/30 text-[11px] font-bold"
+            title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
           >
-            <span>FB Нийгэмлэг</span>
+            <span className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white font-black text-[9px] flex items-center justify-center">f</span>
+            <span>Асуух юм байвал (Facebook Page) ↗</span>
           </a>
         </div>
       </div>
@@ -330,11 +333,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="nav-admin-control"
                 onClick={onOpenUserManagement}
-                className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold hover:bg-amber-500/25 cursor-pointer mr-1"
+                className="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold hover:bg-amber-500/25 cursor-pointer mr-1 relative"
                 title="Админ удирдлагын хэсэг"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 <span>УДИРДАХ</span>
+                {newUsersNotifsCount > 0 && (
+                  <span className="bg-emerald-500 text-black text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow">
+                    {newUsersNotifsCount} ШИНЭ
+                  </span>
+                )}
               </button>
             )}
 
@@ -529,7 +537,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right: Wallet + Pass + Search + Favorites */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-1 lg:flex-none justify-end min-w-0">
-          {/* Subscription Package Button with Expiration Display */}
+          {/* Subscription Package Button with Expiration Display & Points */}
           {(() => {
             const animeExpiry = getAnimeExpiryDetails(currentUser);
             if (isAnimePackage || isMonthlyVip) {
@@ -538,13 +546,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id="vip-monthly-pass-btn"
                   onClick={onOpenVipModal}
                   className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 via-amber-400 to-rose-500 hover:brightness-110 text-black px-2.5 py-1 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 cursor-pointer shrink-0 transition-transform active:scale-95"
-                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText})`}
+                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText}) | Оноо: ${userBalance.toLocaleString()} ₮`}
                 >
                   <Sparkles className="w-3.5 h-3.5 fill-current shrink-0 text-zinc-950" />
                   <div className="flex flex-col items-start leading-tight text-left">
-                    <span className="font-black text-[11px] sm:text-xs">🎌 АНИМЭ ЭРХТЭЙ</span>
-                    <span className="text-[9px] font-mono font-black text-zinc-900 opacity-90 truncate max-w-[130px] sm:max-w-[200px]">
-                      {animeExpiry.countdownText} ({animeExpiry.expiryDateStr})
+                    <span className="font-black text-[11px] sm:text-xs flex items-center gap-1.5">
+                      <span>🎌 АНИМЭ ЭРХТЭЙ</span>
+                      <span className="bg-black/25 text-black px-1.5 py-0.2 rounded font-mono font-black text-[10px]">
+                        {userBalance.toLocaleString()} ₮
+                      </span>
+                    </span>
+                    <span className="text-[9px] font-mono font-black text-zinc-900 opacity-95 truncate max-w-[140px] sm:max-w-[210px]">
+                      Дуусах: {animeExpiry.expiryDateStr} ({animeExpiry.countdownText})
                     </span>
                   </div>
                 </button>
@@ -555,11 +568,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="vip-monthly-pass-btn"
                 onClick={onOpenVipModal}
                 className="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
-                title="Анимэ багц идэвхжүүлэх (15 хоног 2.5k, 1 сар 5k, 2 сар 8.5k)"
+                title={`Анимэ эрх авах | Хугацаа: ${animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-' ? animeExpiry.expiryDateStr : 'Эрх аваагүй'} | Оноо: ${userBalance.toLocaleString()} ₮`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="hidden sm:inline">АНИМЭ БАГЦ (2,500 ₮-с)</span>
-                <span className="sm:hidden">Эрх авах</span>
+                <div className="flex flex-col items-start leading-tight text-left">
+                  <span className="font-black text-[11px] sm:text-xs flex items-center gap-1.5 text-rose-200">
+                    <span className="hidden sm:inline">🎌 АНИМЭ ЭРХ</span>
+                    <span className="sm:hidden">Эрх авах</span>
+                    <span className="bg-amber-400/20 text-amber-300 px-1 py-0.2 rounded font-mono font-bold text-[10px]">
+                      {userBalance.toLocaleString()} ₮
+                    </span>
+                  </span>
+                  <span className="text-[9px] font-mono text-zinc-400 truncate max-w-[140px] sm:max-w-[190px]">
+                    {animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-'
+                      ? `Дууссан (${animeExpiry.expiryDateStr})`
+                      : 'Хугацаа: Эрх аваагүй'}
+                  </span>
+                </div>
               </button>
             );
           })()}
@@ -814,6 +839,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* Facebook Page Quick Help / Inquiry Link */}
+          <a
+            href="https://www.facebook.com/share/1LdgHqWqvz/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 border border-blue-500/40 text-blue-300 hover:text-white text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm"
+            title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+          >
+            <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">f</span>
+            <span className="hidden xl:inline">Асуух зүйл (FB)</span>
+          </a>
+
           {/* Notification Bell Button with Real-time Dropdown */}
           <div className="relative shrink-0">
             <button
@@ -1038,10 +1075,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="mobile-nav-users"
               onClick={onOpenUserManagement}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold shadow-md cursor-pointer whitespace-nowrap active:scale-95 transition-transform shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold shadow-md cursor-pointer whitespace-nowrap active:scale-95 transition-transform shrink-0 relative"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
               <span>Удирдах</span>
+              {newUsersNotifsCount > 0 && (
+                <span className="bg-emerald-500 text-black text-[9px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow">
+                  {newUsersNotifsCount} шинэ
+                </span>
+              )}
             </button>
           )}
 
@@ -1262,6 +1304,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Google SEO</span>
             </button>
           )}
+
+          <a
+            href="https://www.facebook.com/share/1LdgHqWqvz/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/30"
+            title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
+          >
+            <span className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white font-black text-[9px] flex items-center justify-center shrink-0">f</span>
+            <span>Асуух (FB)</span>
+          </a>
         </div>
       </div>
     </header>
