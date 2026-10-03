@@ -23,11 +23,11 @@ export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): bool
   if (u.isMockUser === true) return true;
   const id = String(u.id || '').trim();
   const email = String(u.email || '').trim().toLowerCase();
-  const phone = String(u.phone || '').trim().replace(/\s+/g, '');
   const name = String(u.name || '').trim();
 
   // Known sample / bot IDs
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
+  if (id.startsWith('visitor_')) return true;
 
   // Known sample / bot emails
   const botEmails = [
@@ -38,13 +38,14 @@ export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): bool
     'morko@mn.net',
   ];
   if (botEmails.includes(email)) return true;
+  if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
 
   // Known sample bot names with their default test phones
-  if (name === 'Бат-Эрдэнэ' && (phone === '99112233' || !phone)) return true;
-  if (name === 'Анужин' && (phone === '88105544' || !phone)) return true;
-  if (name === 'Ганзориг' && (phone === '99087766' || !phone)) return true;
-  if (name === 'Мөнх-Оргил' && (phone === '95551212' || !phone)) return true;
-  if (name === 'Тамир (Админ)' && email === 'admin@ioio.mn') return true;
+  if (name.startsWith('Шинэ Зочин')) return true;
+  if (name === 'Бат-Эрдэнэ') return true;
+  if (name === 'Анужин') return true;
+  if (name === 'Ганзориг') return true;
+  if (name === 'Мөнх-Оргил') return true;
 
   return false;
 }
@@ -215,7 +216,7 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
   // Filter out any mock/bot users first
   const cleanSource = users.filter((u) => !isBotOrMockUser(u));
 
-  // Sort input so non-mock / real users are processed first
+  // Sort input so newest registered users are processed with high fidelity
   const prioritized = [...cleanSource].sort((a, b) => {
     return (b.registeredTimestamp || 0) - (a.registeredTimestamp || 0);
   });
@@ -226,17 +227,16 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const cleanEmail = (u.email || '').trim().toLowerCase();
     const cleanPhone = (u.phone || '').trim().replace(/\s+/g, '');
 
-    // Look for existing user with same ID, email or non-empty phone (ignore default placeholder 99110000)
+    // Look for existing user with identical ID or clear alias
     let foundKey: string | null = null;
     for (const [key, existing] of map.entries()) {
       const exEmail = (existing.email || '').trim().toLowerCase();
-      const exPhone = (existing.phone || '').trim().replace(/\s+/g, '');
 
+      // Only merge if exact same ID or alias for the exact same user
       if (
         key === cleanId ||
         existing.id === cleanId ||
-        (cleanEmail && exEmail && exEmail === cleanEmail) ||
-        (cleanPhone && cleanPhone !== '99110000' && exPhone && exPhone === cleanPhone)
+        (cleanEmail && exEmail && exEmail === cleanEmail && !cleanEmail.endsWith('@flicknime.mn'))
       ) {
         foundKey = key;
         break;
@@ -246,19 +246,14 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
     const baseObj = foundKey ? map.get(foundKey) : null;
     const targetKey = foundKey || cleanId;
 
-    // Resolve isMockUser: If either is explicitly a real user (isMockUser === false), it is 100% a real user!
-    const resolvedIsMock = (u.isMockUser === false || baseObj?.isMockUser === false)
-      ? false
-      : (u.isMockUser ?? baseObj?.isMockUser ?? false);
+    const resolvedIsMock = false;
 
     const parsedTimestamp =
-      (!resolvedIsMock && u.isMockUser === false && u.registeredTimestamp)
-        ? u.registeredTimestamp
-        : (u.registeredTimestamp ||
-          baseObj?.registeredTimestamp ||
-          (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime())
-            ? new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime()
-            : Date.now()));
+      u.registeredTimestamp ||
+      baseObj?.registeredTimestamp ||
+      (u.registeredAt && !isNaN(new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime())
+        ? new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime()
+        : Date.now());
 
     // 1. Resolve Package Type: Keep active paid package over 'free'
     let resolvedPackage = u.packageType || baseObj?.packageType || 'free';
@@ -274,10 +269,12 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       resolvedExpiry = baseObj.packageExpiry;
     }
 
-    // 3. Resolve Wallet Balance: Keep the highest balance
-    const uBal = typeof u.walletBalance === 'number' ? u.walletBalance : undefined;
-    const baseBal = typeof baseObj?.walletBalance === 'number' ? baseObj.walletBalance : undefined;
-    const resolvedBalance = Math.max(uBal ?? 0, baseBal ?? 0);
+    // 3. Resolve Wallet Balance: Keep the user's own balance, NEVER overwrite with another account's balance
+    const resolvedBalance = typeof u.walletBalance === 'number'
+      ? u.walletBalance
+      : typeof baseObj?.walletBalance === 'number'
+      ? baseObj.walletBalance
+      : 0;
 
     // 4. Phone and Email: Prefer non-empty values
     const resolvedPhone = cleanPhone && cleanPhone !== '99110000'
@@ -475,7 +472,8 @@ export async function topUpUserBalanceInFirestore(
     });
     localStorage.setItem('ioio_registered_users_list', JSON.stringify(sortUsersByNewest(deduplicateUserList(updatedList))));
 
-    // 7. Update active session if target matches current user
+    // 7. Update active session ONLY if target matches current user
+    let isActiveUser = false;
     try {
       const activeStr = localStorage.getItem('ioio_user');
       if (activeStr) {
@@ -484,19 +482,28 @@ export async function topUpUserBalanceInFirestore(
         const actEmail = (activeU.email || '').trim().toLowerCase();
         if (
           matchingDocIds.has(activeU.id) ||
-          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone) ||
-          (cleanEmail && actEmail === cleanEmail)
+          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone && activeU.id === primaryDocId) ||
+          (cleanEmail && actEmail === cleanEmail && activeU.id === primaryDocId)
         ) {
+          isActiveUser = true;
           activeU.walletBalance = newBalance;
           persistActiveSession(activeU, true);
+          localStorage.setItem('ioio_balance', String(newBalance));
         }
       }
-      localStorage.setItem('ioio_balance', String(newBalance));
     } catch (e) {}
 
-    // Dispatch balance event
+    // Dispatch balance event strictly with target details
     try {
-      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: primaryDocId } }));
+      window.dispatchEvent(new CustomEvent('ioio_balance_updated', {
+        detail: {
+          newBalance,
+          userId: primaryDocId,
+          phone: cleanPhone,
+          email: cleanEmail,
+          isActiveUser
+        }
+      }));
       window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: updatedList }));
     } catch (e) {}
 
@@ -778,7 +785,8 @@ export async function approveAndCreditRechargeRequest(
     updatedList = sortUsersByNewest(deduplicateUserList(updatedList));
     localStorage.setItem('ioio_registered_users_list', JSON.stringify(updatedList));
 
-    // 7. Update current active session if it matches
+    // 7. Update current active session ONLY if it matches the recharge recipient
+    let isActiveUser = false;
     try {
       const activeStr = localStorage.getItem('ioio_user');
       if (activeStr) {
@@ -787,17 +795,18 @@ export async function approveAndCreditRechargeRequest(
         const actEmail = (activeU.email || '').trim().toLowerCase();
         if (
           matchingDocIds.has(activeU.id) ||
-          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone) ||
-          (cleanEmail && actEmail === cleanEmail)
+          (cleanPhone && cleanPhone !== '99110000' && actPhone === cleanPhone && activeU.id === primaryId) ||
+          (cleanEmail && actEmail === cleanEmail && activeU.id === primaryId)
         ) {
+          isActiveUser = true;
           activeU.walletBalance = newBalance;
           activeU.packageType = resolvedPackage;
           activeU.packageExpiry = expiryStr;
           activeU.status = 'active';
           persistActiveSession(activeU, true);
+          localStorage.setItem('ioio_balance', String(newBalance));
         }
       }
-      localStorage.setItem('ioio_balance', String(newBalance));
     } catch (e) {}
 
     // 8. Clear pending recharge blocks in LocalStorage
@@ -833,7 +842,15 @@ export async function approveAndCreditRechargeRequest(
     // 9. Dispatch custom events
     try {
       window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: updatedList }));
-      window.dispatchEvent(new CustomEvent('ioio_balance_updated', { detail: { newBalance, userId: primaryId } }));
+      window.dispatchEvent(new CustomEvent('ioio_balance_updated', {
+        detail: {
+          newBalance,
+          userId: primaryId,
+          phone: cleanPhone,
+          email: cleanEmail,
+          isActiveUser
+        }
+      }));
     } catch (e) {}
 
     // 10. Broadcast admin notification
@@ -1038,15 +1055,20 @@ export async function saveUserToFirestore(
       const savedListStr = localStorage.getItem('ioio_registered_users_list');
       const list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
       if (Array.isArray(list)) {
-        existingRecord = list.find((u) => u && (u.id === rawId || (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail) || (cleanPhone && cleanPhone !== '99110000' && u.phone === cleanPhone)));
+        existingRecord = list.find((u) => u && (
+          (rawId && u.id === rawId) ||
+          (cleanEmail && !cleanEmail.endsWith('@flicknime.mn') && u.email && u.email.toLowerCase() === cleanEmail) ||
+          (cleanPhone && cleanPhone.length >= 8 && cleanPhone !== '99110000' && u.phone && u.phone.replace(/\s+/g, '') === cleanPhone)
+        ));
       }
     } catch {}
 
+    // Resolve Wallet Balance: respect 0 balance for newly registered users
     const resolvedBalance = typeof extraData?.walletBalance === 'number'
       ? extraData.walletBalance
-      : typeof (user as UserDetail).walletBalance === 'number' && (user as UserDetail).walletBalance > 0
+      : typeof (user as UserDetail).walletBalance === 'number'
       ? (user as UserDetail).walletBalance
-      : (existingRecord?.walletBalance ?? (user as UserDetail).walletBalance ?? 0);
+      : (existingRecord?.walletBalance ?? 0);
 
     const resolvedPackage = extraData?.packageType
       ? extraData.packageType
@@ -1234,7 +1256,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     };
 
     fetchServerUsers();
-    const serverInterval = setInterval(fetchServerUsers, 12000);
+    const serverInterval = setInterval(fetchServerUsers, 3500);
 
     // BroadcastChannel listener
     const handleBroadcast = (ev: MessageEvent) => {
@@ -1382,31 +1404,29 @@ export async function deleteUserFromFirestoreAndServer(userId: string): Promise<
  * Remove all mock and bot users from Firestore, server, and local storage
  */
 export async function cleanupAllBotUsers(): Promise<{ deletedCount: number; message: string }> {
-  const botIds = ['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'];
   let deletedCount = 0;
 
-  // 1. Delete bot docs from Firestore
-  for (const botId of botIds) {
-    try {
-      await deleteDoc(doc(db, 'users', botId));
-      deletedCount++;
-    } catch (e) {}
+  // 1. Scan and delete all bot docs from Firestore
+  try {
+    const usersCol = collection(db, 'users');
+    const snap = await getDocs(usersCol);
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data() as UserDetail;
+      if (isBotOrMockUser(data) || isBotOrMockUser({ id: docSnap.id })) {
+        try {
+          await deleteDoc(doc(db, 'users', docSnap.id));
+          deletedCount++;
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.warn('Firestore bot cleanup warning:', err);
   }
 
   // 2. Delete bot records on server
   try {
     await fetch('/api/users/cleanup-bots', { method: 'POST' }).catch(() => {});
   } catch (e) {}
-
-  for (const botId of botIds) {
-    try {
-      await fetch('/api/users/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: botId }),
-      }).catch(() => {});
-    } catch (e) {}
-  }
 
   // 3. Clean local storage
   try {
@@ -1423,7 +1443,7 @@ export async function cleanupAllBotUsers(): Promise<{ deletedCount: number; mess
 
   return {
     deletedCount,
-    message: 'Бүх бот хэрэглэгчдийг амжилттай устгаж цэвэрлэлээ.',
+    message: `Бүх бот болон туршилтын хэрэглэгчдийг амжилттай устгаж цэвэрлэлээ. (${deletedCount} бот устгагдсан)`,
   };
 }
 
@@ -1516,46 +1536,7 @@ export async function authenticateUserCredentials(
     return { success: true, user: adminUser };
   }
 
-  // 1. Check LocalStorage Auth Records first
-  try {
-    const credMapStr = localStorage.getItem('ioio_user_auth_records');
-    if (credMapStr) {
-      const credMap = JSON.parse(credMapStr);
-      let found = credMap[cleanLower] || credMap[cleanPhone];
-      if (!found) {
-        // Search values
-        const entry = Object.values(credMap).find(
-          (v: any) => v && ((v.phone && v.phone === cleanPhone) || (v.email && v.email.toLowerCase() === cleanLower))
-        );
-        if (entry) found = entry;
-      }
-
-      if (found) {
-        if (found.password && password && found.password !== password) {
-          return { success: false, error: '⚠️ Нууц үг буруу байна. Шалгаад дахин оруулна уу.' };
-        }
-        const userAcc: UserAccount = {
-          id: found.id || 'usr_' + Date.now(),
-          name: found.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
-          email: found.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
-          phone: found.phone || (isPhone ? cleanPhone : '99110000'),
-          registeredAt: found.registeredAt || new Date().toLocaleDateString('mn-MN'),
-          role: found.role || 'user',
-          status: found.status || 'active',
-          packageType: found.packageType || 'free',
-          packageExpiry: found.packageExpiry || '-',
-          walletBalance: found.walletBalance ?? 0,
-          purchasedMovies: found.purchasedMovies || [],
-        };
-        persistActiveSession(userAcc, true);
-        return { success: true, user: userAcc };
-      }
-    }
-  } catch (e) {
-    console.error('Error checking local auth records:', e);
-  }
-
-  // 2. Query Firestore `users` collection for matching phone or email
+  // 1. Query Firestore `users` collection first for authoritative account state
   try {
     const usersCol = collection(db, 'users');
     let matchedDoc: any = null;
@@ -1581,6 +1562,7 @@ export async function authenticateUserCredentials(
         return { success: false, error: '⚠️ Нууц үг буруу байна. Шалгаад дахин оролдоно уу.' };
       }
 
+      const bal = typeof matchedDoc.walletBalance === 'number' ? matchedDoc.walletBalance : 0;
       const userAcc: UserAccount = {
         id: matchedDoc.id || ('user_phone_' + cleanPhone),
         name: matchedDoc.name || 'Хэрэглэгч',
@@ -1591,7 +1573,7 @@ export async function authenticateUserCredentials(
         status: matchedDoc.status || 'active',
         packageType: matchedDoc.packageType || 'free',
         packageExpiry: matchedDoc.packageExpiry || '-',
-        walletBalance: matchedDoc.walletBalance ?? 0,
+        walletBalance: bal,
         purchasedMovies: matchedDoc.purchasedMovies || [],
       };
 
@@ -1605,10 +1587,121 @@ export async function authenticateUserCredentials(
       });
 
       persistActiveSession(userAcc, true);
+      try {
+        localStorage.setItem('ioio_balance', String(bal));
+      } catch {}
       return { success: true, user: userAcc };
     }
   } catch (err) {
     console.error('Error querying Firestore for user auth:', err);
+  }
+
+  // 1.5. Query Server /api/users for authoritative cross-device state
+  try {
+    const sRes = await fetch('/api/users');
+    if (sRes.ok) {
+      const sData = await sRes.json();
+      if (sData.success && Array.isArray(sData.users)) {
+        const foundServerUser = sData.users.find((u: any) => {
+          if (!u || isBotOrMockUser(u)) return false;
+          const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+          const uEmail = (u.email || '').trim().toLowerCase();
+          return (
+            (cleanPhone && cleanPhone.length >= 8 && uPhone === cleanPhone) ||
+            (cleanLower && cleanLower.includes('@') && uEmail === cleanLower)
+          );
+        });
+        if (foundServerUser) {
+          const sBal = typeof foundServerUser.walletBalance === 'number' ? foundServerUser.walletBalance : 0;
+          const userAcc: UserAccount = {
+            id: foundServerUser.id || (isPhone ? 'user_phone_' + cleanPhone : 'user_' + Date.now()),
+            name: foundServerUser.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
+            email: foundServerUser.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
+            phone: foundServerUser.phone || (isPhone ? cleanPhone : ''),
+            registeredAt: foundServerUser.registeredAt || new Date().toLocaleDateString('mn-MN'),
+            registeredTimestamp: foundServerUser.registeredTimestamp || Date.now(),
+            role: (foundServerUser.email === 'tamir91441299@gmail.com' || foundServerUser.phone === '91441299') ? 'admin' : (foundServerUser.role || 'user'),
+            status: foundServerUser.status || 'active',
+            packageType: foundServerUser.packageType || 'free',
+            packageExpiry: foundServerUser.packageExpiry || '-',
+            walletBalance: sBal,
+            purchasedMovies: foundServerUser.purchasedMovies || [],
+          };
+          saveUserAuthRecord({
+            id: userAcc.id,
+            name: userAcc.name,
+            email: userAcc.email,
+            phone: userAcc.phone,
+            password: password,
+          });
+          persistActiveSession(userAcc, true);
+          try {
+            localStorage.setItem('ioio_balance', String(sBal));
+          } catch {}
+          return { success: true, user: userAcc };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Server auth lookup warning:', err);
+  }
+
+  // 2. Check LocalStorage Auth Records as local fallback
+  try {
+    const credMapStr = localStorage.getItem('ioio_user_auth_records');
+    if (credMapStr) {
+      const credMap = JSON.parse(credMapStr);
+      let found = (cleanLower && credMap[cleanLower]) || (cleanPhone && credMap[cleanPhone]);
+      if (!found) {
+        const entry = Object.values(credMap).find(
+          (v: any) => v && ((cleanPhone && cleanPhone.length >= 8 && v.phone && v.phone.replace(/\s+/g, '') === cleanPhone) || (cleanLower && cleanLower.includes('@') && v.email && v.email.toLowerCase() === cleanLower))
+        );
+        if (entry) found = entry;
+      }
+
+      if (found) {
+        if (found.password && password && found.password !== password) {
+          return { success: false, error: '⚠️ Нууц үг буруу байна. Шалгаад дахин оруулна уу.' };
+        }
+
+        let currentBalance = 0;
+        let currentPackage = found.packageType || 'free';
+        let currentExpiry = found.packageExpiry || '-';
+        try {
+          const listStr = localStorage.getItem('ioio_registered_users_list');
+          if (listStr) {
+            const list: UserDetail[] = JSON.parse(listStr);
+            const reg = list.find((u) => u && ((found.id && u.id === found.id) || (cleanLower && cleanLower.includes('@') && u.email && u.email.toLowerCase() === cleanLower) || (cleanPhone && cleanPhone.length >= 8 && u.phone && u.phone.replace(/\s+/g, '') === cleanPhone)));
+            if (reg) {
+              if (typeof reg.walletBalance === 'number') currentBalance = reg.walletBalance;
+              if (reg.packageType) currentPackage = reg.packageType;
+              if (reg.packageExpiry) currentExpiry = reg.packageExpiry;
+            }
+          }
+        } catch {}
+
+        const userAcc: UserAccount = {
+          id: found.id || (isPhone ? 'user_phone_' + cleanPhone : 'usr_' + Date.now()),
+          name: found.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
+          email: found.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
+          phone: found.phone || (isPhone ? cleanPhone : ''),
+          registeredAt: found.registeredAt || new Date().toLocaleDateString('mn-MN'),
+          role: found.role || 'user',
+          status: found.status || 'active',
+          packageType: currentPackage as any,
+          packageExpiry: currentExpiry,
+          walletBalance: currentBalance,
+          purchasedMovies: found.purchasedMovies || [],
+        };
+        persistActiveSession(userAcc, true);
+        try {
+          localStorage.setItem('ioio_balance', String(currentBalance));
+        } catch {}
+        return { success: true, user: userAcc };
+      }
+    }
+  } catch (e) {
+    console.error('Error checking local auth records:', e);
   }
 
   // 3. Fallback: If not found in DB, allow seamless user experience if credentials provided
@@ -1697,15 +1790,24 @@ export function subscribeUserAccount(
       status: data.status || currentSession?.status || 'active',
       packageType: data.packageType || currentSession?.packageType || 'free',
       packageExpiry: data.packageExpiry || currentSession?.packageExpiry || '-',
-      walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : (currentSession?.walletBalance ?? 0),
+      walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : 0,
       purchasedMovies: Array.isArray(data.purchasedMovies) ? data.purchasedMovies : (currentSession?.purchasedMovies || []),
     };
 
-    persistActiveSession(updatedUser, true);
-    try {
-      localStorage.setItem('ioio_balance', String(updatedUser.walletBalance ?? 0));
-    } catch {}
-    onUpdate(updatedUser);
+    const isCurrentSessionUser = currentSession && (
+      currentSession.id === targetId ||
+      currentSession.id === docId ||
+      (cleanEmail && currentSession.email && currentSession.email.toLowerCase() === cleanEmail) ||
+      (cleanPhone && cleanPhone !== '99110000' && currentSession.phone === cleanPhone)
+    );
+
+    if (isCurrentSessionUser) {
+      persistActiveSession(updatedUser, true);
+      try {
+        localStorage.setItem('ioio_balance', String(updatedUser.walletBalance ?? 0));
+      } catch {}
+      onUpdate(updatedUser);
+    }
   };
 
   // 1. Direct document listener

@@ -306,18 +306,34 @@ export default function App() {
     return () => unsubscribe();
   }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
 
-  // Listen for global balance update events
+  // Listen for balance update events (strictly scoped to current user to prevent balance bleeding)
   useEffect(() => {
     const handleBalanceEvent = (e: any) => {
       if (e.detail && typeof e.detail.newBalance === 'number') {
-        const newBal = e.detail.newBalance;
-        setUserBalance(newBal);
-        setCurrentUser((prev) => (prev ? { ...prev, walletBalance: newBal } : null));
+        const targetUserId = e.detail.userId;
+        const targetPhone = e.detail.phone;
+        const targetEmail = e.detail.email;
+
+        // ONLY update if it is strictly the current user's balance!
+        const isCurrent = currentUser && (
+          (targetUserId && targetUserId === currentUser.id) ||
+          (currentUser.phone && targetPhone && currentUser.phone.replace(/\s+/g, '') === String(targetPhone).replace(/\s+/g, '')) ||
+          (currentUser.email && targetEmail && currentUser.email.toLowerCase() === String(targetEmail).toLowerCase())
+        );
+
+        if (isCurrent) {
+          const newBal = e.detail.newBalance;
+          setUserBalance(newBal);
+          setCurrentUser((prev) => (prev ? { ...prev, walletBalance: newBal } : null));
+          try {
+            localStorage.setItem('ioio_balance', String(newBal));
+          } catch {}
+        }
       }
     };
     window.addEventListener('ioio_balance_updated', handleBalanceEvent);
     return () => window.removeEventListener('ioio_balance_updated', handleBalanceEvent);
-  }, []);
+  }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
 
   // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
   useEffect(() => {
@@ -440,19 +456,35 @@ export default function App() {
     return !isPackageExpired(currentUser.packageExpiry) && (pkg === 'movie' || pkg === 'full_vip');
   }, [currentUser, isAdmin]);
 
-  // User Wallet Balance (MNT / Points)
+  // User Wallet Balance (MNT / Points) - isolated per user
   const [userBalance, setUserBalance] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem('ioio_balance');
-      if (!saved || saved === '5000') {
-        localStorage.setItem('ioio_balance', '0');
-        return 0;
+      const savedUser = getPersistedActiveSession();
+      if (savedUser && typeof savedUser.walletBalance === 'number') {
+        return savedUser.walletBalance;
       }
-      return parseInt(saved, 10) || 0;
+      return 0;
     } catch {
       return 0;
     }
   });
+
+  // Synchronize userBalance whenever currentUser changes (login, logout, switch account)
+  useEffect(() => {
+    if (currentUser) {
+      const activeBalance = typeof currentUser.walletBalance === 'number' ? currentUser.walletBalance : 0;
+      setUserBalance(activeBalance);
+      try {
+        localStorage.setItem('ioio_balance', String(activeBalance));
+      } catch {}
+    } else {
+      setUserBalance(0);
+      try {
+        localStorage.setItem('ioio_balance', '0');
+        localStorage.removeItem('ioio_last_account_info');
+      } catch {}
+    }
+  }, [currentUser?.id, currentUser?.phone, currentUser?.email, currentUser?.walletBalance]);
 
   // Watch History & Continue Watching state
   const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>(() => {
@@ -586,11 +618,15 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('ioio_balance', userBalance.toString());
+      if (currentUser) {
+        localStorage.setItem('ioio_balance', userBalance.toString());
+      } else {
+        localStorage.setItem('ioio_balance', '0');
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [userBalance]);
+  }, [userBalance, currentUser]);
 
   const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
@@ -1507,11 +1543,15 @@ export default function App() {
           onClose={() => setShowAuthModal(false)}
           onLoginSuccess={(user) => {
             setCurrentUser(user);
-            if (typeof user.walletBalance === 'number') {
-              setUserBalance(user.walletBalance);
-            }
+            const userBal = typeof user.walletBalance === 'number' ? user.walletBalance : 0;
+            setUserBalance(userBal);
+            try {
+              localStorage.setItem('ioio_balance', String(userBal));
+            } catch {}
             if (Array.isArray(user.purchasedMovies)) {
               setPurchasedMovies(user.purchasedMovies);
+            } else {
+              setPurchasedMovies([]);
             }
           }}
           onLogout={() => {
@@ -1520,6 +1560,14 @@ export default function App() {
             setPurchasedMovies([]);
             persistActiveSession(null);
             clearLegacyDevicePackages();
+            try {
+              localStorage.setItem('ioio_balance', '0');
+              localStorage.removeItem('ioio_last_account_info');
+              localStorage.removeItem('ioio_user');
+              localStorage.removeItem('ioio_active_session');
+              localStorage.removeItem('ioio_remember_user');
+              localStorage.removeItem('ioio_session_persist');
+            } catch {}
           }}
           onOpenUserManagement={() => {
             setShowAuthModal(false);

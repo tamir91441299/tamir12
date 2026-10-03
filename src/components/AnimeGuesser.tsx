@@ -4,6 +4,7 @@ import localGameData from '../data/data.json';
 import localCharacterData from '../data/character_data.json';
 import { saveScoreToFirestore, AnswerHistory } from '../lib/scoreService';
 import { LeaderboardModal } from './LeaderboardModal';
+import { getPersistedActiveSession } from '../lib/userService';
 
 interface QuestionItem {
   id: number;
@@ -36,9 +37,11 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
   const [imgError, setImgError] = useState<boolean>(false);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
 
-  // Firestore score saving states
+  // Firestore score saving states scoped per active user
   const [playerName, setPlayerName] = useState<string>(() => {
     try {
+      const activeSession = getPersistedActiveSession();
+      if (activeSession?.name) return activeSession.name;
       return localStorage.getItem('ioio_anime_guesser_player_name') || '';
     } catch {
       return '';
@@ -51,7 +54,9 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
 
   const [highScore, setHighScore] = useState<number>(() => {
     try {
-      return Number(localStorage.getItem('ioio_anime_guesser_highscore') || '0');
+      const activeSession = getPersistedActiveSession();
+      const userKey = activeSession?.id ? `ioio_anime_guesser_highscore_${activeSession.id}` : 'ioio_anime_guesser_highscore';
+      return Number(localStorage.getItem(userKey) || '0');
     } catch {
       return 0;
     }
@@ -256,7 +261,9 @@ export function AnimeGuesser({ defaultMode = 'character' }: { defaultMode?: 'cha
       if (newScore > highScore) {
         setHighScore(newScore);
         try {
-          localStorage.setItem('ioio_anime_guesser_highscore', String(newScore));
+          const activeSession = getPersistedActiveSession();
+          const userKey = activeSession?.id ? `ioio_anime_guesser_highscore_${activeSession.id}` : 'ioio_anime_guesser_highscore';
+          localStorage.setItem(userKey, String(newScore));
         } catch {
           // ignore localStorage error
         }

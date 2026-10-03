@@ -19,7 +19,9 @@ import {
   Clock,
   Zap,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw,
+  LogOut
 } from 'lucide-react';
 import { 
   saveUserToFirestore, 
@@ -158,8 +160,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           userToLogin.name = cleanName;
         }
 
+        const targetBal = typeof userToLogin.walletBalance === 'number' ? userToLogin.walletBalance : 0;
+        userToLogin.walletBalance = targetBal;
+        try {
+          localStorage.setItem('ioio_balance', String(targetBal));
+        } catch {}
+
         persistActiveSession(userToLogin, rememberMe);
-        saveUserToFirestore(userToLogin);
+        await saveUserToFirestore(userToLogin, { walletBalance: targetBal });
 
         setSuccessMessage('✓ Утасны дугаараар амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
         setTimeout(() => {
@@ -226,6 +234,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           isMockUser: false,
         };
 
+        // Explicitly isolate new user balance to 0
+        try {
+          localStorage.setItem('ioio_balance', '0');
+        } catch {}
+
         // Save credentials into both Firestore and LocalStorage
         await saveUserAuthRecord({
           id: newUser.id,
@@ -246,14 +259,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           isMockUser: false,
         });
 
-        // Persist session securely so user never gets logged out on refresh
+        // Persist session securely
         persistActiveSession(newUser, rememberMe);
+
+        // Notify app and admin panel immediately
+        try {
+          window.dispatchEvent(new CustomEvent('ioio_new_user_registered', { detail: newUser }));
+        } catch {}
 
         setSuccessMessage('🎉 Бүртгэл амжилттай үүсэж хадгалагдлаа! Шууд нэвтэрч байна...');
         setTimeout(() => {
           onLoginSuccess(newUser);
           onClose();
-        }, 700);
+        }, 600);
         return;
       }
 
@@ -279,8 +297,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
 
       const loggedInUser = res.user;
+      const targetBal = typeof loggedInUser.walletBalance === 'number' ? loggedInUser.walletBalance : 0;
+      loggedInUser.walletBalance = targetBal;
+      try {
+        localStorage.setItem('ioio_balance', String(targetBal));
+      } catch {}
+
       persistActiveSession(loggedInUser, rememberMe);
-      saveUserToFirestore(loggedInUser);
+      await saveUserToFirestore(loggedInUser, { walletBalance: targetBal });
 
       setSuccessMessage('✓ Амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
       setTimeout(() => {
@@ -517,16 +541,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               )}
 
-              <button
-                id="logout-btn"
-                onClick={() => {
-                  onLogout();
-                  onClose();
-                }}
-                className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
-              >
-                Системээс Гарах
-              </button>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  id="switch-account-btn"
+                  type="button"
+                  onClick={() => {
+                    onLogout();
+                    setMode('phone');
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Өөр хаягаар нэвтрэх</span>
+                </button>
+
+                <button
+                  id="logout-btn"
+                  type="button"
+                  onClick={() => {
+                    onLogout();
+                    onClose();
+                  }}
+                  className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Системээс Гарах</span>
+                </button>
+              </div>
             </div>
           );
         })() : (

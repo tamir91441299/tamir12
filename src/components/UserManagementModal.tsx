@@ -397,13 +397,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         if (res.ok) {
           const d = await res.json();
           if (d.success && Array.isArray(d.users)) {
-            serverUsers = d.users;
+            serverUsers = d.users.filter((u: any) => !isBotOrMockUser(u));
           }
         }
       } catch {}
 
       const firestoreUsers = await fetchUsersFromFirestore();
-      const combined = sortUsersByNewest(deduplicateUserList([...serverUsers, ...firestoreUsers, ...users]));
+      const combined = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
       setUsers(combined);
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(combined));
       setLastSyncTime(new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -415,23 +415,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   useEffect(() => {
-    // Automatically purge any bot/mock users when admin panel opens
+    // Automatically purge any bot/mock users when admin panel opens and fetch live users
     cleanupAllBotUsers().then(() => {
-      setUsers((prev) => prev.filter((u) => !isBotOrMockUser(u)));
+      handleManualSyncUsers();
     });
+
+    const syncInterval = setInterval(() => {
+      handleManualSyncUsers();
+    }, 3500);
 
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(sortUsersByNewest(deduplicateUserList(list.filter((u) => !isBotOrMockUser(u)))));
     });
     const handleLocalUsersUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
-        setUsers(sortUsersByNewest(deduplicateUserList(e.detail)));
+        setUsers(sortUsersByNewest(deduplicateUserList(e.detail.filter((u: any) => !isBotOrMockUser(u)))));
       }
     };
     window.addEventListener('ioio_users_updated', handleLocalUsersUpdated);
 
     const handleNewUserEvent = (e: any) => {
-      if (e.detail) {
+      if (e.detail && !isBotOrMockUser(e.detail)) {
         setUsers((prev) => sortUsersByNewest(deduplicateUserList([e.detail, ...prev])));
       }
     };
@@ -462,6 +466,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setRechargeRequests(reqs);
     });
     return () => {
+      clearInterval(syncInterval);
       unsubscribeUsers();
       window.removeEventListener('ioio_users_updated', handleLocalUsersUpdated);
       window.removeEventListener('ioio_new_user_registered', handleNewUserEvent);
