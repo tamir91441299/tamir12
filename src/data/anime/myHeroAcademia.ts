@@ -78,7 +78,7 @@ export const MY_HERO_ACADEMIA_S1: Movie = {
   titleMongolian: 'Миний Баатрын Академи (1-р бүлэг)',
   type: 'anime',
   poster: 'https://tse3.mm.bing.net/th/id/OIP.jkUO94drfoqspSdA6WAORAHaJ4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
-  backdrop: '/images/mha_backdrop.jpg',
+  backdrop: 'https://tse4.mm.bing.net/th/id/OIP.VEHkJTy4hHmOl1SRblO4KAHaEK?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2016,
   duration: '13 анги',
   rating: 9.8,
