@@ -54,7 +54,7 @@ interface AuthModalProps {
   onLoginSuccess: (user: UserAccount) => void;
   onLogout: () => void;
   onOpenUserManagement?: () => void;
-  onOpenPaymentModal?: (tab?: 'topup' | 'package' | 'code') => void;
+  onOpenPaymentModal?: (tab?: 'topup' | 'package' | 'code' | 'points_request' | 'get_permission') => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -368,12 +368,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="button"
                       onClick={() => {
                         onClose();
-                        onOpenPaymentModal('topup');
+                        onOpenPaymentModal('points_request');
                       }}
-                      className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
+                      className="bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-black text-xs px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
                     >
                       <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span>Оноо цэнэглэх</span>
+                      <span>Админаас оноо авах</span>
                     </button>
                   )}
                 </div>
@@ -422,7 +422,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="button"
                       onClick={() => {
                         onClose();
-                        onOpenPaymentModal('package');
+                        onOpenPaymentModal('get_permission');
                       }}
                       className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95 shrink-0"
                     >

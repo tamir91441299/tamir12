@@ -375,6 +375,7 @@ export default function App() {
 
           if (!accessResult.hasAccess) {
             setPaymentMovie(found);
+            setPaymentModalTab('get_permission');
             setShowPaymentModal(true);
             return;
           }
@@ -679,6 +680,7 @@ export default function App() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [paymentMovie, setPaymentMovie] = useState<Movie | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [paymentModalTab, setPaymentModalTab] = useState<'points_request' | 'get_permission' | 'code'>('get_permission');
 
   // Sync tab clicks & reset conflicting filters when tab changes
   useEffect(() => {
@@ -796,6 +798,7 @@ export default function App() {
 
     if (!access.hasAccess) {
       setPaymentMovie(movie);
+      setPaymentModalTab('get_permission');
       setShowPaymentModal(true);
       return;
     }
@@ -957,9 +960,13 @@ export default function App() {
         isMoviePackage={isMoviePackage}
         currentUser={currentUser}
         onOpenWallet={() => {
+          setPaymentMovie(null);
+          setPaymentModalTab('points_request');
           setShowPaymentModal(true);
         }}
         onOpenVipModal={() => {
+          setPaymentMovie(null);
+          setPaymentModalTab('get_permission');
           setShowPaymentModal(true);
         }}
         onOpenAuthModal={(mode) => {
@@ -1430,6 +1437,7 @@ export default function App() {
           onRequestPurchase={(m) => {
             setSelectedMovieForDetails(null);
             setPaymentMovie(m);
+            setPaymentModalTab('get_permission');
             setShowPaymentModal(true);
           }}
         />
@@ -1450,6 +1458,7 @@ export default function App() {
           onRequestPurchase={(m) => {
             setSelectedMovieForPlayer(null);
             setPaymentMovie(m);
+            setPaymentModalTab('get_permission');
             setShowPaymentModal(true);
           }}
         />
@@ -1464,6 +1473,7 @@ export default function App() {
           isMonthlyVip={isMonthlyVip}
           isAnimePackage={isAnimePackage}
           isMoviePackage={isMoviePackage}
+          initialTab={paymentModalTab}
           onOpenAuthModal={() => {
             setShowPaymentModal(false);
             handleOpenAuthModal('login');
@@ -1515,8 +1525,15 @@ export default function App() {
             setShowAuthModal(false);
             setShowUserManagementModal(true);
           }}
-          onOpenPaymentModal={() => {
+          onOpenPaymentModal={(tab) => {
             setShowAuthModal(false);
+            if (tab === 'points_request' || tab === 'topup') {
+              setPaymentModalTab('points_request');
+            } else if (tab === 'code') {
+              setPaymentModalTab('code');
+            } else {
+              setPaymentModalTab('get_permission');
+            }
             setShowPaymentModal(true);
           }}
         />

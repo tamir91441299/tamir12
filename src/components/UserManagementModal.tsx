@@ -1061,7 +1061,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             }`}
           >
             <CreditCard className="w-4 h-4 text-rose-400" />
-            <span>💳 Цэнэглэлтийн Хүсэлтүүд</span>
+            <span>📩 Оноо Авах Хүсэлтүүд</span>
             {rechargeRequests.filter((r) => r.status === 'pending').length > 0 && (
               <span className="bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse shadow">
                 {rechargeRequests.filter((r) => r.status === 'pending').length} ШИНЭ
@@ -2385,13 +2385,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-base text-white flex items-center gap-2">
-                    <span>💳 Цэнэглэлтийн Хүсэлтүүд</span>
+                    <span>📩 Оноо Авах Хүсэлтүүд (Админ хяналт)</span>
                     <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                      🎌 Зөвхөн Анимэ Эрх
+                      🎌 Оноо & Анимэ Эрх
                     </span>
                   </h3>
                   <p className="text-xs text-zinc-400">
-                    Эрх аваагүй хэрэглэгчид MonPay / Дансаар шилжүүлэг хийгээд энд хүсэлт илгээнэ. Админ шалгаад <strong>ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ</strong> олгоно.
+                    Хэрэглэгчид MonPay (99106883518) / Дансаар шилжүүлэг хийгээд энд оноо авах хүсэлт илгээнэ. Админ шалгаад дансанд нь <strong>ОНОО ОЛГОЖ</strong>, анимэ үзэх эрхийг нь нээнэ.
                   </p>
                 </div>
               </div>

@@ -1,10 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, QrCode, Wallet, CreditCard, ShieldCheck, RefreshCw, Copy, Check, Ticket, KeyRound, Send, Phone, Zap, Calendar, Clock, AlertCircle } from 'lucide-react';
+import {
+  X,
+  CheckCircle,
+  QrCode,
+  Wallet,
+  CreditCard,
+  ShieldCheck,
+  RefreshCw,
+  Copy,
+  Check,
+  Ticket,
+  Send,
+  Zap,
+  Calendar,
+  Clock,
+  AlertCircle,
+  ArrowRight,
+  Sparkles,
+  HelpCircle,
+  ExternalLink
+} from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
 import { redeemCode } from '../lib/codeService';
-import { submitRechargeRequest, clearUserPendingRechargeRequests, executeDirectInstantTopUp, subscribeRechargeRequests } from '../lib/rechargeService';
-import { getAnimeExpiryDetails, calculateExtendedExpiryDate, isAdminUser } from '../lib/permissionService';
+import {
+  submitRechargeRequest,
+  clearUserPendingRechargeRequests,
+  executeDirectInstantTopUp,
+  subscribeRechargeRequests
+} from '../lib/rechargeService';
+import {
+  getAnimeExpiryDetails,
+  calculateExtendedExpiryDate,
+  isAdminUser
+} from '../lib/permissionService';
+
+export type PaymentModalTab = 'points_request' | 'get_permission' | 'code' | 'topup' | 'package';
 
 interface PaymentModalProps {
   movie: Movie | null;
@@ -13,6 +44,7 @@ interface PaymentModalProps {
   isMonthlyVip?: boolean;
   isAnimePackage: boolean;
   isMoviePackage?: boolean;
+  initialTab?: PaymentModalTab;
   onClose: () => void;
   onOpenAuthModal?: () => void;
   onPaymentSuccess: (movieId: string, deductedAmount?: number) => void;
@@ -106,8 +138,9 @@ const TOP_UP_PRESETS = [
   { amount: 2500, label: '2,500 ₮', note: '15 хоногийн анимэ эрх' },
   { amount: 5000, label: '5,000 ₮', note: '1 сарын анимэ эрх' },
   { amount: 8500, label: '8,500 ₮', note: '2 сарын анимэ эрх' },
-  { amount: 10000, label: '10,000 ₮', note: 'Хэмнэлттэй цэнэглэлт' },
-  { amount: 20000, label: '20,000 ₮', note: 'VIP хэтэвч цэнэглэлт' },
+  { amount: 12000, label: '12,000 ₮', note: '3 сарын анимэ эрх' },
+  { amount: 22000, label: '22,000 ₮', note: '6 сарын анимэ эрх' },
+  { amount: 40000, label: '40,000 ₮', note: '1 жилийн анимэ эрх' },
 ];
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -117,26 +150,40 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   isMonthlyVip,
   isAnimePackage,
   isMoviePackage,
+  initialTab = 'get_permission',
   onClose,
   onOpenAuthModal,
   onPaymentSuccess,
   onSubscribePackage,
   onTopUpBalance,
 }) => {
-  // Main Tab: 'package' (Анимэ багц идэвхжүүлэх) | 'topup' (Шууд оноо авах) | 'code' (Эрхийн код)
-  const [mainTab, setMainTab] = useState<'topup' | 'package' | 'code'>('package');
+  // Normalize initial tab into 3 clear sections:
+  // 'points_request' (Админаас оноо авах хүсэлт явуулах хэсэг)
+  // 'get_permission' (Эрх авах хэсэг)
+  // 'code' (Эрхийн код)
+  const resolveInitialTab = (tab?: string | null): 'points_request' | 'get_permission' | 'code' => {
+    if (tab === 'points_request' || tab === 'topup') return 'points_request';
+    if (tab === 'code') return 'code';
+    return 'get_permission';
+  };
 
-  // Top Up Points state
+  const [mainTab, setMainTab] = useState<'points_request' | 'get_permission' | 'code'>(() => resolveInitialTab(initialTab));
+
+  // Sync if initialTab prop changes
+  useEffect(() => {
+    setMainTab(resolveInitialTab(initialTab));
+  }, [initialTab]);
+
+  // Points request state
   const [selectedTopUpAmount, setSelectedTopUpAmount] = useState<number>(2500);
   const [customTopUpInput, setCustomTopUpInput] = useState<string>('');
+  const [paymentTransferMethod, setPaymentTransferMethod] = useState<'monpay' | 'qpay'>('monpay');
 
-  // Subscription package duration
+  // Subscription package duration state
   const [selectedPlanId, setSelectedPlanId] = useState<PlanDurationId>('15d');
   const currentPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[0];
   const activePrice = currentPlan.price;
 
-  // Primary payment method is Wallet / Points
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'monpay' | 'qpay' | 'code'>('wallet');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMsgText, setSuccessMsgText] = useState<string>('');
@@ -149,7 +196,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
   const [userNoteInput, setUserNoteInput] = useState<string>('');
 
-  // Real-time listener for current user's recharge request approval
+  // Real-time listener for current user's recharge request approval by Admin Tamir
   useEffect(() => {
     if (!currentUser && !submittedRequestId) return;
     const cleanPhone = (userPhoneInput || currentUser?.phone || '').trim().replace(/\s+/g, '');
@@ -174,7 +221,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           setTopUpRequestSent(false);
           setIsSuccess(true);
           setSuccessMsgText(
-            `🎉 ТАНЫ ЦЭНЭГЛЭЛТ АМЖИЛТТАЙ БАТАЛГААЖЛАА!\n\n+${approved.amount.toLocaleString()} ₮ оноо таны дансанд амжилттай орлоо.\n\nАнимэ үзэх эрх нээгдлээ!`
+            `🎉 ТАНЫ ХҮСЭЛТИЙГ АДМИН ТАМИР БАТАЛГААЖУУЛЛАА!\n\n+${approved.amount.toLocaleString()} ₮ оноо таны дансанд амжилттай орлоо.\n\nТа одоо "2. Эрх Авах" хэсэг рүү орж анимэ үзэх эрхээ шууд идэвхжүүлэх боломжтой!`
           );
           onTopUpBalance(approved.amount);
           clearUserPendingRechargeRequests(currentUser);
@@ -238,73 +285,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return selectedTopUpAmount;
   };
 
-  // 1. Top-Up Points Handler: For non-admins, sends transfer request to Admin Tamir. Admin can instantly test.
-  const handleInstantTopUpPoints = async (overrideAmount?: number) => {
-    const amountToCredit = overrideAmount || getEffectiveTopUpAmount();
-    if (amountToCredit <= 0) {
-      alert('Цэнэглэх онооны дүнгээ зөв оруулна уу.');
-      return;
-    }
-
-    if (!isUserAdmin) {
-      // Non-admins must submit transfer request for Admin review
-      await handleSubmitPendingTransfer(amountToCredit, `${amountToCredit.toLocaleString()}₮ Данс цэнэглэлт`);
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      if (currentUser?.id) {
-        await executeDirectInstantTopUp({
-          userId: currentUser.id,
-          userName: currentUser.name || 'Хэрэглэгч',
-          userPhone: userPhoneInput.trim() || currentUser.phone || '',
-          userEmail: currentUser.email || '',
-          amount: amountToCredit,
-          method: paymentMethod,
-          note: `[Админ] Шууд данс цэнэглэлт (+${amountToCredit.toLocaleString()}₮)`,
-        });
-      }
-    } catch (e) {
-      console.error('Instant top-up background sync:', e);
-    }
-
-    onTopUpBalance(amountToCredit);
-    clearUserPendingRechargeRequests(currentUser);
-    setIsVerifying(false);
-    setIsSuccess(true);
-    setSuccessMsgText(
-      `🎉 [АДМИН] ТАНЫ ДАНС АМЖИЛТТАЙ ЦЭНЭГЛЭГДЛЭЭ!\n\n+${amountToCredit.toLocaleString()} ₮ оноо шууд таны дансанд орлоо.\nТаны шинэ үлдэгдэл: ${(userBalance + amountToCredit).toLocaleString()} ₮.`
-    );
-  };
-
-  // 2. Direct Instant Anime Package Activation: Only available to Admin for testing. Non-admins CANNOT use this!
-  const handleInstantActivatePackage = async () => {
-    if (!isUserAdmin) {
-      alert('⛔ Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд дансаа оноогоор цэнэглэнэ үү эсвэл шилжүүлгийн хүсэлтээ илгээнэ үү.');
-      return;
-    }
-
-    setIsVerifying(true);
-    const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
-    clearUserPendingRechargeRequests(currentUser);
-
-    setTimeout(() => {
-      setIsVerifying(false);
-      setIsSuccess(true);
-      setSuccessMsgText(
-        `🎉 [АДМИН ТЕСТ] АНИМЭ БАГЦ ШУУД ИДЭВХЖИЛЭЭ!\n\n${currentPlan.label} (${currentPlan.durationDays} хоног) эрх амжилттай нээгдлээ.\nДуусах хугацаа: ${newExpiry} хүртэл.`
-      );
-      setTimeout(() => {
-        onSubscribePackage('anime', 0, currentPlan.durationMonths, currentPlan.durationDays, true);
-      }, 1000);
-    }, 600);
-  };
-
-  // 3. Submit payment transfer request to Admin queue (Points are NOT credited until Admin Tamir approves!)
-  const handleSubmitPendingTransfer = async (targetAmount: number, targetLabel: string) => {
+  // 1. Send Point Request to Admin Tamir
+  const handleSubmitPointsRequestToAdmin = async () => {
     if (!currentUser) {
-      alert('⚠️ Анимэ эрх авах болон төлбөр төлөхийн тулд эхлээд системд нэвтэрнэ үү.');
+      alert('⚠️ Админаас оноо авах хүсэлт илгээхийн тулд эхлээд системд нэвтэрнэ үү.');
       onClose();
       if (onOpenAuthModal) onOpenAuthModal();
       return;
@@ -312,7 +296,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     const phone = (userPhoneInput.trim() || currentUser.phone || '').trim();
     if (!phone) {
-      alert('⚠️ Гүйлгээ шалгахад шаардлагатай утасны дугаараа оруулна уу.');
+      alert('⚠️ Админ Тамир таны шилжүүлгийг шалгаж баталгаажуулахад гар утасны дугаар шаардлагатай. Утасны дугаараа оруулна уу.');
+      return;
+    }
+
+    const amountToRequest = getEffectiveTopUpAmount();
+    if (amountToRequest <= 0) {
+      alert('⚠️ Авах онооны дүнгээ зөв сонгоно уу.');
       return;
     }
 
@@ -325,11 +315,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         userPhone: phone,
         userEmail: currentUser.email || '',
         planId: currentPlan.id,
-        planLabel: targetLabel,
+        planLabel: `${amountToRequest.toLocaleString()}₮ Оноо авах хүсэлт`,
         durationDays: currentPlan.durationDays,
-        amount: targetAmount,
-        method: paymentMethod === 'qpay' ? 'qpay' : 'monpay',
-        note: userNoteInput.trim() || `${targetLabel} (${targetAmount.toLocaleString()}₮) шилжүүлэг илгээв`,
+        amount: amountToRequest,
+        method: paymentTransferMethod,
+        note: userNoteInput.trim() || `[Оноо авах хүсэлт] ${amountToRequest.toLocaleString()}₮ (${paymentTransferMethod.toUpperCase()})`,
       });
       if (res && res.id) {
         setSubmittedRequestId(res.id);
@@ -341,72 +331,112 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(false);
     setTopUpRequestSent(true);
     setTopUpSuccessNotice(
-      `📩 Таны ${targetAmount.toLocaleString()} ₮ дүнтэй шилжүүлгийн хүсэлтийг Админ Тамирт амжилттай илгээлээ.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд оноо орж, анимэ үзэх эрх нээгдэнэ.\n\n⚠️ Админ шалгаж баталгаажуулах хүртэл оноогүй тул анимэ түр түгжээтэй байна.`
+      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админ Тамирт амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл оноогүй тул контент түр түгжээтэй байна.`
     );
   };
 
-  // Main Confirm Handler
-  const handleConfirmPayment = async () => {
-    if (mainTab === 'code' || paymentMethod === 'code') {
-      handleRedeemActivationCode();
-      return;
-    }
+  // 2. Admin direct test point addition
+  const handleAdminDirectAddPoints = async () => {
+    const amountToCredit = getEffectiveTopUpAmount();
+    if (amountToCredit <= 0) return;
 
-    if (mainTab === 'topup') {
-      handleSubmitPendingTransfer(effectiveTopUp, `${effectiveTopUp.toLocaleString()}₮ Данс цэнэглэлт`);
-      return;
-    }
-
-    // Package mode with wallet points
-    if (paymentMethod === 'wallet') {
-      if (userBalance < activePrice) {
-        alert(
-          `⛔ Оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна. Энэ анимэ багцыг авахад ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\n\nОноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та "⚡ Оноо Цэнэглэх" цэснээс MonPay (${monpayNumber}) эсвэл QPay-ээр шилжүүлэг хийж дансаа цэнэглэнэ үү.`
-        );
-        setMainTab('topup');
-        return;
+    setIsVerifying(true);
+    try {
+      if (currentUser?.id) {
+        await executeDirectInstantTopUp({
+          userId: currentUser.id,
+          userName: currentUser.name || 'Админ',
+          userPhone: userPhoneInput.trim() || currentUser.phone || '',
+          userEmail: currentUser.email || '',
+          amount: amountToCredit,
+          method: paymentTransferMethod,
+          note: `[Админ тест] Шууд оноо нэмэлт (+${amountToCredit.toLocaleString()}₮)`,
+        });
       }
+    } catch (e) {
+      console.error('Instant top-up background sync:', e);
+    }
 
-      setIsVerifying(true);
-      const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
-      setTimeout(() => {
-        setIsVerifying(false);
-        setIsSuccess(true);
-        setSuccessMsgText(
-          `🎉 АНИМЭ БАГЦ ОНООГООР АМЖИЛТТАЙ ИДЭВХЖЛЭЭ!\n\n${currentPlan.label} (${activePrice.toLocaleString()}₮ оноо хасагдлаа).\nДуусах хугацаа: ${newExpiry} хүртэл сунгагдлаа.\n\nҮлдсэн онооны үлдэгдэл: ${(userBalance - activePrice).toLocaleString()} ₮.`
-        );
+    onTopUpBalance(amountToCredit);
+    clearUserPendingRechargeRequests(currentUser);
+    setIsVerifying(false);
+    setIsSuccess(true);
+    setSuccessMsgText(
+      `🎉 [АДМИН ТЕСТ] ОНОО ШУУД НЭМЭГДЛЭЭ!\n\n+${amountToCredit.toLocaleString()} ₮ оноо дансанд орлоо.\nТаны шинэ оноо: ${(userBalance + amountToCredit).toLocaleString()} ₮.`
+    );
+  };
 
-        setTimeout(() => {
-          onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
-        }, 1200);
-      }, 700);
+  // 3. Purchase Anime Permission using Points (Эрх авах)
+  const handlePurchasePermissionWithPoints = () => {
+    if (!currentUser) {
+      alert('⚠️ Анимэ эрх авахын тулд эхлээд системд нэвтэрнэ үү.');
+      onClose();
+      if (onOpenAuthModal) onOpenAuthModal();
       return;
     }
 
-    // Package mode with MonPay / QPay transfer request
-    handleSubmitPendingTransfer(activePrice, currentPlan.label);
+    // Check if points are sufficient
+    if (userBalance < activePrice) {
+      const diff = activePrice - userBalance;
+      alert(
+        `⛔ ТАНЫ ОНОО ХҮРЭЛЦЭХГҮЙ БАЙНА!\n\nТанд одоо ${userBalance.toLocaleString()}₮ оноо байна.\nСонгосон багц (${currentPlan.label}): ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\nДутуу оноо: ${diff.toLocaleString()}₮.\n\nОноогүй хэрэглэгч анимэ эрх авах боломжгүй тул эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж шилжүүлэг хийнэ үү.`
+      );
+      // Auto prefill missing amount and switch to points request
+      setSelectedTopUpAmount(diff > 0 ? diff : activePrice);
+      setCustomTopUpInput(String(diff > 0 ? diff : activePrice));
+      setMainTab('points_request');
+      return;
+    }
+
+    setIsVerifying(true);
+    const newExpiry = calculateExtendedExpiryDate(currentUser?.packageExpiry, currentPlan.durationDays);
+
+    setTimeout(() => {
+      setIsVerifying(false);
+      setIsSuccess(true);
+      setSuccessMsgText(
+        `🎉 АНИМЭ ҮЗЭХ ЭРХ АМЖИЛТТАЙ НЭЭГДЛЭЭ!\n\nСонгосон хугацаа: ${currentPlan.label} (${currentPlan.durationDays} хоног)\nХасагдсан оноо: -${activePrice.toLocaleString()} ₮\nДуусах хугацаа: ${newExpiry} хүртэл сунгагдлаа.\n\nҮлдсэн дансны оноо: ${(userBalance - activePrice).toLocaleString()} ₮.`
+      );
+
+      setTimeout(() => {
+        onSubscribePackage('anime', activePrice, currentPlan.durationMonths, currentPlan.durationDays);
+      }, 1200);
+    }, 700);
+  };
+
+  // Switch to points request tab and auto pre-select the needed amount
+  const handleSwitchToPointsRequestWithAmount = (neededAmount: number) => {
+    setSelectedTopUpAmount(neededAmount);
+    setCustomTopUpInput(String(neededAmount));
+    setMainTab('points_request');
   };
 
   const effectiveTopUp = getEffectiveTopUpAmount();
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#17171a] border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col max-h-[92vh] my-auto">
+      <div className="relative w-full max-w-xl bg-[#141518] border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl text-zinc-100 flex flex-col max-h-[94vh] my-auto">
         {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-zinc-900 via-[#121214] to-zinc-900 border-b border-zinc-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
-              <CreditCard className="w-5 h-5" />
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-zinc-950 via-[#16171b] to-zinc-950 border-b border-zinc-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-rose-500/20 to-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+              <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
-                <span>ДАНС & БАГЦ ЦЭНЭГЛЭЛТ</span>
-                <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-400/30">
-                  {userBalance.toLocaleString()} ₮
+              <div className="flex items-center gap-2">
+                <h2 className="font-extrabold text-sm sm:text-base text-white">
+                  {mainTab === 'points_request' ? 'АДМИНААС ОНОО АВАХ' : mainTab === 'get_permission' ? 'АНИМЭ ҮЗЭХ ЭРХ АВАХ' : 'ЭРХИЙН КОД'}
+                </h2>
+                <span className="bg-amber-400/20 text-amber-300 text-[10px] font-mono font-black px-2 py-0.5 rounded-full border border-amber-400/30">
+                  {userBalance.toLocaleString()} ₮ оноо
                 </span>
-              </h2>
+              </div>
               <p className="text-[11px] text-zinc-400">
-                Оноо шууд цэнэглэх • 15 хоног, 1 сар, 2 сарын Анимэ эрх авах
+                {mainTab === 'points_request'
+                  ? '1-р хэсэг: Админ Тамираас оноо авах хүсэлт явуулах'
+                  : mainTab === 'get_permission'
+                  ? '2-р хэсэг: Цуглуулсан оноогоороо анимэ эрх авах / сунгах'
+                  : '3-р хэсэг: Админаас авсан эрхийн код идэвхжүүлэх'}
               </p>
             </div>
           </div>
@@ -415,94 +445,105 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             id="close-payment-modal"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            title="Хаах"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Top-Level Mode Selector Tabs */}
-        <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-2 border-b border-zinc-800 shrink-0 text-xs font-black">
+        {/* 2 MAIN SECTIONS TOP TABS (ТУСДАА 2 ХЭСЭГ) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-zinc-950 p-2 border-b border-zinc-800 shrink-0 text-xs font-black">
+          {/* ХЭСЭГ 1: Админаас оноо авах хүсэлт */}
           <button
             type="button"
-            id="tab-mode-topup"
-            onClick={() => setMainTab('topup')}
-            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              mainTab === 'topup'
-                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+            id="tab-mode-points-request"
+            onClick={() => {
+              setMainTab('points_request');
+              setTopUpRequestSent(false);
+              setIsSuccess(false);
+            }}
+            className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mainTab === 'points_request'
+                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-black shadow-lg font-black ring-2 ring-amber-400 scale-[1.01]'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/70 border border-zinc-800/80 hover:bg-zinc-850'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 fill-current" />
-            <span>⚡ Оноо Цэнэглэх</span>
+            <Send className="w-3.5 h-3.5 fill-current" />
+            <span className="truncate">1. Админаас Оноо Авах</span>
           </button>
 
+          {/* ХЭСЭГ 2: Эрх авах (Оноогоор) */}
           <button
             type="button"
-            id="tab-mode-package"
-            onClick={() => setMainTab('package')}
-            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              mainTab === 'package'
-                ? 'bg-rose-600 text-white shadow-md font-extrabold ring-1 ring-rose-400'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+            id="tab-mode-get-permission"
+            onClick={() => {
+              setMainTab('get_permission');
+              setTopUpRequestSent(false);
+              setIsSuccess(false);
+            }}
+            className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mainTab === 'get_permission'
+                ? 'bg-rose-600 text-white shadow-lg font-black ring-2 ring-rose-400 scale-[1.01]'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/70 border border-zinc-800/80 hover:bg-zinc-850'
             }`}
           >
-            <span>🎌 Анимэ Эрх (Оноогоор)</span>
+            <Sparkles className="w-3.5 h-3.5 fill-current text-amber-300" />
+            <span className="truncate">2. Эрх Авах (Оноогоор)</span>
           </button>
 
+          {/* ХЭСЭГ 3: Эрхийн код */}
           <button
             type="button"
             id="tab-mode-code"
             onClick={() => {
               setMainTab('code');
-              setPaymentMethod('code');
+              setTopUpRequestSent(false);
+              setIsSuccess(false);
             }}
-            className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer col-span-2 sm:col-span-1 ${
               mainTab === 'code'
-                ? 'bg-cyan-500 text-black shadow-md font-extrabold ring-1 ring-cyan-400'
-                : 'text-zinc-400 hover:text-white bg-zinc-900/60'
+                ? 'bg-cyan-500 text-black shadow-lg font-black ring-2 ring-cyan-400 scale-[1.01]'
+                : 'text-zinc-400 hover:text-white bg-zinc-900/70 border border-zinc-800/80 hover:bg-zinc-850'
             }`}
           >
             <Ticket className="w-3.5 h-3.5" />
-            <span>🎟️ Эрхийн Код</span>
+            <span>3. Эрхийн Код</span>
           </button>
         </div>
 
-        {/* Content with smooth independent scrolling */}
+        {/* Scrollable Content Container */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain">
-          {/* TAB 1: DIRECT TOP-UP POINTS */}
-          {mainTab === 'topup' && (
+          {/* ================================================================ */}
+          {/* ХЭСЭГ 1: АДМИНААС ОНОО АВАХ ХҮСЭЛТ ЯВУУЛДАГ ХЭСЭГ */}
+          {/* ================================================================ */}
+          {mainTab === 'points_request' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Wallet Status Card */}
-              <div className="p-3.5 bg-gradient-to-r from-amber-950/60 via-zinc-900 to-zinc-900 rounded-xl border border-amber-500/40 flex items-center justify-between shadow-inner">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-black font-black flex items-center justify-center text-xl shadow shrink-0">
-                    💰
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">
-                      Одоогийн дансны үлдэгдэл:
-                    </span>
-                    <h3 className="font-mono text-lg font-black text-amber-300">
-                      {userBalance.toLocaleString()} ₮
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                    Шууд дансанд орно
+              {/* Informative Header Banner */}
+              <div className="p-3 bg-gradient-to-r from-amber-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-amber-500/40 space-y-1.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-amber-400 uppercase font-black tracking-wider flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-amber-400" />
+                    <span>ХЭСЭГ 1: АДМИНААС ОНОО АВАХ ХҮСЭЛТ</span>
                   </span>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    1₮ = 1 Оноо
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Та <strong>Админ Тамир</strong>-ын MonPay дугаарт (эсвэл QPay-ээр) шилжүүлэг хийсний дараа эндээс оноо авах хүсэлтээ илгээнэ үү. Админ таны шилжүүлгийг шалгаж баталгаажуулснаар дансанд тань оноо орно.
+                </p>
+                <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-xs">
+                  <span className="text-zinc-400">Таны одоогийн дансны үлдэгдэл:</span>
+                  <span className="font-mono font-black text-amber-300 text-sm">{userBalance.toLocaleString()} ₮ оноо</span>
                 </div>
               </div>
 
-              {/* Amount Presets */}
+              {/* Step 1: Select Amount */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
-                    Цэнэглэх дүнгээ сонгох:
-                  </label>
-                  <span className="text-[10px] text-amber-400 font-bold">1₮ = 1 Оноо</span>
-                </div>
+                <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>1. Авах онооны дүнгээ сонгох:</span>
+                  <span className="text-[10px] text-amber-400 font-bold">Сонгосон: +{effectiveTopUp.toLocaleString()} ₮</span>
+                </label>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {TOP_UP_PRESETS.map((p) => {
@@ -517,106 +558,300 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         }}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-amber-500/20 border-amber-400 text-white ring-1 ring-amber-400 shadow-md'
+                            ? 'bg-amber-500/20 border-amber-400 text-white ring-2 ring-amber-400 shadow-md'
                             : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
                         }`}
                       >
                         <span className="font-mono text-sm font-black text-amber-300 block">
                           +{p.label}
                         </span>
-                        <span className="text-[10px] text-zinc-400 mt-1">{p.note}</span>
+                        <span className="text-[10px] text-zinc-400 mt-1 leading-tight">{p.note}</span>
                       </button>
                     );
                   })}
 
-                  {/* Custom input tile */}
-                  <div className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-col justify-between">
-                    <span className="text-[10px] text-zinc-400 font-bold block">Дурын дүн:</span>
+                  {/* Custom input */}
+                  <div className="p-2 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-col justify-between col-span-2 sm:col-span-3">
+                    <span className="text-[10px] text-zinc-400 font-bold block">Эсвэл дурын дүнгээр оноо авах:</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="number"
+                        placeholder="Жишээ: 10000"
+                        value={customTopUpInput}
+                        onChange={(e) => setCustomTopUpInput(e.target.value)}
+                        className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-400"
+                      />
+                      <span className="text-xs font-mono font-black text-amber-300 shrink-0">₮ оноо</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Payment Transfer Channel (MonPay or QPay) */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
+                  2. Шилжүүлэг хийх хэрэгслээ сонгох:
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTransferMethod('monpay')}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
+                      paymentTransferMethod === 'monpay'
+                        ? 'bg-rose-600 text-white border-rose-500 ring-2 ring-rose-400 shadow-md'
+                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-pulse" />
+                    <span>MonPay (МонПэй)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTransferMethod('qpay')}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
+                      paymentTransferMethod === 'qpay'
+                        ? 'bg-cyan-500 text-black border-cyan-400 ring-2 ring-cyan-400 shadow-md font-black'
+                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>QPay / Бүх Банк</span>
+                  </button>
+                </div>
+
+                {/* MonPay Card */}
+                {paymentTransferMethod === 'monpay' && (
+                  <div className="p-3.5 bg-gradient-to-b from-rose-950/40 to-zinc-900 rounded-xl border border-rose-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-xs">
+                          M
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-xs text-white">MonPay Данс: Тамир</h4>
+                          <p className="text-[10px] text-zinc-400">Шилжүүлэх дүн: {effectiveTopUp.toLocaleString()} ₮</p>
+                        </div>
+                      </div>
+                      <span className="font-mono text-sm font-black text-amber-400">
+                        {effectiveTopUp.toLocaleString()} ₮
+                      </span>
+                    </div>
+
+                    <div className="bg-black/60 p-2.5 rounded-lg border border-zinc-700/80 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] text-zinc-400 block uppercase font-bold">MonPay Дугаар:</span>
+                        <span className="font-mono text-base font-black text-amber-400 tracking-wider">
+                          {monpayNumber}
+                        </span>
+                        <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(monpayNumber)}
+                        className="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow"
+                      >
+                        {copiedMonpay ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Хууллаа!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Хуулах</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-zinc-900/90 p-2 rounded-xl border border-zinc-800">
+                      <div className="p-1 bg-white rounded-lg shrink-0">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=MONPAY_${monpayNumber}_${effectiveTopUp}MNT`}
+                          alt="MonPay QR"
+                          className="w-14 h-14 object-contain"
+                        />
+                      </div>
+                      <div className="text-xs text-zinc-300 space-y-0.5">
+                        <p className="font-bold text-white text-[11px]">MonPay QR-ээр шууд уншуулах</p>
+                        <p className="text-[10px] text-zinc-400">
+                          MonPay апп-аараа QR-г уншуулж {effectiveTopUp.toLocaleString()}₮ шилжүүлнэ.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* QPay Card */}
+                {paymentTransferMethod === 'qpay' && (
+                  <div className="p-3.5 bg-zinc-900/90 rounded-xl border border-cyan-500/30 space-y-2 text-center">
+                    <div className="relative inline-block p-2 bg-white rounded-xl shadow-lg border-2 border-cyan-400 mx-auto">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=IOIO_TOPUP_${effectiveTopUp}MNT`}
+                        alt="QPay QR"
+                        className="w-24 h-24 object-contain"
+                      />
+                      <div className="absolute -bottom-2 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2 whitespace-nowrap">
+                        {effectiveTopUp.toLocaleString()} ₮
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 font-medium pt-1">
+                      Хаан, Голомт, Хас, Төрийн банк, SocialPay апп-аар QR кодыг уншуулж төлнө үү.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: Contact Phone & Note Form */}
+              <div className="space-y-2 bg-zinc-900/80 p-3 rounded-xl border border-zinc-800">
+                <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
+                  3. Таны холбогдох утас & Гүйлгээний мэдээлэл:
+                </label>
+
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold block mb-1">
+                      Таны утасны дугаар (Админ гүйлгээ шалгахад ашиглана) *:
+                    </span>
                     <input
-                      type="number"
-                      placeholder="Жишээ: 3000"
-                      value={customTopUpInput}
-                      onChange={(e) => setCustomTopUpInput(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-400 mt-1"
+                      type="tel"
+                      placeholder="Жишээ: 99112233"
+                      value={userPhoneInput}
+                      onChange={(e) => setUserPhoneInput(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold block mb-1">
+                      Гүйлгээний утга / Нэмэлт тэмдэглэл (заавал биш):
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Жишээ: 91441299 Тамир оноо авах"
+                      value={userNoteInput}
+                      onChange={(e) => setUserNoteInput(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Selected Amount Summary */}
-              <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Сонгосон цэнэглэлт:</span>
-                  <span className="text-sm font-extrabold text-white">
-                    +{effectiveTopUp.toLocaleString()} ₮ оноо нэмэгдэнэ
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="font-mono text-lg font-black text-emerald-400">
-                    {effectiveTopUp.toLocaleString()} ₮
-                  </span>
-                </div>
+              {/* Action Buttons for Section 1 */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  id="submit-points-request-btn"
+                  onClick={handleSubmitPointsRequestToAdmin}
+                  disabled={isVerifying || effectiveTopUp <= 0}
+                  className="w-full bg-gradient-to-r from-amber-400 via-emerald-500 to-amber-400 hover:from-amber-300 hover:to-emerald-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                >
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Админ руу илгээж байна...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>{`📩 АДМИН ТАМИРТ ОНОО АВАХ ХҮСЭЛТ ИЛГЭЭХ (+${effectiveTopUp.toLocaleString()} ₮)`}</span>
+                    </>
+                  )}
+                </button>
+
+                {isUserAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleAdminDirectAddPoints}
+                    disabled={isVerifying || effectiveTopUp <= 0}
+                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 flex items-center justify-center gap-1.5"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>[Админ тест] Шууд оноо нэмэх (+{effectiveTopUp.toLocaleString()}₮)</span>
+                  </button>
+                )}
+
+                {/* Direct switch to Section 2 */}
+                <button
+                  type="button"
+                  onClick={() => setMainTab('get_permission')}
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>Оноо хангалттай юу? 2-р Хэсэг: "Эрх Авах" руу шилжих</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-rose-400" />
+                </button>
               </div>
+
+              {/* Facebook Help */}
+              <a
+                href="https://www.facebook.com/share/1LdgHqWqvz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 rounded-lg text-xs text-blue-200 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center shrink-0">f</span>
+                  <span className="text-[11px] font-medium">Асуух юм байвал Админы Facebook хуудаснаас лавлах</span>
+                </div>
+                <span className="text-[10px] text-blue-400 font-bold flex items-center gap-1 shrink-0">
+                  Нээх ↗
+                </span>
+              </a>
             </div>
           )}
 
-          {/* TAB 2: ANIME PACKAGES */}
-          {mainTab === 'package' && (
+          {/* ================================================================ */}
+          {/* ХЭСЭГ 2: ЭРХ АВАХ (ОНООГООР) */}
+          {/* ================================================================ */}
+          {mainTab === 'get_permission' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Active Package Banner with Detailed Expiry & Points */}
-              <div className="p-3.5 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 space-y-2.5 shadow-inner">
+              {/* Informative Header Banner */}
+              <div className="p-3.5 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 space-y-2 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-600 text-white font-black flex items-center justify-center text-xl shadow shrink-0">
-                      🎌
-                    </div>
-                    <div>
-                      <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5">
-                        <span>Анимэ Үзэх Эрх</span>
-                        {animeExpiryInfo.hasAccess ? (
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-black flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3 text-emerald-400" />
-                            <span>Идэвхтэй ({animeExpiryInfo.countdownText})</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">
-                            {animeExpiryInfo.isExpired && animeExpiryInfo.expiryDateStr !== '-'
-                              ? `Хугацаа дууссан (${animeExpiryInfo.expiryDateStr})`
-                              : 'Эрх аваагүй'}
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-[11px] text-zinc-400">
-                        Бүх анимэ цуврал, шинэ ангиуд хязгааргүй үзэх эрх
-                      </p>
-                    </div>
-                  </div>
+                  <span className="text-[10px] text-rose-400 uppercase font-black tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>ХЭСЭГ 2: АНИМЭ ҮЗЭХ ЭРХ АВАХ (ОНООГООР)</span>
+                  </span>
+                  {animeExpiryInfo.hasAccess ? (
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-black flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-emerald-400" />
+                      <span>Идэвхтэй ({animeExpiryInfo.countdownText})</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded font-bold">
+                      {animeExpiryInfo.isExpired && animeExpiryInfo.expiryDateStr !== '-'
+                        ? `Дууссан (${animeExpiryInfo.expiryDateStr})`
+                        : 'Эрх аваагүй'}
+                    </span>
+                  )}
                 </div>
 
-                {/* Expiry Details & Points (Оноо) Grid */}
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Та дансан дахь оноогоо ашиглан хүссэн хугацааныхаа эрхийг нээж эсвэл сунгана уу. 15 хоног, 1 сар, 2 сар, 3 сар, 6 сар, 1 жилийн эрхүүдээс сонгох боломжтой.
+                </p>
+
+                {/* Expiry Date & User Points Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-black/60 p-2.5 rounded-lg border border-white/[0.08] text-xs">
-                  {/* Expiry Date */}
                   <div className="flex items-center justify-between sm:justify-start sm:gap-2">
                     <div className="flex items-center gap-1.5 text-zinc-300">
                       <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="font-semibold text-zinc-300">Эрх дуусах хугацаа:</span>
+                      <span className="font-semibold text-zinc-300">Одоогийн эрх:</span>
                     </div>
                     <div className="font-mono font-bold text-right sm:text-left">
                       {animeExpiryInfo.hasAccess ? (
                         <span className="text-amber-300 font-black">
-                          {animeExpiryInfo.expiryDateStr} <span className="text-[10px] text-emerald-400 font-semibold">({animeExpiryInfo.countdownText})</span>
+                          {animeExpiryInfo.expiryDateStr}
                         </span>
                       ) : (
                         <span className="text-rose-400 font-semibold">
-                          {animeExpiryInfo.isExpired && animeExpiryInfo.expiryDateStr !== '-'
-                            ? `Дууссан (${animeExpiryInfo.expiryDateStr})`
-                            : 'Идэвхгүй / Дууссан'}
+                          Идэвхгүй / Дууссан
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Points (Оноо) */}
                   <div className="flex items-center justify-between sm:justify-start sm:gap-2 sm:border-l sm:border-white/10 sm:pl-3">
                     <div className="flex items-center gap-1.5 text-zinc-300">
                       <Wallet className="w-4 h-4 text-amber-400 shrink-0" />
@@ -627,32 +862,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* Facebook Inquiry / Help link */}
-                <a
-                  href="https://www.facebook.com/share/1LdgHqWqvz/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 rounded-lg text-xs text-blue-200 transition-all group cursor-pointer"
-                  title="Асуух зүйл байвал манай албан ёсны Facebook хуудаснаас мэдээлэл авах"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center shrink-0">f</span>
-                    <span className="text-[11px] font-medium">Асуух юм байвал энэ page-ээс мэдээлэл авах</span>
-                  </div>
-                  <span className="text-[10px] text-blue-400 group-hover:text-blue-200 font-bold flex items-center gap-1 shrink-0">
-                    Facebook хуудас ↗
-                  </span>
-                </a>
               </div>
 
-              {/* Duration Selection: 15 Honog (2.5k), 1 Sar (5k), 2 Sar (8.5k) */}
+              {/* Duration Selection (PLANS) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider block">
-                    Хугацаа сонгох:
+                  <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
+                    Авах хугацаагаа сонгох:
                   </label>
-                  <span className="text-[10px] text-amber-400 font-bold">15 хоног 2.5k • 1 сар 5k • 2 сар 8.5k</span>
+                  <span className="text-[10px] text-amber-400 font-bold">15 хоног • 1 сар • 2 сар • 3 сар • 6 сар • 1 жил</span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -667,8 +885,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         onClick={() => setSelectedPlanId(plan.id)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-zinc-800 border-rose-500 text-white ring-1 ring-rose-500 shadow-md'
-                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
+                            ? 'bg-zinc-800 border-rose-500 text-white ring-2 ring-rose-500 shadow-md'
+                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
                         }`}
                       >
                         {plan.badge && (
@@ -703,57 +921,144 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* Selected Package Summary Card */}
-              <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 shadow-inner">
-                <div className="w-11 h-11 rounded-xl font-black flex items-center justify-center text-xl shadow shrink-0 bg-rose-600 text-white">
-                  🎌
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                    <span>Анимэ Багц</span>
-                    <span className="text-amber-400 bg-amber-400/10 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded font-black">
-                      {currentPlan.label} ({currentPlan.durationDays} хоног)
+              {/* Selected Plan Details & Balance Evaluation */}
+              <div className="p-3 bg-zinc-900/90 rounded-xl border border-zinc-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-sm">
+                      🎌
                     </span>
-                  </h3>
-                  <div className="text-[11px] text-emerald-400 font-bold mt-0.5 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 shrink-0" />
-                    <span>Дуусах хугацаа: <strong className="text-white font-mono">{projectedExpiryDate}</strong> (+{currentPlan.durationDays} хоног)</span>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-white">
+                        {currentPlan.label} ({currentPlan.durationDays} хоног эрх)
+                      </h4>
+                      <p className="text-[10px] text-emerald-400 font-mono">
+                        Дуусах шинэ хугацаа: {projectedExpiryDate}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono text-base font-black text-amber-400">
+                      {activePrice.toLocaleString()} ₮
+                    </span>
+                    <span className="text-[9px] text-zinc-400 block">оноо хасагдана</span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="font-mono text-amber-400 text-base font-black block">
-                    {activePrice.toLocaleString()} ₮
-                  </span>
-                  {currentPlan.id === '2m' && (
-                    <span className="text-[9px] text-emerald-400 font-bold">Хэмнэлттэй</span>
-                  )}
-                </div>
+
+                {/* Point balance check indicator */}
+                {userBalance >= activePrice ? (
+                  <div className="p-2.5 bg-emerald-950/70 border border-emerald-700/80 rounded-lg text-emerald-300 text-xs flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Оноо хангалттай байна (Үлдэх: {(userBalance - activePrice).toLocaleString()} ₮)</span>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-rose-950/80 border border-rose-600/80 rounded-xl text-rose-300 text-xs space-y-2">
+                    <div className="font-black text-rose-200 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>ОНОО ХҮРЭЛЦЭХГҮЙ - ОНООГҮЙ БОЛ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300">
+                      Танд <strong>{userBalance.toLocaleString()} ₮</strong> оноо байна. Энэ багцыг авахад <strong>{activePrice.toLocaleString()} ₮</strong> оноо шаардлагатай (Дутуу: <strong>{(activePrice - userBalance).toLocaleString()} ₮</strong>).
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchToPointsRequestWithAmount(activePrice - userBalance)}
+                      className="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                    >
+                      <Send className="w-3.5 h-3.5 fill-current" />
+                      <span>⚡ 1-р ХЭСЭГ: Админаас дутуу {(activePrice - userBalance).toLocaleString()}₮ оноо авах хүсэлт илгээх (Энд дар) ➔</span>
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Action Buttons for Section 2 */}
+              <div className="space-y-2 pt-1">
+                {userBalance >= activePrice ? (
+                  <button
+                    id="confirm-purchase-permission-btn"
+                    type="button"
+                    onClick={handlePurchasePermissionWithPoints}
+                    disabled={isVerifying}
+                    className="w-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 hover:from-rose-500 hover:to-amber-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Эрх нээж байна...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>{`🎌 ОНООГООР ЭРХ АВАХ (${currentPlan.label} - ${activePrice.toLocaleString()}₮ ОНОО ХАСАГДАНА)`}</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={true}
+                    className="w-full bg-zinc-800 text-zinc-500 font-black text-sm py-3.5 rounded-xl cursor-not-allowed border border-zinc-700 opacity-60 flex items-center justify-center gap-2"
+                  >
+                    <AlertCircle className="w-4 h-4 text-rose-500" />
+                    <span>{`⛔ ОНОО ХҮРЭЛЦЭХГҮЙ (${userBalance.toLocaleString()}₮ / ${activePrice.toLocaleString()}₮)`}</span>
+                  </button>
+                )}
+
+                {/* Promo Code Link */}
+                <button
+                  type="button"
+                  onClick={() => setMainTab('code')}
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-cyan-300 hover:text-white border border-cyan-500/30 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Ticket className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Танд админаас өгсөн эрхийн код байгаа бол энд дарж идэвхжүүлэх</span>
+                </button>
+              </div>
+
+              {/* Facebook Help */}
+              <a
+                href="https://www.facebook.com/share/1LdgHqWqvz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 rounded-lg text-xs text-blue-200 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[11px] flex items-center justify-center shrink-0">f</span>
+                  <span className="text-[11px] font-medium">Асуух юм байвал Админы Facebook хуудаснаас лавлах</span>
+                </div>
+                <span className="text-[10px] text-blue-400 font-bold flex items-center gap-1 shrink-0">
+                  Нээх ↗
+                </span>
+              </a>
             </div>
           )}
 
-          {/* TAB 3: PROMO / ACTIVATION CODE */}
+          {/* ================================================================ */}
+          {/* ХЭСЭГ 3: ЭРХИЙН КОД / ВАУЧЕР */}
+          {/* ================================================================ */}
           {mainTab === 'code' && (
-            <div className="space-y-3 bg-gradient-to-b from-rose-950/30 via-zinc-900 to-zinc-900 p-3.5 rounded-xl border border-rose-500/40">
+            <div className="space-y-4 bg-gradient-to-b from-cyan-950/30 via-zinc-900 to-zinc-900 p-4 rounded-xl border border-cyan-500/40 animate-in fade-in duration-200">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center font-black text-xs">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500 text-black flex items-center justify-center font-black text-sm">
                     🎟️
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-xs text-white">Идэвхжүүлэх Код / Ваучер</h4>
-                    <p className="text-[10px] text-zinc-400">Админаас өгсөн эсвэл урамшууллын кодоо оруулна уу</p>
+                    <h4 className="font-extrabold text-xs text-white">ХЭСЭГ 3: ИДЭВХЖҮҮЛЭХ КОД / ВАУЧЕР</h4>
+                    <p className="text-[10px] text-zinc-400">Админаас өгсөн эрхийн кодыг шууд идэвхжүүлэх</p>
                   </div>
                 </div>
-                <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
+                <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
                   Шууд Идэвхжинэ
                 </span>
               </div>
 
-              {/* Code Input Box */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-zinc-300 block">
-                  Админаас авсан эрхийн код:
+                  Админаас авсан кодоо оруулна уу:
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -770,13 +1075,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         handleRedeemActivationCode();
                       }
                     }}
-                    className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-rose-400 text-white font-mono text-sm font-bold px-3 py-2 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
+                    className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-cyan-400 text-white font-mono text-sm font-bold px-3 py-2.5 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
                   />
                   <button
                     type="button"
                     onClick={() => handleRedeemActivationCode()}
                     disabled={isVerifying || !inputActivationCode.trim()}
-                    className="bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 disabled:opacity-50 text-black font-black text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1"
+                    className="bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 disabled:opacity-50 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
                   >
                     {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                     <span>Идэвхжүүлэх</span>
@@ -784,255 +1089,71 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
 
                 {codeError && (
-                  <p className="text-xs text-rose-400 font-semibold bg-rose-950/60 p-2 rounded-lg border border-rose-800">
+                  <p className="text-xs text-rose-400 font-semibold bg-rose-950/60 p-2.5 rounded-lg border border-rose-800">
                     {codeError}
                   </p>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Payment Method Selector (For topup and package modes) */}
-          {mainTab !== 'code' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-bold">
-                {mainTab === 'package' && (
-                  <button
-                    id="pay-tab-wallet"
-                    type="button"
-                    onClick={() => setPaymentMethod('wallet')}
-                    className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      paymentMethod === 'wallet'
-                        ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-black shadow-md font-extrabold ring-1 ring-amber-400'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <Wallet className="w-3.5 h-3.5 fill-current" />
-                    <span>Оноогоор ({userBalance.toLocaleString()}₮)</span>
-                  </button>
-                )}
-
+              <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs">
                 <button
-                  id="pay-tab-monpay"
                   type="button"
-                  onClick={() => setPaymentMethod('monpay')}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    paymentMethod === 'monpay'
-                      ? 'bg-rose-600 text-white shadow-md font-extrabold ring-1 ring-rose-400'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
+                  onClick={() => setMainTab('get_permission')}
+                  className="text-zinc-400 hover:text-white underline cursor-pointer"
                 >
-                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-                  <span>MonPay</span>
+                  ← Эрх авах хэсэг рүү буцах
                 </button>
-
                 <button
-                  id="pay-tab-qpay"
                   type="button"
-                  onClick={() => setPaymentMethod('qpay')}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    paymentMethod === 'qpay'
-                      ? 'bg-cyan-500 text-black shadow-md font-extrabold ring-1 ring-cyan-400'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
+                  onClick={() => setMainTab('points_request')}
+                  className="text-amber-400 hover:text-amber-300 underline cursor-pointer"
                 >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>QPay / Банк</span>
+                  Админаас оноо авах хэсэг рүү очих →
                 </button>
               </div>
-
-              {/* MonPay Details Card */}
-              {paymentMethod === 'monpay' && (
-                <div className="space-y-3 bg-gradient-to-b from-rose-950/30 to-zinc-900 p-3.5 rounded-xl border border-rose-900/40">
-                  <div className="flex items-center justify-between border-b border-rose-900/50 pb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-xs">
-                        M
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-xs text-white">MonPay (МонПэй) Шилжүүлэг</h4>
-                        <p className="text-[10px] text-zinc-400">Шууд дугаарт эсвэл QR кодоор төлөх</p>
-                      </div>
-                    </div>
-                    <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg">
-                      {mainTab === 'topup' ? `${effectiveTopUp.toLocaleString()} ₮` : `${activePrice.toLocaleString()} ₮`}
-                    </span>
-                  </div>
-
-                  {/* MonPay Account Number Display */}
-                  <div className="bg-zinc-900/90 p-3 rounded-xl border border-rose-500/30 space-y-1.5">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                      MonPay Шилжүүлэх Дугаар:
-                    </span>
-                    <div className="flex items-center justify-between bg-black/60 p-2 rounded-lg border border-zinc-700/80">
-                      <div>
-                        <span className="font-mono text-base font-black text-amber-400 tracking-wider">
-                          {monpayNumber}
-                        </span>
-                        <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
-                      </div>
-                      <button
-                        id="copy-monpay-btn"
-                        onClick={() => copyToClipboard(monpayNumber)}
-                        className="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer shadow"
-                      >
-                        {copiedMonpay ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Хууллаа!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Хуулах</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-zinc-400 italic">
-                      * Гүйлгээний утга: <span className="text-rose-300 font-mono font-bold">{currentUser?.phone || currentUser?.name || 'Таны дугаар'}</span>
-                    </p>
-                  </div>
-
-                  {/* QR Code for MonPay */}
-                  <div className="flex items-center gap-3 bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
-                    <div className="p-1.5 bg-white rounded-lg shadow shrink-0">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=MONPAY_${monpayNumber}_${mainTab === 'topup' ? effectiveTopUp : activePrice}MNT`}
-                        alt="MonPay QR"
-                        className="w-14 h-14 object-contain"
-                      />
-                    </div>
-                    <div className="text-xs space-y-0.5 text-zinc-300">
-                      <p className="font-bold text-white text-[11px]">MonPay Апп ашиглаж байна уу?</p>
-                      <p className="text-[10px] text-zinc-400">
-                        {monpayNumber} дугаарт шилжүүлснээр таны данс шууд цэнэглэгдэнэ.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* QPay Details Card */}
-              {paymentMethod === 'qpay' && (
-                <div className="space-y-3 bg-zinc-900/90 p-3.5 rounded-xl border border-zinc-800">
-                  <div className="flex flex-col items-center justify-center text-center space-y-2">
-                    <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-cyan-400">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=IOIO_TOPUP_${mainTab === 'topup' ? effectiveTopUp : activePrice}MNT`}
-                        alt="QPay QR Code"
-                        className="w-28 h-28 object-contain"
-                      />
-                      <div className="absolute -bottom-2 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2">
-                        {mainTab === 'topup' ? `${effectiveTopUp.toLocaleString()} ₮` : `${activePrice.toLocaleString()} ₮`}
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-zinc-300 font-medium">
-                      Бүх банкны апп (Хаан, Голомт, Хас, TDB, SocialPay)-аар QR кодыг уншуулж төлнө үү.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Wallet Method Card in Package Mode */}
-              {paymentMethod === 'wallet' && mainTab === 'package' && (
-                <div className="space-y-3 bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800">
-                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
-                    <span className="text-xs text-zinc-400 font-medium">
-                      Таны хэтэвчийн үлдэгдэл оноо:
-                    </span>
-                    <span className="text-base font-black text-amber-400 font-mono">
-                      {userBalance.toLocaleString()} ₮
-                    </span>
-                  </div>
-
-                  {userBalance >= activePrice ? (
-                    <div className="space-y-2">
-                      <div className="p-3 bg-emerald-950/70 border border-emerald-700/80 rounded-xl text-emerald-300 text-xs space-y-1.5 shadow-inner">
-                        <div className="flex items-center gap-2 font-bold text-emerald-300">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>✓ Оноо хангалттай байна! Данснаас оноо хасагдаж анимэ эрх нээгдэнэ.</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 bg-black/40 p-2 rounded-lg text-[11px] font-mono border border-emerald-500/20 text-center">
-                          <div>
-                            <span className="text-[9px] text-zinc-400 block">Одоогийн оноо</span>
-                            <span className="text-zinc-200 font-bold">{userBalance.toLocaleString()} ₮</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] text-zinc-400 block">Хасагдах</span>
-                            <span className="text-rose-400 font-bold">-{activePrice.toLocaleString()} ₮</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] text-zinc-400 block">Үлдэх оноо</span>
-                            <span className="text-emerald-400 font-black">{(userBalance - activePrice).toLocaleString()} ₮</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      <div className="p-3 bg-rose-950/80 border border-rose-600/80 rounded-xl text-rose-300 text-xs space-y-1">
-                        <div className="font-black text-rose-200 flex items-center gap-1.5">
-                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                          <span>ОНОО ХҮРЭЛЦЭХГҮЙ - ОНООГҮЙ ХҮН АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-300">
-                          Танд <strong>{userBalance.toLocaleString()} ₮</strong> оноо байна. Энэ багцыг авахад <strong>{activePrice.toLocaleString()} ₮</strong> оноо шаардлагатай (Дутуу: <strong>{(activePrice - userBalance).toLocaleString()} ₮</strong>).
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setMainTab('topup')}
-                        className="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow"
-                      >
-                        <Zap className="w-3.5 h-3.5 fill-current" />
-                        <span>⚡ Дутуу {(activePrice - userBalance).toLocaleString()}₮ оноогоо шууд цэнэглэх</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
-          {/* Action Results & Buttons */}
-          {isSuccess ? (
+          {/* Result / Success Modals */}
+          {isSuccess && (
             <div className="bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-xs font-bold p-4 rounded-xl flex flex-col items-center justify-center gap-2 animate-in zoom-in-95 text-center">
-              <CheckCircle className="w-7 h-7 text-emerald-400" />
-              <p className="whitespace-pre-line leading-relaxed font-black text-sm">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
+              <p className="whitespace-pre-line leading-relaxed font-black text-sm text-white">
                 {successMsgText}
               </p>
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-5 py-2 rounded-xl cursor-pointer shadow"
+                className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-6 py-2.5 rounded-xl cursor-pointer shadow-lg"
               >
-                Ойлголоо, Цонхыг хаах
+                Баярлалаа, Хаах
               </button>
             </div>
-          ) : topUpRequestSent ? (
+          )}
+
+          {topUpRequestSent && !isSuccess && (
             <div className="bg-gradient-to-b from-amber-950/70 to-zinc-900 border border-amber-500/60 text-amber-200 text-xs p-4 rounded-xl space-y-3 animate-in zoom-in-95 shadow-xl">
               <div className="flex items-start gap-2.5">
                 <CheckCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-white font-black text-sm flex items-center gap-1.5">
-                    <span>📩 Шилжүүлгийн хүсэлт илгээгдлээ</span>
+                    <span>📩 Хүсэлт Админ Тамирт илгээгдлээ</span>
                     <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
                       Шалгагдаж байна
                     </span>
                   </p>
-                  <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  <p className="text-[11px] text-zinc-300 leading-relaxed whitespace-pre-line">
                     {topUpSuccessNotice}
                   </p>
                 </div>
               </div>
+
               {/* Facebook support link */}
               <a
                 href="https://www.facebook.com/share/1LdgHqWqvz/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all group"
-                title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
               >
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0">f</span>
@@ -1040,164 +1161,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
                 <span className="text-blue-300 group-hover:text-white text-[11px]">Нээх ↗</span>
               </a>
+
               <button
                 onClick={onClose}
                 className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2.5 rounded-xl border border-zinc-700 cursor-pointer transition-colors"
               >
                 Ойлголоо, Цонхыг хаах
               </button>
-            </div>
-          ) : (
-            <div className="space-y-2 pt-2">
-              {/* PRIMARY ACTION BUTTON: TOP-UP POINTS */}
-              {mainTab === 'topup' && (
-                <div className="space-y-2">
-                  <button
-                    id="submit-topup-transfer-btn"
-                    type="button"
-                    onClick={() => handleSubmitPendingTransfer(effectiveTopUp, `${effectiveTopUp.toLocaleString()}₮ Данс цэнэглэлт`)}
-                    disabled={isVerifying || effectiveTopUp <= 0}
-                    className="w-full bg-gradient-to-r from-amber-400 via-emerald-500 to-amber-400 hover:from-amber-300 hover:to-emerald-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                  >
-                    {isVerifying ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Хүсэлт илгээж байна...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>{`📩 ШИЛЖҮҮЛЭГ ИЛГЭЭСНЭЭ МЭДЭГДЭХ (+${effectiveTopUp.toLocaleString()} ₮ оноо авах)`}</span>
-                      </>
-                    )}
-                  </button>
-
-                  {isUserAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => handleInstantTopUpPoints()}
-                      disabled={isVerifying || effectiveTopUp <= 0}
-                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 flex items-center justify-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>[Админ тест] Шууд оноо олгох</span>
-                    </button>
-                  )}
-
-                  <p className="text-[10px] text-zinc-400 text-center">
-                    * Шилжүүлэг (MonPay: {monpayNumber}) хийсний дараа хүсэлт илгээнэ. Админ шалгаж баталгаажуулснаар оноо орно.
-                  </p>
-                </div>
-              )}
-
-              {/* PACKAGE PURCHASE WITH WALLET POINTS */}
-              {mainTab === 'package' && paymentMethod === 'wallet' && (
-                <div className="space-y-2">
-                  {userBalance < activePrice ? (
-                    <div className="space-y-2">
-                      <div className="p-3 bg-rose-950/80 border border-rose-500/60 rounded-xl text-center space-y-1">
-                        <p className="text-xs text-rose-300 font-extrabold flex items-center justify-center gap-1.5">
-                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                          <span>ОНОО ХҮРЭЛЦЭХГҮЙ - ОНООГҮЙ БОЛ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</span>
-                        </p>
-                        <p className="text-[11px] text-zinc-300">
-                          Танд <strong>{userBalance.toLocaleString()} ₮</strong> оноо байна. Энэ багцыг авахад <strong>{activePrice.toLocaleString()} ₮</strong> шаардлагатай.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={true}
-                        className="w-full bg-zinc-800 text-zinc-500 font-black text-sm py-3.5 rounded-xl cursor-not-allowed border border-zinc-700 opacity-60 flex items-center justify-center gap-2"
-                      >
-                        <AlertCircle className="w-4 h-4 text-rose-500" />
-                        <span>{`⛔ ОНОО ХҮРЭЛЦЭХГҮЙ (${userBalance.toLocaleString()}₮ / ${activePrice.toLocaleString()}₮)`}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setMainTab('topup')}
-                        className="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-black font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
-                      >
-                        <Zap className="w-3.5 h-3.5 fill-current" />
-                        <span>⚡ Дутуу {(activePrice - userBalance).toLocaleString()} ₮ оноогоо цэнэглэх</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      id="confirm-payment-wallet-action"
-                      type="button"
-                      onClick={handleConfirmPayment}
-                      disabled={isVerifying}
-                      className="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-50 text-black font-black text-sm py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                    >
-                      {isVerifying ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Идэвхжүүлж байна...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-4 h-4" />
-                          <span>{`ОНООГООР АНИМЭ БАГЦ (${currentPlan.label} - ${activePrice.toLocaleString()}₮) АВАХ`}</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* PACKAGE PURCHASE WITH MONPAY / QPAY TRANSFER */}
-              {mainTab === 'package' && paymentMethod !== 'wallet' && paymentMethod !== 'code' && (
-                <div className="space-y-2">
-                  <button
-                    id="submit-package-transfer-btn"
-                    type="button"
-                    onClick={() => handleSubmitPendingTransfer(activePrice, currentPlan.label)}
-                    disabled={isVerifying}
-                    className="w-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 hover:from-rose-500 hover:to-amber-400 text-black font-black text-sm py-3.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
-                  >
-                    {isVerifying ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Хүсэлт илгээж байна...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>{`📩 ШИЛЖҮҮЛЭГ ХИЙСНЭЭ АДМИНД МЭДЭГДЭХ (${activePrice.toLocaleString()}₮ ШАЛГУУЛАХ)`}</span>
-                      </>
-                    )}
-                  </button>
-
-                  {isUserAdmin && (
-                    <button
-                      id="instant-package-activate-btn"
-                      type="button"
-                      onClick={handleInstantActivatePackage}
-                      disabled={isVerifying}
-                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 flex items-center justify-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>[Админ тест] Багц шууд идэвхжүүлэх</span>
-                    </button>
-                  )}
-
-                  <p className="text-[10px] text-zinc-400 text-center">
-                    * Та MonPay ({monpayNumber}) эсвэл QPay-ээр шилжүүлэг хийсний дараа хүсэлтээ илгээнэ. Админ шалгаж баталгаажуулснаар таны анимэ эрх идэвхжинэ.
-                  </p>
-
-                  <a
-                    href="https://www.facebook.com/share/1LdgHqWqvz/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-300 hover:text-blue-100 font-semibold text-xs py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">f</span>
-                    <span>Асуух юм байвал энэ Facebook хуудаснаас мэдээлэл авах ↗</span>
-                  </a>
-                </div>
-              )}
             </div>
           )}
         </div>
