@@ -9,6 +9,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { safeFirestoreWrite } from './quotaService';
 
 export interface AnswerHistory {
   questionId: number;
@@ -39,7 +40,27 @@ export async function saveScoreToFirestore(data: {
   correctCount: number;
   answers: AnswerHistory[];
 }): Promise<string> {
+  const localId = 'score_' + Date.now();
+  const localRecord: ScoreRecord = {
+    id: localId,
+    playerName: data.playerName.trim() || 'Зочин',
+    score: data.score,
+    gameMode: data.gameMode,
+    totalQuestions: data.totalQuestions,
+    correctCount: data.correctCount,
+    createdAt: new Date(),
+    answers: data.answers || [],
+  };
+
+  // Cache locally
   try {
+    const saved = localStorage.getItem('ioio_local_scores');
+    const list: ScoreRecord[] = saved ? JSON.parse(saved) : [];
+    list.unshift(localRecord);
+    localStorage.setItem('ioio_local_scores', JSON.stringify(list.slice(0, 100)));
+  } catch {}
+
+  const result = await safeFirestoreWrite(async () => {
     const scoresCol = collection(db, 'scores');
     const docRef = await addDoc(scoresCol, {
       playerName: data.playerName.trim() || 'Зочин',
@@ -51,10 +72,9 @@ export async function saveScoreToFirestore(data: {
       answers: data.answers || [],
     });
     return docRef.id;
-  } catch (err) {
-    console.error('Error saving score to Firestore:', err);
-    throw err;
-  }
+  }, () => localId);
+
+  return result || localId;
 }
 
 /**

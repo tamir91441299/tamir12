@@ -36,7 +36,10 @@ import {
   Sun,
   Smartphone,
   HardDrive,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  SkipBack
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -130,7 +133,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       // Record anime view for viewer tracking (who watched, total views)
       recordAnimeView(movie.id, currentUser || null, epNum);
     }
-  }, [movie?.id, currentEpisodeIndex, currentUser]);
+  }, [movie?.id, currentEpisodeIndex, currentUser?.id]);
 
   const episodes = movie?.episodes || [];
   const currentEpisode: Episode | undefined = episodes[currentEpisodeIndex];
@@ -1008,265 +1011,344 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       ref={modalContainerRef}
       className="fixed inset-0 w-full h-full z-50 bg-black flex flex-col justify-between overflow-hidden select-none"
     >
-      {/* Top Header Bar - Clean transparent header, NO screen darkening */}
-      <header className={`p-2 sm:p-3 bg-transparent flex flex-col sm:flex-row sm:items-center justify-between z-30 text-white gap-2 sm:gap-4 shrink-0 transition-all duration-300 ${
-        isFullscreen || isDeviceLandscape || isViewportLandscape
-          ? controlsVisible
-            ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 pointer-events-auto'
-            : 'opacity-0 -translate-y-full pointer-events-none absolute inset-x-0 top-0'
-          : 'opacity-100 relative'
-      }`}>
-        {/* Title and metadata row */}
-        <div className="flex items-center justify-between sm:justify-start gap-2.5 min-w-0 w-full sm:w-auto">
-          {/* FlickNime Luxury Multicolor Glow Brand Logo */}
-          <div className="hidden xl:flex items-center gap-2 mr-2 shrink-0 border-r border-zinc-800 pr-3">
-            <div className="w-7 h-7 rounded-xl brand-insignia text-black font-black flex items-center justify-center text-xs shadow-md">
-              🎬
+      {/* Top Header Bar - Permanent on windowed mode, smooth auto-hide overlay on fullscreen */}
+      <header
+        className={`z-40 text-white transition-all duration-300 ${
+          isFullscreen
+            ? controlsVisible
+              ? 'opacity-100 translate-y-0 absolute inset-x-0 top-0 bg-gradient-to-b from-black/95 via-black/80 to-transparent p-2.5 sm:p-4 pointer-events-auto'
+              : 'opacity-0 -translate-y-full absolute inset-x-0 top-0 pointer-events-none'
+            : 'relative bg-zinc-950/95 border-b border-zinc-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 backdrop-blur-md opacity-100 shrink-0'
+        }`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 w-full">
+          {/* Left: Movie & Episode Title */}
+          <div className="flex items-center justify-between sm:justify-start gap-2.5 min-w-0">
+            {/* FlickNime Brand Insignia */}
+            <div className="hidden xl:flex items-center gap-2 mr-1 shrink-0 border-r border-zinc-800 pr-2.5">
+              <div className="w-7 h-7 rounded-xl brand-insignia text-black font-black flex items-center justify-center text-xs shadow-md">
+                🎬
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="font-black text-sm tracking-wider brand-text-luxury font-display leading-none">
+                  FlickNime
+                </span>
+                <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase">
+                  HD Cinema
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col text-left">
-              <span className="font-black text-sm tracking-wider brand-text-luxury font-display leading-none">
-                FlickNime
-              </span>
-              <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase">
-                HD Cinema
-              </span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md shrink-0 shadow-md">
-              {movie.type === 'series' ? 'ЦУВРАЛ' : movie.type === 'anime' ? 'АНИМЭ' : 'КИНО'}
-            </span>
-            <div className="min-w-0">
-              <h2 className="font-black text-xs sm:text-base text-white leading-tight truncate flex items-center gap-1.5">
-                <span className="truncate">{movie.titleMongolian}</span>
-                <span className="text-xs text-zinc-400 font-normal hidden md:inline">({movie.year})</span>
-              </h2>
-              {currentEpisode ? (
-                <p className="text-[11px] sm:text-xs text-cyan-400 font-bold truncate flex items-center gap-1">
-                  <Tv className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{currentEpisode.title} • 1080p Full HD</span>
-                </p>
-              ) : (
-                <p className="text-[11px] sm:text-xs text-emerald-400 font-bold flex items-center gap-1 truncate">
-                  <Sparkles className="w-3 h-3 shrink-0" />
-                  <span>Шууд тоглуулагч • 1080p Full HD</span>
-                </p>
-              )}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md shrink-0 shadow-md">
+                {movie.type === 'series' ? 'ЦУВРАЛ' : movie.type === 'anime' ? 'АНИМЭ' : 'КИНО'}
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-black text-xs sm:text-sm md:text-base text-white leading-tight truncate flex items-center gap-1.5">
+                  <span className="truncate">{movie.titleMongolian}</span>
+                  <span className="text-xs text-zinc-400 font-normal hidden sm:inline">({movie.year})</span>
+                </h2>
+                {currentEpisode ? (
+                  <p className="text-[11px] sm:text-xs text-cyan-400 font-bold truncate flex items-center gap-1">
+                    <Tv className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{currentEpisode.title} • 1080p Full HD</span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] sm:text-xs text-emerald-400 font-bold flex items-center gap-1 truncate">
+                    <Sparkles className="w-3 h-3 shrink-0" />
+                    <span>Шууд тоглуулагч • 1080p Full HD</span>
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Quick actions on mobile top right (Only show episodes drawer toggle if series/anime has episodes) */}
-          {episodes.length > 0 && (
-            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+            {/* Quick Mobile Exit Button on Left Row (shown only on small screens) */}
+            <div className="flex sm:hidden items-center shrink-0">
               <button
                 type="button"
-                id="toggle-episodes-mobile-top"
-                onClick={() => setShowEpisodesDrawer(!showEpisodesDrawer)}
-                className={`px-2.5 py-1 rounded-xl border text-xs font-bold cursor-pointer transition-all flex items-center gap-1 shadow-md ${
-                  showEpisodesDrawer
-                    ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-cyan-500/30'
-                    : 'bg-zinc-900/95 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80 active:scale-95'
-                }`}
-                title="Ангиуд сонгох"
+                id="mobile-header-exit-btn"
+                onClick={handleCloseSafely}
+                className="px-2.5 py-1 rounded-xl bg-rose-600 active:bg-rose-700 text-white font-black text-xs border border-rose-500/50 flex items-center gap-1 shadow-md cursor-pointer"
+                title="Хаах / Гарах"
               >
-                <ListVideo className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Ангиуд</span>
+                <X className="w-3.5 h-3.5" />
+                <span>Гарах</span>
               </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Controls and Selectors Bar */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-between sm:justify-end w-full sm:w-auto">
-          {/* Anime Subscription Expiry & Points Pill */}
-          {(() => {
-            const animeExpiry = getAnimeExpiryDetails(currentUser);
-            const userPoints = typeof currentUser?.walletBalance === 'number'
-              ? currentUser.walletBalance
-              : (currentUser as any)?.balance ?? 0;
-            if (animeExpiry.hasAccess) {
+          {/* Center: Dedicated Anime Episode Navigation Hub (Separated from Exit button) */}
+          {episodes.length > 0 && (
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 bg-zinc-900/90 border border-zinc-700/80 p-1 sm:p-1.5 rounded-2xl shadow-lg shrink-0">
+              {/* Previous Episode Button */}
+              <button
+                type="button"
+                id="nav-prev-episode-btn"
+                onClick={() => {
+                  if (currentEpisodeIndex > 0) {
+                    selectEpisode(currentEpisodeIndex - 1);
+                  }
+                }}
+                disabled={currentEpisodeIndex <= 0}
+                className={`px-2 sm:px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${
+                  currentEpisodeIndex > 0
+                    ? 'bg-zinc-800 hover:bg-zinc-750 text-zinc-200 cursor-pointer active:scale-95'
+                    : 'bg-zinc-900/50 text-zinc-600 cursor-not-allowed opacity-40'
+                }`}
+                title={currentEpisodeIndex > 0 ? `${currentEpisodeIndex}-р анги (Өмнөх)` : 'Эхний анги'}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Өмнөх</span>
+              </button>
+
+              {/* Current Episode Selector Button (Opens Drawer) */}
+              <button
+                type="button"
+                id="nav-current-episodes-toggle"
+                onClick={() => setShowEpisodesDrawer(!showEpisodesDrawer)}
+                className={`px-2.5 sm:px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  showEpisodesDrawer
+                    ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/30'
+                    : 'bg-zinc-800/90 hover:bg-zinc-750 text-cyan-300 border-zinc-700/80 active:scale-95'
+                }`}
+                title="Ангиудын жагсаалт нээх / анги солих"
+              >
+                <ListVideo className="w-3.5 h-3.5" />
+                <span>
+                  {currentEpisode?.episodeNumber || currentEpisodeIndex + 1}-р анги
+                  <span className="text-[10px] text-zinc-400 font-normal ml-1">/ {episodes.length}</span>
+                </span>
+                <ChevronDown className={`w-3 h-3 text-cyan-400 transition-transform ${showEpisodesDrawer ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Next Episode Button - PROMINENTLY HIGHLIGHTED */}
+              {currentEpisodeIndex < episodes.length - 1 ? (
+                <button
+                  type="button"
+                  id="nav-next-episode-btn"
+                  onClick={() => {
+                    const nextIdx = currentEpisodeIndex + 1;
+                    selectEpisode(nextIdx);
+                    if (!checkEpisodeAccess(nextIdx) && onRequestPurchase && movie) {
+                      onRequestPurchase(movie);
+                    }
+                  }}
+                  className={`px-3 sm:px-3.5 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95 ${
+                    checkEpisodeAccess(currentEpisodeIndex + 1)
+                      ? 'bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black shadow-cyan-500/20'
+                      : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-amber-500/10'
+                  }`}
+                  title={
+                    checkEpisodeAccess(currentEpisodeIndex + 1)
+                      ? `Дараагийн анги үзэх (${currentEpisodeIndex + 2}-р анги)`
+                      : `🔒 ${currentEpisodeIndex + 2}-р анги (Анимэ эрх шаардлагатай)`
+                  }
+                >
+                  <span>Дараагийн анги ({currentEpisodeIndex + 2})</span>
+                  {checkEpisodeAccess(currentEpisodeIndex + 1) ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-black" />
+                  ) : (
+                    <Lock className="w-3 h-3 text-amber-400" />
+                  )}
+                </button>
+              ) : (
+                <span className="text-[10px] sm:text-xs font-bold text-zinc-500 bg-zinc-900/60 px-2 py-1 rounded-lg">
+                  🏁 Сүүлийн анги
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Right: Playback Options + Standalone Dedicated EXIT Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
+            {/* Anime Subscription Expiry & Points Pill */}
+            {(() => {
+              const animeExpiry = getAnimeExpiryDetails(currentUser);
+              const userPoints = typeof currentUser?.walletBalance === 'number'
+                ? currentUser.walletBalance
+                : (currentUser as any)?.balance ?? 0;
+              if (animeExpiry.hasAccess) {
+                return (
+                  <div 
+                    className="hidden xl:flex items-center gap-2 bg-black/70 border border-emerald-500/40 text-emerald-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
+                    title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText}) | Оноо: ${userPoints.toLocaleString()} ₮`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span>Анимэ эрх:</span>
+                    <span className="font-mono text-white font-black">{animeExpiry.expiryDateStr}</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">({animeExpiry.countdownText})</span>
+                    <span className="text-zinc-600">|</span>
+                    <span className="text-amber-300 font-mono font-bold">Оноо: {userPoints.toLocaleString()} ₮</span>
+                  </div>
+                );
+              }
               return (
                 <div 
-                  className="hidden md:flex items-center gap-2 bg-black/70 border border-emerald-500/40 text-emerald-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
-                  title={`Анимэ эрх хүчинтэй: ${animeExpiry.formattedExpiryDate} (${animeExpiry.countdownText}) | Оноо: ${userPoints.toLocaleString()} ₮`}
+                  className="hidden xl:flex items-center gap-2 bg-black/70 border border-rose-500/30 text-rose-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
+                  title={`Анимэ эрх: Идэвхгүй | Оноо: ${userPoints.toLocaleString()} ₮`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span>Анимэ эрх:</span>
-                  <span className="font-mono text-white font-black">{animeExpiry.expiryDateStr}</span>
-                  <span className="text-[10px] text-zinc-400 font-normal">({animeExpiry.countdownText})</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                  <span>Эрх:</span>
+                  <span className="font-mono text-zinc-300 font-bold">
+                    {animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-' ? `Дууссан (${animeExpiry.expiryDateStr})` : 'Аваагүй'}
+                  </span>
                   <span className="text-zinc-600">|</span>
                   <span className="text-amber-300 font-mono font-bold">Оноо: {userPoints.toLocaleString()} ₮</span>
                 </div>
               );
-            }
-            return (
-              <div 
-                className="hidden md:flex items-center gap-2 bg-black/70 border border-rose-500/30 text-rose-300 px-3 py-1 rounded-xl text-[11px] font-bold shadow-sm"
-                title={`Анимэ эрх: Идэвхгүй | Оноо: ${userPoints.toLocaleString()} ₮`}
+            })()}
+
+            {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
+            <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
+              <button
+                type="button"
+                onClick={() => handleServerChange('embed')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  serverMode === 'embed'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
-                <span>Эрх:</span>
-                <span className="font-mono text-zinc-300 font-bold">
-                  {animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-' ? `Дууссан (${animeExpiry.expiryDateStr})` : 'Аваагүй'}
-                </span>
-                <span className="text-zinc-600">|</span>
-                <span className="text-amber-300 font-mono font-bold">Оноо: {userPoints.toLocaleString()} ₮</span>
-              </div>
-            );
-          })()}
+                <HardDrive className="w-3 h-3" />
+                <span className="hidden sm:inline">Drive</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleServerChange('direct')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  serverMode === 'direct'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Шууд тоглуулагч: HTML5 тоглуулагч"
+              >
+                <Zap className="w-3 h-3" />
+                <span>Шууд HD</span>
+              </button>
+            </div>
 
-          {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
-          <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
-            <button
-              type="button"
-              onClick={() => handleServerChange('embed')}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                serverMode === 'embed'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
-            >
-              <HardDrive className="w-3 h-3" />
-              <span>Drive (Үндсэн)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleServerChange('direct')}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                serverMode === 'direct'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Шууд тоглуулагч: HTML5 тоглуулагч"
-            >
-              <Zap className="w-3 h-3" />
-              <span>Шууд HD</span>
-            </button>
-          </div>
+            {/* Interactive Quality Selector Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowQualityQuickMenu(!showQualityQuickMenu)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/80 text-cyan-300 shadow-lg shadow-cyan-500/10 backdrop-blur-md cursor-pointer transition-all active:scale-95"
+                title="Дүрсийн чанар сонгох (Resolution)"
+              >
+                <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+                <span>{activeQualityOption.tag}</span>
+                <ChevronDown className={`w-3 h-3 text-cyan-400 transition-transform ${showQualityQuickMenu ? 'rotate-180' : ''}`} />
+              </button>
 
-          {/* Interactive Quality Selector Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowQualityQuickMenu(!showQualityQuickMenu)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/80 text-cyan-300 shadow-lg shadow-cyan-500/10 backdrop-blur-md cursor-pointer transition-all active:scale-95"
-              title="Дүрсийн чанар сонгох (Resolution)"
-            >
-              <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
-              <span>{activeQualityOption.tag}</span>
-              <ChevronDown className={`w-3 h-3 text-cyan-400 transition-transform ${showQualityQuickMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showQualityQuickMenu && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-950/95 border border-cyan-500/40 rounded-2xl p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="text-[10px] uppercase tracking-wider text-cyan-400 font-extrabold px-2.5 py-1 flex items-center justify-between border-b border-zinc-800 mb-1">
-                  <span>Дүрсийн чанар</span>
-                  <span className="text-zinc-500">60 FPS HD</span>
+              {showQualityQuickMenu && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-950/95 border border-cyan-500/40 rounded-2xl p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="text-[10px] uppercase tracking-wider text-cyan-400 font-extrabold px-2.5 py-1 flex items-center justify-between border-b border-zinc-800 mb-1">
+                    <span>Дүрсийн чанар</span>
+                    <span className="text-zinc-500">60 FPS HD</span>
+                  </div>
+                  <div className="space-y-1">
+                    {QUALITY_OPTIONS.map((q) => (
+                      <button
+                        key={q.key}
+                        type="button"
+                        onClick={() => {
+                          handleQualitySelect(q.key);
+                          setShowQualityQuickMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                          selectedQualityKey === q.key
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
+                            : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex flex-col text-left">
+                          <span className="flex items-center gap-1.5">
+                            <span>{q.label}</span>
+                            {q.key === '1080p' && (
+                              <span className="text-[9px] bg-cyan-500 text-black px-1.5 py-0.2 rounded font-black">
+                                Дээд
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-normal">{q.description}</span>
+                        </div>
+                        {selectedQualityKey === q.key && <Check className="w-4 h-4 text-cyan-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  {QUALITY_OPTIONS.map((q) => (
-                    <button
-                      key={q.key}
-                      type="button"
-                      onClick={() => {
-                        handleQualitySelect(q.key);
-                        setShowQualityQuickMenu(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                        selectedQualityKey === q.key
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
-                          : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                      }`}
-                    >
-                      <div className="flex flex-col text-left">
-                        <span className="flex items-center gap-1.5">
-                          <span>{q.label}</span>
-                          {q.key === '1080p' && (
-                            <span className="text-[9px] bg-cyan-500 text-black px-1.5 py-0.2 rounded font-black">
-                              Дээд
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-normal">{q.description}</span>
-                      </div>
-                      {selectedQualityKey === q.key && <Check className="w-4 h-4 text-cyan-400 shrink-0" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
+            </div>
+
+            {/* Video Fit / Zoom Mode Button */}
+            <button
+              type="button"
+              id="video-fit-toggle-btn"
+              onClick={() => {
+                const modes: Array<'contain' | 'cover' | 'fill'> = ['contain', 'cover', 'fill'];
+                const nextMode = modes[(modes.indexOf(videoFitMode) + 1) % modes.length];
+                setVideoFitMode(nextMode);
+                setQualityNotice(
+                  nextMode === 'cover'
+                    ? '📐 Дэлгэц дүүргэх горим (Crop to Fill)'
+                    : nextMode === 'fill'
+                    ? '↔️ Дэлгэц сунгах горим (Stretch to Fit)'
+                    : '⬛ Стандарт 16:9 горим (Original Ratio)'
+                );
+                setTimeout(() => setQualityNotice(null), 2000);
+              }}
+              className="hidden md:flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer"
+              title="Дэлгэцийн харьцаа: Агуулга (16:9), Дүүргэх (Cover), Сунгах (Fill)"
+            >
+              <Layers className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="capitalize text-[11px]">{videoFitMode === 'contain' ? '16:9' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}</span>
+            </button>
+
+            {/* Diagnostic / Debug Toggle Button - Only visible to Admin */}
+            {isAdmin && (
+              <button
+                type="button"
+                id="debug-panel-toggle-btn"
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
+                  showDebugPanel
+                    ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                    : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
+                }`}
+                title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
+              >
+                <Bug className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Дебаг</span>
+              </button>
             )}
-          </div>
 
-          {/* Video Fit / Zoom Mode Button */}
-          <button
-            type="button"
-            id="video-fit-toggle-btn"
-            onClick={() => {
-              const modes: Array<'contain' | 'cover' | 'fill'> = ['contain', 'cover', 'fill'];
-              const nextMode = modes[(modes.indexOf(videoFitMode) + 1) % modes.length];
-              setVideoFitMode(nextMode);
-              setQualityNotice(
-                nextMode === 'cover'
-                  ? '📐 Дэлгэц дүүргэх горим (Crop to Fill)'
-                  : nextMode === 'fill'
-                  ? '↔️ Дэлгэц сунгах горим (Stretch to Fit)'
-                  : '⬛ Стандарт 16:9 горим (Original Ratio)'
-              );
-              setTimeout(() => setQualityNotice(null), 2000);
-            }}
-            className="hidden md:flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer"
-            title="Дэлгэцийн харьцаа: Агуулга (16:9), Дүүргэх (Cover), Сунгах (Fill)"
-          >
-            <Layers className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="capitalize text-[11px]">{videoFitMode === 'contain' ? '16:9' : videoFitMode === 'cover' ? 'Дүүргэх' : 'Сунгах'}</span>
-          </button>
-
-          {/* Diagnostic / Debug Toggle Button - Only visible to Admin */}
-          {isAdmin && (
+            {/* Fullscreen Quick Button */}
             <button
               type="button"
-              id="debug-panel-toggle-btn"
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className={`flex items-center gap-1 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border ${
-                showDebugPanel
-                  ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
-                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-amber-300 border-zinc-700'
-              }`}
-              title="Тоглуулагчийн дебаг мэдээлэл болон алдаа оношлох"
+              id="quick-fullscreen-btn"
+              onClick={toggleFullscreen}
+              className="flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-white font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-zinc-700"
+              title="Бүтэн дэлгэц (F)"
             >
-              <Bug className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Дебаг</span>
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5" />}
             </button>
-          )}
 
-          {/* Fullscreen Quick Button */}
-          <button
-            type="button"
-            id="quick-fullscreen-btn"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-white font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-zinc-700"
-            title="Бүтэн дэлгэц (F)"
-          >
-            {isFullscreen ? <Minimize className="w-3.5 h-3.5 text-cyan-400" /> : <Maximize className="w-3.5 h-3.5" />}
-          </button>
+            {/* Visual Separator */}
+            <div className="h-6 w-px bg-zinc-800 hidden sm:block mx-0.5" />
 
-          {/* Episodes Drawer Toggle on Desktop */}
-          {episodes.length > 0 && (
+            {/* Dedicated Official EXIT Button: Clear, prominent, separated from other controls */}
             <button
-              id="toggle-episodes-drawer"
-              onClick={() => setShowEpisodesDrawer(!showEpisodesDrawer)}
-              className={`hidden sm:flex text-xs font-bold px-3 py-1.5 rounded-xl items-center gap-1.5 border cursor-pointer transition-all ${
-                showEpisodesDrawer
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-lg shadow-cyan-500/20'
-                  : 'bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-              }`}
+              type="button"
+              id="pc-header-exit-btn"
+              onClick={handleCloseSafely}
+              className="hidden sm:flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0 select-none"
+              title="Видеогоос гарах / Тоглуулагч хаах (Esc)"
             >
-              <ListVideo className="w-4 h-4 text-cyan-400" />
-              <span>Ангиуд ({episodes.length})</span>
+              <X className="w-4 h-4 text-white" />
+              <span>Гарах</span>
             </button>
-          )}
+          </div>
         </div>
       </header>
 
@@ -1280,28 +1362,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           {/* Episode Access Restricted Overlay */}
           {!hasAccessToCurrentEpisode ? (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none relative">
-              <div 
-                className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleCloseSafely();
-                }}
-                title="Видеогоос гарах / Хаах (Esc)"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleCloseSafely();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  <span>Гарах</span>
-                </button>
-              </div>
               <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 flex items-center justify-center text-rose-400 shadow-2xl shadow-rose-500/20">
                 <Lock className="w-10 h-10 animate-pulse" />
               </div>
@@ -1454,57 +1514,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   </button>
                 </div>
 
-                {/* 🛡️ Drive Popout Blocker & Direct Exit Button */}
-                {/* Covers the entire top-right corner of Google Drive's iframe so Drive's pop-out button can NEVER be clicked */}
+                {/* 🛡️ Drive Popout Blocker: Invisible 56x56px shield covering Drive's iframe popout button in the corner without any UI overlap */}
                 <div 
-                  className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
+                  className="absolute top-0 right-0 w-14 h-14 z-20 pointer-events-auto bg-transparent select-none"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    handleCloseSafely();
                   }}
-                  title="Видеогоос гарах / Хаах (Esc)"
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleCloseSafely();
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    <span>Гарах</span>
-                  </button>
-                </div>
+                  title=""
+                />
               </div>
             </div>
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
-              {/* Direct Exit Button for HTML5 Player */}
-              <div 
-                className="absolute top-0 right-0 w-32 sm:w-44 h-16 sm:h-20 z-40 flex items-start justify-end p-2.5 sm:p-4 pointer-events-auto select-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  handleCloseSafely();
-                }}
-                title="Видеогоос гарах / Хаах (Esc)"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleCloseSafely();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-rose-600/95 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border border-rose-400/60 shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  <span>Гарах</span>
-                </button>
-              </div>
               <video
                 ref={videoRef}
                 src={videoSrcToPlay}
@@ -2008,58 +2030,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <span>+10с</span>
                     <span className="text-cyan-400">⏩</span>
                   </button>
-
-                  {/* Next Episode Button */}
-                  {episodes.length > 0 && currentEpisodeIndex < episodes.length - 1 && (
-                    <button
-                      id="player-next-ep"
-                      type="button"
-                      onClick={() => {
-                        const nextIdx = currentEpisodeIndex + 1;
-                        selectEpisode(nextIdx);
-                        if (!checkEpisodeAccess(nextIdx) && onRequestPurchase && movie) {
-                          onRequestPurchase(movie);
-                        }
-                        resetControlsTimer();
-                      }}
-                      className={`p-2 rounded-xl cursor-pointer border transition-all flex items-center gap-1.5 ${
-                        !checkEpisodeAccess(currentEpisodeIndex + 1)
-                          ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/80 shadow-md shadow-amber-500/10'
-                          : 'hover:bg-zinc-800 active:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700/60 bg-zinc-900/60'
-                      }`}
-                      title={
-                        !checkEpisodeAccess(currentEpisodeIndex + 1)
-                          ? `🔒 ${currentEpisodeIndex + 2}-р анги түгжээтэй (Анимэ эрх шаардлагатай)`
-                          : 'Дараагийн анги'
-                      }
-                    >
-                      <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
-                      {!checkEpisodeAccess(currentEpisodeIndex + 1) && (
-                        <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      )}
-                    </button>
-                  )}
-
-                  {/* Episodes List Drawer Toggle Button (Grouped with Episode controls on left) */}
-                  {episodes.length > 0 && (
-                    <button
-                      id="player-episodes-bottom-toggle"
-                      type="button"
-                      onClick={() => {
-                        setShowEpisodesDrawer(!showEpisodesDrawer);
-                        resetControlsTimer();
-                      }}
-                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 text-xs font-bold ${
-                        showEpisodesDrawer
-                          ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-md shadow-cyan-500/20'
-                          : 'bg-zinc-900/80 hover:bg-zinc-800 text-cyan-300 border-zinc-700/80'
-                      }`}
-                      title="Ангиудын жагсаалт нээх / анги солих"
-                    >
-                      <ListVideo className="w-4 h-4 text-cyan-400" />
-                      <span>Ангиуд ({episodes.length})</span>
-                    </button>
-                  )}
 
                   {/* Volume Control */}
                   <div className="flex items-center gap-1 sm:gap-2">

@@ -420,10 +420,6 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       handleManualSyncUsers();
     });
 
-    const syncInterval = setInterval(() => {
-      handleManualSyncUsers();
-    }, 3500);
-
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(sortUsersByNewest(deduplicateUserList(list.filter((u) => !isBotOrMockUser(u)))));
     });
@@ -466,7 +462,6 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setRechargeRequests(reqs);
     });
     return () => {
-      clearInterval(syncInterval);
       unsubscribeUsers();
       window.removeEventListener('ioio_users_updated', handleLocalUsersUpdated);
       window.removeEventListener('ioio_new_user_registered', handleNewUserEvent);

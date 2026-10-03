@@ -14,6 +14,7 @@ import {
 import { db } from './firebase';
 import { UserDetail, INITIAL_USERS } from '../components/UserManagementModal';
 import { UserAccount } from '../components/AuthModal';
+import { safeFirestoreWrite, markFirestoreQuotaExceeded, isFirestoreQuotaExceeded } from './quotaService';
 
 /**
  * Check if a user is a mock sample or bot user that should not appear in production management
@@ -127,8 +128,8 @@ export async function sendNewAnimeNotification(movie: {
       localStorage.setItem('flicknime_anime_notifs', JSON.stringify([payload, ...list.slice(0, 20)]));
     } catch {}
 
-    // 2. Persist to Firestore
-    await setDoc(docRef, payload);
+    // 2. Persist to Firestore with quota fallback
+    await safeFirestoreWrite(() => setDoc(docRef, payload));
     return payload;
   } catch (err) {
     console.error('Error sending new anime notification:', err);
@@ -148,7 +149,7 @@ export async function sendAdminNotification(notif: Omit<AppNotification, 'id' | 
       id: notifId,
       createdAt: new Date().toLocaleString('mn-MN'),
     };
-    await setDoc(docRef, payload);
+    await safeFirestoreWrite(() => setDoc(docRef, payload));
   } catch (err) {
     console.error('Error sending admin notification:', err);
   }
@@ -429,28 +430,23 @@ export async function topUpUserBalanceInFirestore(
     const primaryDocId = rawId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
     matchingDocIds.add(primaryDocId);
 
-    // 5. Persist to ALL matching Firestore document IDs so listeners always fire!
-    for (const docId of matchingDocIds) {
-      if (!docId) continue;
-      try {
-        await setDoc(
-          doc(db, 'users', docId),
-          {
-            id: docId,
-            name: targetUser?.name || 'Хэрэглэгч',
-            phone: cleanPhone || targetUser?.phone || '',
-            email: cleanEmail || targetUser?.email || '',
-            walletBalance: newBalance,
-            updatedAt: new Date().toISOString(),
-            lastTopUpAmount: pointsAmount,
-            lastTopUpAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-      } catch (err) {
-        console.warn(`Firestore setDoc error for ${docId}:`, err);
-      }
-    }
+    // 5. Persist to primary Firestore document with quota-safe wrapper
+    await safeFirestoreWrite(() =>
+      setDoc(
+        doc(db, 'users', primaryDocId),
+        {
+          id: primaryDocId,
+          name: targetUser?.name || 'Хэрэглэгч',
+          phone: cleanPhone || targetUser?.phone || '',
+          email: cleanEmail || targetUser?.email || '',
+          walletBalance: newBalance,
+          updatedAt: new Date().toISOString(),
+          lastTopUpAmount: pointsAmount,
+          lastTopUpAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+    );
 
     // 6. Update local storage registered users list
     if (targetUser) {
@@ -571,21 +567,18 @@ export async function approveAndCreditRechargeRequest(
       (req.planId as string) === '1y' ? 365 : 30
     );
 
-    // 1. Mark request as approved in Firestore `recharge_requests` collection
-    try {
-      const reqDocRef = doc(db, 'recharge_requests', req.id);
-      await setDoc(
-        reqDocRef,
+    // 1. Mark request as approved in Firestore `recharge_requests` collection with quota safety
+    await safeFirestoreWrite(() =>
+      setDoc(
+        doc(db, 'recharge_requests', req.id),
         {
           status: 'approved',
           processedAt: new Date().toISOString(),
           processedBy: adminName,
         },
         { merge: true }
-      );
-    } catch (e) {
-      console.warn('Error updating recharge_requests in Firestore:', e);
-    }
+      )
+    );
 
     // 2. Mark request as approved in LocalStorage
     try {
@@ -1000,14 +993,16 @@ export async function grantAnimeAccessToUser(
 export async function revokeUserPackage(userId: string): Promise<boolean> {
   try {
     const docRef = doc(db, 'users', userId);
-    await setDoc(
-      docRef,
-      {
-        packageType: 'free',
-        packageExpiry: '-',
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          packageType: 'free',
+          packageExpiry: '-',
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
     );
 
     try {
@@ -1161,13 +1156,13 @@ export async function saveUserToFirestore(
       }).catch((e) => console.warn('Server user sync error (non-fatal):', e));
     } catch {}
 
-    // 5. Write primary doc to Firestore
-    await setDoc(docRef, userPayload, { merge: true });
+    // 5. Write primary doc to Firestore with quota protection
+    await safeFirestoreWrite(() => setDoc(docRef, userPayload, { merge: true }));
 
     // 6. If phone exists, also alias under user_phone_{cleanPhone} so phone-based lookups are instantaneous
-    if (cleanPhone && cleanPhone !== '99110000' && rawId !== `user_phone_${cleanPhone}`) {
+    if (!isFirestoreQuotaExceeded() && cleanPhone && cleanPhone !== '99110000' && rawId !== `user_phone_${cleanPhone}`) {
       try {
-        await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userPayload, { merge: true });
+        await safeFirestoreWrite(() => setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userPayload, { merge: true }));
       } catch (e) {}
     }
   } catch (err) {
@@ -1487,17 +1482,23 @@ export async function saveUserAuthRecord(record: {
     console.error('Error saving credentials to localStorage:', e);
   }
 
-  // 2. Save securely to Firestore `users` document
+  // 2. Save securely to Firestore `users` document with quota fallback
   try {
     const docRef = doc(db, 'users', cleanId);
-    await setDoc(docRef, {
-      id: cleanId,
-      name: record.name,
-      email: cleanEmail,
-      phone: cleanPhone,
-      password: record.password || '',
-      lastLogin: new Date().toLocaleString('mn-MN'),
-    }, { merge: true });
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          id: cleanId,
+          name: record.name,
+          email: cleanEmail,
+          phone: cleanPhone,
+          password: record.password || '',
+          lastLogin: new Date().toLocaleString('mn-MN'),
+        },
+        { merge: true }
+      )
+    );
   } catch (err) {
     console.error('Error saving auth record to Firestore users:', err);
   }
@@ -1802,15 +1803,28 @@ export function subscribeUserAccount(
     );
 
     if (isCurrentSessionUser) {
-      persistActiveSession(updatedUser, true);
-      try {
-        localStorage.setItem('ioio_balance', String(updatedUser.walletBalance ?? 0));
-      } catch {}
-      onUpdate(updatedUser);
+      // Check if actual values changed compared to currentSession to avoid infinite renders
+      const hasChanged =
+        currentSession.id !== updatedUser.id ||
+        currentSession.walletBalance !== updatedUser.walletBalance ||
+        currentSession.packageType !== updatedUser.packageType ||
+        currentSession.packageExpiry !== updatedUser.packageExpiry ||
+        currentSession.status !== updatedUser.status ||
+        currentSession.role !== updatedUser.role ||
+        currentSession.name !== updatedUser.name ||
+        JSON.stringify(currentSession.purchasedMovies || []) !== JSON.stringify(updatedUser.purchasedMovies || []);
+
+      if (hasChanged) {
+        persistActiveSession(updatedUser, true);
+        try {
+          localStorage.setItem('ioio_balance', String(updatedUser.walletBalance ?? 0));
+        } catch {}
+        onUpdate(updatedUser);
+      }
     }
   };
 
-  // 1. Direct document listener
+  // 1. If targetId exists, attach direct document listener only to prevent listener duplication
   if (targetId) {
     try {
       const userDocRef = doc(db, 'users', targetId);
@@ -1822,6 +1836,9 @@ export function subscribeUserAccount(
           }
         },
         (err) => {
+          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+            markFirestoreQuotaExceeded();
+          }
           console.warn('Doc subscription warning:', err);
         }
       );
@@ -1829,12 +1846,10 @@ export function subscribeUserAccount(
     } catch (e) {
       console.warn('Failed to listen to doc by ID:', e);
     }
-  }
-
-  // 2. Real-time phone query listener
-  if (cleanPhone && cleanPhone !== '99110000') {
+  } else if (cleanPhone && cleanPhone !== '99110000') {
+    // 2. Real-time phone query listener only if targetId not available
     try {
-      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(2));
+      const qPhone = query(collection(db, 'users'), where('phone', '==', cleanPhone), limit(1));
       const unsub = onSnapshot(
         qPhone,
         (snapshot) => {
@@ -1845,6 +1860,9 @@ export function subscribeUserAccount(
           });
         },
         (err) => {
+          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+            markFirestoreQuotaExceeded();
+          }
           console.warn('Phone query subscription warning:', err);
         }
       );
@@ -1852,12 +1870,10 @@ export function subscribeUserAccount(
     } catch (e) {
       console.warn('Failed to listen to phone query:', e);
     }
-  }
-
-  // 3. Real-time email query listener
-  if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.endsWith('@flicknime.mn')) {
+  } else if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.endsWith('@flicknime.mn')) {
+    // 3. Real-time email query listener only if ID and phone not available
     try {
-      const qEmail = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(2));
+      const qEmail = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(1));
       const unsub = onSnapshot(
         qEmail,
         (snapshot) => {
@@ -1868,6 +1884,9 @@ export function subscribeUserAccount(
           });
         },
         (err) => {
+          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+            markFirestoreQuotaExceeded();
+          }
           console.warn('Email query subscription warning:', err);
         }
       );

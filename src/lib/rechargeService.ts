@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { sendAdminNotification, topUpUserBalanceInFirestore } from './userService';
+import { safeFirestoreWrite } from './quotaService';
 
 export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
@@ -165,15 +166,13 @@ export async function submitRechargeRequest(data: {
       console.error('Local storage save error:', e);
     }
 
-    // Save to Firestore
-    try {
-      await setDoc(doc(db, 'recharge_requests', id), {
+    // Save to Firestore with quota protection
+    await safeFirestoreWrite(() =>
+      setDoc(doc(db, 'recharge_requests', id), {
         ...newReq,
         timestamp: serverTimestamp(),
-      });
-    } catch (fsErr) {
-      console.warn('Firestore setDoc recharge_requests warning:', fsErr);
-    }
+      })
+    );
 
     // Notify Admin (Explicitly mentions Anime only permission)
     sendAdminNotification({
@@ -345,16 +344,17 @@ export async function updateRechargeRequestStatus(
       }
     } catch (e) {}
 
-    // Update Firestore
-    const docRef = doc(db, 'recharge_requests', requestId);
-    await setDoc(
-      docRef,
-      {
-        status,
-        processedAt: new Date().toISOString(),
-        processedBy: adminName,
-      },
-      { merge: true }
+    // Update Firestore with quota protection
+    await safeFirestoreWrite(() =>
+      setDoc(
+        doc(db, 'recharge_requests', requestId),
+        {
+          status,
+          processedAt: new Date().toISOString(),
+          processedBy: adminName,
+        },
+        { merge: true }
+      )
     );
 
     try {

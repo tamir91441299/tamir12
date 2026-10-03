@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserAccount } from '../components/AuthModal';
+import { safeFirestoreWrite } from './quotaService';
 
 export interface AnimeWatcher {
   id: string;
@@ -127,25 +128,31 @@ export async function recordAnimeView(
     console.error('Error saving local anime view:', e);
   }
 
-  // 2. Persist to Firestore "anime_views" collection
+  // 2. Persist to Firestore "anime_views" collection with quota fallback
   try {
     const docId = `view_${movieId}_${userId}`;
     const docRef = doc(db, 'anime_views', docId);
-    await setDoc(docRef, {
-      movieId,
-      userId,
-      userName,
-      userPhone: phone,
-      userEmail: email,
-      episodeNumber,
-      watchedAt: now,
-      formattedTime: new Date().toLocaleString('mn-MN'),
-      userRole: role,
-      packageType,
-    }, { merge: true });
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          movieId,
+          userId,
+          userName,
+          userPhone: phone,
+          userEmail: email,
+          episodeNumber,
+          watchedAt: now,
+          formattedTime: new Date().toLocaleString('mn-MN'),
+          userRole: role,
+          packageType,
+        },
+        { merge: true }
+      )
+    );
   } catch (err) {
     // Firestore might be offline, cached state already works
-    console.warn('Firestore anime view record failed (using local cache):', err);
+    console.warn('Firestore anime view record notice (using local cache):', err);
   }
 }
 

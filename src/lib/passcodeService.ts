@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
+import { safeFirestoreWrite } from './quotaService';
 
 const LOCAL_STORAGE_PASSCODE_KEY = 'ioio_window_passcode';
 const SESSION_VERIFIED_KEY = 'ioio_window_pin_verified';
@@ -79,14 +80,16 @@ export async function setProtectedWindowPasscode(newCode: string): Promise<boole
   try {
     localStorage.setItem(LOCAL_STORAGE_PASSCODE_KEY, cleanCode);
     const docRef = doc(db, 'settings', 'window_security');
-    await setDoc(
-      docRef,
-      {
-        passcode: cleanCode,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'Admin',
-      },
-      { merge: true }
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          passcode: cleanCode,
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'Admin',
+        },
+        { merge: true }
+      )
     );
     return true;
   } catch (err) {

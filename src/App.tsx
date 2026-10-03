@@ -43,6 +43,7 @@ import {
   clearLegacyDevicePackages,
   calculateExtendedExpiryDate
 } from './lib/permissionService';
+import { isFirestoreQuotaExceeded, FIRESTORE_UPGRADE_URL } from './lib/quotaService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
 
 export default function App() {
@@ -262,12 +263,28 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     const unsubscribe = subscribeUserAccount(currentUser, (updated) => {
-      setCurrentUser(updated);
+      setCurrentUser((prev) => {
+        if (!prev) return updated;
+        const isSame =
+          prev.id === updated.id &&
+          prev.walletBalance === updated.walletBalance &&
+          prev.packageType === updated.packageType &&
+          prev.packageExpiry === updated.packageExpiry &&
+          prev.status === updated.status &&
+          prev.role === updated.role &&
+          prev.name === updated.name &&
+          JSON.stringify(prev.purchasedMovies || []) === JSON.stringify(updated.purchasedMovies || []);
+        return isSame ? prev : updated;
+      });
+
       if (typeof updated.walletBalance === 'number') {
-        setUserBalance(updated.walletBalance);
+        setUserBalance((prevBal) => (prevBal === updated.walletBalance ? prevBal : updated.walletBalance));
       }
       if (Array.isArray(updated.purchasedMovies)) {
-        setPurchasedMovies(updated.purchasedMovies);
+        setPurchasedMovies((prevList) => {
+          const isSame = JSON.stringify(prevList) === JSON.stringify(updated.purchasedMovies);
+          return isSame ? prevList : updated.purchasedMovies;
+        });
       }
     });
     return () => unsubscribe();
@@ -631,6 +648,18 @@ export default function App() {
   const [allNotifications, setAllNotifications] = useState<AppNotification[]>([]);
   const [latestNotification, setLatestNotification] = useState<AppNotification | null>(null);
   const [showNotifToast, setShowNotifToast] = useState(false);
+  const [firestoreQuotaExceeded, setFirestoreQuotaExceeded] = useState<boolean>(() => isFirestoreQuotaExceeded());
+  const [dismissQuotaBanner, setDismissQuotaBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleQuotaEvent = (e: any) => {
+      if (e.detail && typeof e.detail.exceeded === 'boolean') {
+        setFirestoreQuotaExceeded(e.detail.exceeded);
+      }
+    };
+    window.addEventListener('ioio_quota_exceeded', handleQuotaEvent);
+    return () => window.removeEventListener('ioio_quota_exceeded', handleQuotaEvent);
+  }, []);
 
   // Visible notifications:
   // All users see 'NEW_ANIME' broadcasts.
@@ -683,12 +712,11 @@ export default function App() {
     };
   }, [isAdmin]);
 
-  // Track authenticated user session securely & permanently
+  // Track authenticated user session securely & permanently in local storage
   useEffect(() => {
     try {
       if (currentUser) {
         persistActiveSession(currentUser, true);
-        saveUserToFirestore(currentUser);
       } else {
         persistActiveSession(null);
       }
@@ -1048,6 +1076,42 @@ export default function App() {
               <div className="w-24 h-4 bg-zinc-800 rounded-full flex items-center justify-center gap-2 px-2 shadow-inner">
                 <div className="w-2 h-2 rounded-full bg-zinc-900 border border-zinc-700" />
                 <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+              </div>
+            </div>
+          )}
+
+          {/* Firestore Quota Notice Banner (Informative Mongolian Advice) */}
+          {firestoreQuotaExceeded && !dismissQuotaBanner && (
+            <div className="mb-4 rounded-2xl bg-amber-950/50 border border-amber-500/40 p-3 sm:p-4 text-xs text-amber-200 flex items-start justify-between gap-3 shadow-xl backdrop-blur-md animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+                <div>
+                  <p className="font-bold text-amber-300 flex items-center gap-2">
+                    <span>⚡ Өдрийн үнэгүй бичилтийн хязгаар (Daily Write Quota) дүүрсэн</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-mono">Spark Tier</span>
+                  </p>
+                  <p className="text-zinc-300 text-[11px] mt-1 leading-relaxed">
+                    Систем автоматаар өндөр хурдны Local/Server горимд амжилттай шилжсэн. Кино, анимэ үзэх, хэтэвчний оноо, хэрэглэгчийн эрхүүд 100% саадгүй хэвийн ажиллана. Маргааш үнэгүй хязгаар автоматаар сэргэнэ.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={FIRESTORE_UPGRADE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors"
+                >
+                  Лимит шалгах ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setDismissQuotaBanner(true)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                  title="Хаах"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           )}

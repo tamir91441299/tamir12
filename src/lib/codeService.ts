@@ -7,6 +7,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { safeFirestoreWrite } from './quotaService';
 
 export interface PromoCode {
   id: string;
@@ -199,9 +200,9 @@ export async function savePromoCode(codeData: Omit<PromoCode, 'id' | 'createdAt'
     const updated = [newCode, ...filtered];
     localStorage.setItem(LOCAL_STORAGE_CODES_KEY, JSON.stringify(updated));
 
-    // Save to Firestore "promo_codes" collection
+    // Save to Firestore "promo_codes" collection with quota protection
     const docRef = doc(db, 'promo_codes', newCode.id);
-    await setDoc(docRef, newCode, { merge: true });
+    await safeFirestoreWrite(() => setDoc(docRef, newCode, { merge: true }));
   } catch (err) {
     console.error('Error saving promo code to Firestore:', err);
   }
@@ -219,7 +220,7 @@ export async function deletePromoCode(codeId: string): Promise<void> {
     localStorage.setItem(LOCAL_STORAGE_CODES_KEY, JSON.stringify(updated));
 
     const docRef = doc(db, 'promo_codes', codeId);
-    await deleteDoc(docRef);
+    await safeFirestoreWrite(() => deleteDoc(docRef));
   } catch (err) {
     console.error('Error deleting promo code:', err);
   }
