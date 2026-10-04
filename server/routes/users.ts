@@ -5,7 +5,7 @@ import path from 'path';
 const router = Router();
 const USERS_FILE_PATH = path.join(process.cwd(), 'public', 'registered_users.json');
 
-// Helper to identify mock/bot users
+// Helper to identify mock/sample bots (Do NOT filter real users with common Mongolian names)
 function isBotUser(u: any): boolean {
   if (!u) return false;
   if (u.isMockUser === true) return true;
@@ -14,12 +14,11 @@ function isBotUser(u: any): boolean {
   const name = String(u.name || '').trim();
 
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_')) return true;
-  const botEmails = ['admin@ioio.mn', 'bat.erdene@gmail.com', 'anujin.b@yahoo.com', 'ganzorig99@gmail.com', 'morko@mn.net'];
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_')) return true;
+  const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
   if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
-  if (name.startsWith('Шинэ Зочин')) return true;
-  if (['Бат-Эрдэнэ', 'Анужин', 'Ганзориг', 'Мөнх-Оргил'].includes(name)) return true;
+  if (name.startsWith('Шинэ Зочин (Тест)')) return true;
 
   return false;
 }

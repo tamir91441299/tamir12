@@ -32,27 +32,16 @@ export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): bool
   const email = String(u.email || '').trim().toLowerCase();
   const name = String(u.name || '').trim();
 
-  // Known sample / bot IDs
+  // Known sample / bot IDs only
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_')) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_')) return true;
 
   // Known sample / bot emails
-  const botEmails = [
-    'admin@ioio.mn',
-    'bat.erdene@gmail.com',
-    'anujin.b@yahoo.com',
-    'ganzorig99@gmail.com',
-    'morko@mn.net',
-  ];
+  const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
   if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
 
-  // Known sample bot names with their default test phones
-  if (name.startsWith('Шинэ Зочин')) return true;
-  if (name === 'Бат-Эрдэнэ') return true;
-  if (name === 'Анужин') return true;
-  if (name === 'Ганзориг') return true;
-  if (name === 'Мөнх-Оргил') return true;
+  if (name.startsWith('Шинэ Зочин (Тест)')) return true;
 
   return false;
 }
