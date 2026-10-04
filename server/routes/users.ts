@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getServerDb } from '../lib/firestoreDb.js';
 
 const router = Router();
 const USERS_FILE_PATH = path.join(process.cwd(), 'public', 'registered_users.json');
@@ -24,7 +26,7 @@ function isBotUser(u: any): boolean {
 }
 
 // Helper to safely read users from JSON file
-function readStoredUsers(): any[] {
+export function readStoredUsers(): any[] {
   try {
     if (fs.existsSync(USERS_FILE_PATH)) {
       const content = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
@@ -38,7 +40,7 @@ function readStoredUsers(): any[] {
 }
 
 // Helper to safely write users to JSON file
-function writeStoredUsers(users: any[]): void {
+export function writeStoredUsers(users: any[]): void {
   try {
     fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
   } catch (err) {
@@ -46,18 +48,70 @@ function writeStoredUsers(users: any[]): void {
   }
 }
 
-// GET /api/users - List all registered users
-router.get('/', (req: Request, res: Response) => {
+// Parse registration timestamp
+function getUserTimestamp(u: any): number {
+  if (!u) return 0;
+  if (typeof u.registeredTimestamp === 'number') return u.registeredTimestamp;
+  if (u.registeredAt) {
+    const t = new Date(u.registeredAt.replace(/\./g, '-').replace(/\//g, '-')).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+}
+
+// GET /api/users - List all registered users (Firestore + JSON file)
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const users = readStoredUsers();
-    return res.json({ success: true, users, count: users.length });
+    const localUsers = readStoredUsers();
+    const map = new Map<string, any>();
+
+    localUsers.forEach((u) => {
+      if (u && !isBotUser(u)) {
+        const key = u.id || u.phone || u.email;
+        if (key) map.set(key, u);
+      }
+    });
+
+    const db = getServerDb();
+    if (db) {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && !isBotUser(d) && !isBotUser({ id: docSnap.id })) {
+            const userObj: any = {
+              ...d,
+              id: docSnap.id,
+              isMockUser: false,
+            };
+            const key = userObj.id || userObj.phone || userObj.email;
+            if (key) {
+              const existing = map.get(key);
+              map.set(key, { ...existing, ...userObj });
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Firestore fetch warning on /api/users:', err);
+      }
+    }
+
+    const merged = Array.from(map.values());
+    merged.sort((a, b) => getUserTimestamp(b) - getUserTimestamp(a));
+
+    // Update local cache
+    writeStoredUsers(merged);
+
+    return res.json({ success: true, users: merged, count: merged.length });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err?.message || 'Failed to fetch users' });
+    console.error('Error fetching users:', err);
+    const fallback = readStoredUsers();
+    return res.json({ success: true, users: fallback, count: fallback.length });
   }
 });
 
 // POST /api/users/register - Register or update a user
-router.post('/register', (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const payload = req.body;
     if (!payload || (!payload.id && !payload.phone && !payload.email)) {
@@ -106,6 +160,19 @@ router.post('/register', (req: Request, res: Response) => {
 
     writeStoredUsers(users);
 
+    // Persist to Firestore
+    const db = getServerDb();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'users', userObj.id), userObj, { merge: true });
+        if (cleanPhone && cleanPhone !== '99110000' && userObj.id !== `user_phone_${cleanPhone}`) {
+          await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userObj, { merge: true });
+        }
+      } catch (err) {
+        console.warn('Firestore setDoc warning in /api/users/register:', err);
+      }
+    }
+
     return res.json({
       success: true,
       user: userObj,
@@ -119,7 +186,7 @@ router.post('/register', (req: Request, res: Response) => {
 });
 
 // POST /api/users/update - Admin update user (points, package, role, status)
-router.post('/update', (req: Request, res: Response) => {
+router.post('/update', async (req: Request, res: Response) => {
   try {
     const { userId, updates } = req.body;
     if (!userId || !updates) {
@@ -128,20 +195,32 @@ router.post('/update', (req: Request, res: Response) => {
 
     let users = readStoredUsers();
     const idx = users.findIndex((u) => u.id === userId || u.phone === userId || u.email === userId);
+    let updatedUser: any = null;
+
     if (idx >= 0) {
       users[idx] = { ...users[idx], ...updates, updatedAt: new Date().toISOString() };
+      updatedUser = users[idx];
       writeStoredUsers(users);
-      return res.json({ success: true, user: users[idx] });
-    } else {
-      return res.status(404).json({ success: false, error: 'User not found' });
     }
+
+    // Persist to Firestore
+    const db = getServerDb();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'users', userId), { ...updates, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch (err) {
+        console.warn('Firestore update warning in /api/users/update:', err);
+      }
+    }
+
+    return res.json({ success: true, user: updatedUser });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Update failed' });
   }
 });
 
 // POST /api/users/delete - Delete a user
-router.post('/delete', (req: Request, res: Response) => {
+router.post('/delete', async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
     if (!userId) {
@@ -151,6 +230,13 @@ router.post('/delete', (req: Request, res: Response) => {
     let users = readStoredUsers();
     users = users.filter((u) => u.id !== userId && u.phone !== userId && u.email !== userId);
     writeStoredUsers(users);
+
+    const db = getServerDb();
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+      } catch (e) {}
+    }
 
     return res.json({ success: true, message: 'User deleted' });
   } catch (err: any) {

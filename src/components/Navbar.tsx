@@ -848,6 +848,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden xl:inline">Асуух зүйл (FB)</span>
           </a>
 
+          {/* Admin Dashboard Button for Tamir */}
+          {isAdmin && onOpenUserManagement && (
+            <button
+              id="nav-admin-dashboard-btn"
+              type="button"
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/60 text-amber-300 font-extrabold text-xs transition-all cursor-pointer shrink-0 shadow-md animate-pulse"
+              title="Админ удирдлагын самбар (Шинэ хэрэглэгчид, Оноо авах хүсэлтүүд)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Админ</span>
+            </button>
+          )}
+
           {/* Notification Bell Button with Real-time Dropdown */}
           <div className="relative shrink-0">
             <button

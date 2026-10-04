@@ -1,7 +1,7 @@
-import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { sendAdminNotification, topUpUserBalanceInFirestore } from './userService';
-import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
+import { safeFirestoreWrite, isQuotaError, markFirestoreQuotaExceeded } from './quotaService';
 
 export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
@@ -16,15 +16,33 @@ export interface RechargeRequest {
   durationDays: number;
   amount: number;
   packageType: 'anime'; // Зөвхөн анимэ эрх олгогдоно
-  method: 'monpay' | 'qpay' | 'wallet' | 'bank';
+  method: 'monpay' | 'qpay' | 'wallet' | 'bank' | 'code' | 'instant';
   status: 'pending' | 'approved' | 'rejected';
   note?: string;
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
+  timestamp?: any;
 }
 
 const STORAGE_KEY = 'ioio_recharge_requests';
+
+// Helper to robustly extract milliseconds for sorting
+export function parseRechargeTime(r: any): number {
+  if (!r) return 0;
+  if (r.timestamp?.seconds) return r.timestamp.seconds * 1000;
+  if (typeof r.timestamp === 'number') return r.timestamp;
+  if (r.createdAt) {
+    const t = new Date(r.createdAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (r.id && r.id.startsWith('req_')) {
+    const parts = r.id.split('_');
+    const num = Number(parts[1] === 'instant' ? parts[2] : parts[1]);
+    if (!isNaN(num) && num > 1000000000000) return num;
+  }
+  return 0;
+}
 
 /**
  * Check if the given user currently has an unapproved/pending recharge request.
@@ -48,7 +66,7 @@ export function hasUserPendingRechargeRequest(user?: { id?: string; phone?: stri
       const reqEmail = (req.userEmail || '').trim().toLowerCase();
       return (
         (userId && req.userId === userId) ||
-        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanPhone && cleanPhone !== '99110000' && reqPhone === cleanPhone) ||
         (cleanEmail && reqEmail === cleanEmail)
       );
     });
@@ -78,7 +96,7 @@ export function clearUserPendingRechargeRequests(user?: { id?: string; phone?: s
       const reqEmail = (req.userEmail || '').trim().toLowerCase();
       if (
         (userId && req.userId === userId) ||
-        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanPhone && cleanPhone !== '99110000' && reqPhone === cleanPhone) ||
         (cleanEmail && reqEmail === cleanEmail)
       ) {
         if (req.status === 'pending') {
@@ -91,6 +109,7 @@ export function clearUserPendingRechargeRequests(user?: { id?: string; phone?: s
     });
     if (changed) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('ioio_recharges_updated'));
     }
   } catch (e) {}
 }
@@ -115,7 +134,7 @@ export function getUserLatestRechargeRequest(user?: { id?: string; phone?: strin
       const reqEmail = (req.userEmail || '').trim().toLowerCase();
       return (
         (userId && req.userId === userId) ||
-        (cleanPhone && reqPhone === cleanPhone) ||
+        (cleanPhone && cleanPhone !== '99110000' && reqPhone === cleanPhone) ||
         (cleanEmail && reqEmail === cleanEmail)
       );
     });
@@ -125,6 +144,34 @@ export function getUserLatestRechargeRequest(user?: { id?: string; phone?: strin
   }
 }
 
+/**
+ * One-time fetch of all recharge requests from Firestore
+ */
+export async function fetchRechargesFromFirestore(): Promise<RechargeRequest[]> {
+  try {
+    const colRef = collection(db, 'recharge_requests');
+    const snap = await getDocs(colRef);
+    const list: RechargeRequest[] = [];
+    snap.forEach((d) => {
+      const data = d.data() as RechargeRequest;
+      if (data) {
+        list.push({
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt || (data.timestamp?.seconds ? new Date(data.timestamp.seconds * 1000).toISOString() : new Date().toISOString()),
+        });
+      }
+    });
+    return list;
+  } catch (err) {
+    console.warn('fetchRechargesFromFirestore error:', err);
+    return [];
+  }
+}
+
+/**
+ * Submit a points/recharge request to Admin Tamir
+ */
 export async function submitRechargeRequest(data: {
   userId: string;
   userName: string;
@@ -134,7 +181,7 @@ export async function submitRechargeRequest(data: {
   planLabel: string;
   durationDays: number;
   amount: number;
-  method: 'monpay' | 'qpay' | 'wallet' | 'bank';
+  method: 'monpay' | 'qpay' | 'wallet' | 'bank' | 'code' | 'instant';
   note?: string;
 }): Promise<{ success: boolean; id: string; message: string }> {
   try {
@@ -156,17 +203,18 @@ export async function submitRechargeRequest(data: {
       createdAt: new Date().toISOString(),
     };
 
-    // Save locally
+    // 1. Save locally
     try {
       const existingStr = localStorage.getItem(STORAGE_KEY);
       const list: RechargeRequest[] = existingStr ? JSON.parse(existingStr) : [];
       list.unshift(newReq);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('ioio_recharges_updated', { detail: list }));
     } catch (e) {
       console.error('Local storage save error:', e);
     }
 
-    // Save to Server REST API for 100% reliable cross-device delivery
+    // 2. Save to Server REST API for 100% reliable cross-device delivery
     try {
       fetch('/api/recharges/submit', {
         method: 'POST',
@@ -175,15 +223,17 @@ export async function submitRechargeRequest(data: {
       }).catch((e) => console.warn('Server recharge sync error (non-fatal):', e));
     } catch {}
 
-    // Save to Firestore with quota protection
-    await safeFirestoreWrite(() =>
-      setDoc(doc(db, 'recharge_requests', id), {
+    // 3. Save to Firestore
+    try {
+      await setDoc(doc(db, 'recharge_requests', id), {
         ...newReq,
         timestamp: serverTimestamp(),
-      })
-    );
+      });
+    } catch (err) {
+      console.warn('Firestore setDoc recharge request warning:', err);
+    }
 
-    // Notify Admin (Explicitly mentions Anime only permission)
+    // 4. Notify Admin (Explicitly mentions Anime only permission)
     sendAdminNotification({
       type: 'TOP_UP_REQUEST',
       title: '🎌 Зөвхөн Анимэ эрх авах шинэ цэнэглэлтийн хүсэлт',
@@ -265,6 +315,14 @@ export async function executeDirectInstantTopUp(data: {
       });
     } catch {}
 
+    try {
+      fetch('/api/recharges/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReq),
+      }).catch(() => {});
+    } catch {}
+
     return {
       success: true,
       newBalance: topUpRes.newBalance,
@@ -282,6 +340,9 @@ export async function executeDirectInstantTopUp(data: {
   }
 }
 
+/**
+ * Real-time subscription to recharge requests across Firestore, Server API, and LocalStorage
+ */
 export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]) => void) {
   let isUnsubscribed = false;
   let latestFirestoreList: RechargeRequest[] = [];
@@ -315,7 +376,7 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
     });
 
     const combined = Array.from(map.values());
-    combined.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    combined.sort((a, b) => parseRechargeTime(b) - parseRechargeTime(a));
     callback(combined);
   };
 
@@ -344,55 +405,42 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
   };
   window.addEventListener('ioio_recharges_updated', handleCustomUpdated);
 
-  if (isFirestoreQuotaExceeded()) {
-    return () => {
-      isUnsubscribed = true;
-      clearInterval(serverInterval);
-      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
-    };
-  }
-
+  // Firestore real-time listener
+  let unsubFirestore = () => {};
   try {
     const colRef = collection(db, 'recharge_requests');
-    const unsub = onSnapshot(
+    unsubFirestore = onSnapshot(
       colRef,
       (snapshot) => {
         const list: RechargeRequest[] = [];
         snapshot.forEach((d) => {
           const item = d.data() as RechargeRequest;
           if (item && item.id) {
-            list.push(item);
+            list.push({
+              ...item,
+              id: d.id,
+              createdAt: item.createdAt || (item.timestamp?.seconds ? new Date(item.timestamp.seconds * 1000).toISOString() : new Date().toISOString()),
+            });
           }
         });
         latestFirestoreList = list;
         emitMerged();
       },
       (err) => {
-        if (isQuotaError(err)) {
-          markFirestoreQuotaExceeded();
-        }
-        console.warn('subscribeRechargeRequests firestore fallback active:', err);
+        console.warn('subscribeRechargeRequests onSnapshot notice:', err?.message || err);
         emitMerged();
       }
     );
-
-    return () => {
-      isUnsubscribed = true;
-      clearInterval(serverInterval);
-      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
-      unsub();
-    };
   } catch (e) {
-    if (isQuotaError(e)) {
-      markFirestoreQuotaExceeded();
-    }
     console.warn('subscribeRechargeRequests setup fallback:', e);
-    return () => {
-      isUnsubscribed = true;
-      clearInterval(serverInterval);
-      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
-    };
   }
+
+  return () => {
+    isUnsubscribed = true;
+    clearInterval(serverInterval);
+    window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
+    unsubFirestore();
+  };
 }
 
 export async function updateRechargeRequestStatus(
@@ -427,9 +475,9 @@ export async function updateRechargeRequestStatus(
       }
     } catch (e) {}
 
-    // 3. Update Firestore with quota protection
-    await safeFirestoreWrite(() =>
-      setDoc(
+    // 3. Update Firestore
+    try {
+      await setDoc(
         doc(db, 'recharge_requests', requestId),
         {
           status,
@@ -437,8 +485,10 @@ export async function updateRechargeRequestStatus(
           processedBy: adminName,
         },
         { merge: true }
-      )
-    );
+      );
+    } catch (err) {
+      console.warn('Firestore recharge update error:', err);
+    }
 
     try {
       window.dispatchEvent(new CustomEvent('ioio_recharges_updated'));

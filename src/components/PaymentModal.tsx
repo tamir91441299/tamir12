@@ -196,6 +196,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
   const [userNoteInput, setUserNoteInput] = useState<string>('');
 
+  useEffect(() => {
+    if (currentUser?.phone && !userPhoneInput) {
+      setUserPhoneInput(currentUser.phone);
+    }
+  }, [currentUser?.phone]);
+
   // Real-time listener for current user's recharge request approval by Admin Tamir
   const processedApprovalIdsRef = React.useRef<Set<string>>(new Set());
 

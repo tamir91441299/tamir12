@@ -1179,13 +1179,17 @@ export async function saveUserToFirestore(
       }).catch((e) => console.warn('Server user sync error (non-fatal):', e));
     } catch {}
 
-    // 5. Write primary doc to Firestore with quota protection
-    await safeFirestoreWrite(() => setDoc(docRef, userPayload, { merge: true }));
+    // 5. Write primary doc to Firestore reliably
+    try {
+      await setDoc(docRef, userPayload, { merge: true });
+    } catch (err) {
+      console.warn('Firestore setDoc user error:', err);
+    }
 
     // 6. If phone exists, also alias under user_phone_{cleanPhone} so phone-based lookups are instantaneous
-    if (!isFirestoreQuotaExceeded() && cleanPhone && cleanPhone !== '99110000' && rawId !== `user_phone_${cleanPhone}`) {
+    if (cleanPhone && cleanPhone !== '99110000' && rawId !== `user_phone_${cleanPhone}`) {
       try {
-        await safeFirestoreWrite(() => setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userPayload, { merge: true }));
+        await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userPayload, { merge: true });
       } catch (e) {}
     }
   } catch (err) {
@@ -1295,15 +1299,6 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // Initial emit from local
     emitMerged([], []);
 
-    if (isFirestoreQuotaExceeded()) {
-      return () => {
-        isUnsubscribed = true;
-        clearInterval(serverInterval);
-        usersSyncChannel?.removeEventListener('message', handleBroadcast);
-        window.removeEventListener('ioio_users_updated', handleWindowUsersUpdated);
-      };
-    }
-
     const usersCol = collection(db, 'users');
     const unsubFirestore = onSnapshot(
       usersCol,
@@ -1323,12 +1318,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
         emitMerged(latestFirestoreList, latestServerList);
       },
       (err) => {
-        if (isQuotaError(err)) {
-          markFirestoreQuotaExceeded();
-          console.warn('Firestore daily read quota reached for users, using local/server users.');
-        } else {
-          console.warn('Firestore users subscription warning:', err);
-        }
+        console.warn('Firestore users subscription notice:', err?.message || err);
         emitMerged([], latestServerList);
       }
     );
@@ -1341,9 +1331,6 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       unsubFirestore();
     };
   } catch (err) {
-    if (isQuotaError(err)) {
-      markFirestoreQuotaExceeded();
-    }
     console.warn('Firestore users subscription setup fallback:', err);
     callback([]);
     return () => {};
@@ -1369,10 +1356,6 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
     } catch {}
     return sortUsersByNewest(deduplicateUserList(rawList));
   };
-
-  if (isFirestoreQuotaExceeded()) {
-    return getLocalUsers();
-  }
 
   try {
     const usersCol = collection(db, 'users');
@@ -1404,9 +1387,6 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
 
     return sortUsersByNewest(deduplicateUserList(rawList));
   } catch (err) {
-    if (isQuotaError(err)) {
-      markFirestoreQuotaExceeded();
-    }
     console.warn('Firestore users fetch warning, using local list:', err);
     return getLocalUsers();
   }

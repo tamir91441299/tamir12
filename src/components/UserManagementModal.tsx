@@ -79,6 +79,8 @@ import {
 import {
   subscribeRechargeRequests,
   updateRechargeRequestStatus,
+  fetchRechargesFromFirestore,
+  parseRechargeTime,
   RechargeRequest
 } from '../lib/rechargeService';
 
@@ -391,6 +393,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleManualSyncUsers = async () => {
     setIsSyncing(true);
     try {
+      // 1. Fetch Users from Server REST API
       let serverUsers: UserDetail[] = [];
       try {
         const res = await fetch('/api/users');
@@ -402,36 +405,44 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         }
       } catch {}
 
+      // 2. Fetch Users from Firestore
       const firestoreUsers = await fetchUsersFromFirestore();
-      const combined = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
-      setUsers(combined);
-      localStorage.setItem('ioio_registered_users_list', JSON.stringify(combined));
+      const combinedUsers = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
+      setUsers(combinedUsers);
+      localStorage.setItem('ioio_registered_users_list', JSON.stringify(combinedUsers));
 
-      // Also sync recharges from Server API
+      // 3. Fetch Recharges from Server REST API
+      let serverRecharges: RechargeRequest[] = [];
       try {
         const recRes = await fetch('/api/recharges');
         if (recRes.ok) {
           const recData = await recRes.json();
           if (recData.success && Array.isArray(recData.requests)) {
-            setRechargeRequests(recData.requests);
-            localStorage.setItem('ioio_recharge_requests', JSON.stringify(recData.requests));
+            serverRecharges = recData.requests;
           }
         }
       } catch {}
 
+      // 4. Fetch Recharges from Firestore
+      const firestoreRecharges = await fetchRechargesFromFirestore();
+      const recMap = new Map<string, RechargeRequest>();
+      serverRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
+      firestoreRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
+      const combinedRecharges = Array.from(recMap.values());
+      combinedRecharges.sort((a, b) => parseRechargeTime(b) - parseRechargeTime(a));
+      setRechargeRequests(combinedRecharges);
+      localStorage.setItem('ioio_recharge_requests', JSON.stringify(combinedRecharges));
+
       setLastSyncTime(new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
-      console.error('Manual sync users error:', e);
+      console.error('Manual sync users and recharges error:', e);
     } finally {
       setTimeout(() => setIsSyncing(false), 400);
     }
   };
 
   useEffect(() => {
-    // Automatically purge any bot/mock users when admin panel opens and fetch live users
-    cleanupAllBotUsers().then(() => {
-      handleManualSyncUsers();
-    });
+    handleManualSyncUsers();
 
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(sortUsersByNewest(deduplicateUserList(list.filter((u) => !isBotOrMockUser(u)))));
@@ -877,10 +888,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const q = search.trim().toLowerCase();
     const matchesSearch =
       !q ||
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.phone.includes(q) ||
-      (u.id && u.id.toLowerCase().includes(q));
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.phone || '').includes(q) ||
+      (u.id || '').toLowerCase().includes(q);
 
     let matchesPkg = true;
     if (filterPackage === 'new') {
