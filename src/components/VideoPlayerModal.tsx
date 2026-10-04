@@ -1512,17 +1512,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <Zap className="w-3 h-3 text-amber-400" />
                     <span>Шууд HD</span>
                   </button>
+                  {rawVideoSrc.includes('pcloud') && (
+                    <a
+                      href={rawVideoSrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-0.5 bg-blue-600/40 hover:bg-blue-600/60 text-blue-200 hover:text-white font-bold text-[10px] rounded-lg border border-blue-500/40 transition-all flex items-center gap-1 cursor-pointer ml-1"
+                      title="pCloud эх линкээр шинэ цонхонд үзэх"
+                    >
+                      <ExternalLink className="w-3 h-3 text-blue-300" />
+                      <span>pCloud ↗</span>
+                    </a>
+                  )}
                 </div>
 
                 {/* 🛡️ Drive Popout Blocker: Invisible 56x56px shield covering Drive's iframe popout button in the corner without any UI overlap */}
-                <div 
-                  className="absolute top-0 right-0 w-14 h-14 z-20 pointer-events-auto bg-transparent select-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }}
-                  title=""
-                />
+                {isGoogleDrive && (
+                  <div 
+                    className="absolute top-0 right-0 w-14 h-14 z-20 pointer-events-auto bg-transparent select-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    title=""
+                  />
+                )}
               </div>
             </div>
           ) : (

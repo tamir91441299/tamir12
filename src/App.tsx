@@ -22,7 +22,7 @@ import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
 import { ContinueWatching, WatchHistoryItem } from './components/ContinueWatching';
-import { SAMPLE_MOVIES, DEATH_NOTE } from './data/movies';
+import { SAMPLE_MOVIES, DEATH_NOTE, SPY_X_FAMILY } from './data/movies';
 import { Movie, TabType, MovieSubcategory } from './types';
 import { getDirectPlaybackStream } from './lib/videoUtils';
 import {
@@ -78,6 +78,20 @@ export default function App() {
       if (savedEps) {
         const epMap = JSON.parse(savedEps);
         base = base.map((m) => {
+          if (m.id === SPY_X_FAMILY.id) {
+            const customEps = epMap[m.id];
+            if (Array.isArray(customEps)) {
+              const updatedEps = (SPY_X_FAMILY.episodes || []).map((codeEp) => {
+                if (codeEp.episodeNumber === 5) {
+                  return { ...codeEp, videoUrl: 'https://u.pcloud.link/publink/show?code=XZqPVQJZuAXzhOs71zp5AXew8WtKM0N6kJe7' };
+                }
+                const foundCustom = customEps.find((ce: any) => ce.episodeNumber === codeEp.episodeNumber);
+                return foundCustom && foundCustom.videoUrl ? foundCustom : codeEp;
+              });
+              return { ...SPY_X_FAMILY, episodes: updatedEps };
+            }
+            return SPY_X_FAMILY;
+          }
           if (epMap[m.id]) {
             return { ...m, episodes: epMap[m.id] };
           }

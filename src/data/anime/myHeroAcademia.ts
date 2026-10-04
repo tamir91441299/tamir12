@@ -18,10 +18,10 @@ export function formatMyHeroAcademiaDriveLink(driveIdOrUrl: string): string {
  * 🦸‍♂️ МИНИЙ БААТРЫН АКАДЕМИ (MY HERO ACADEMIA) АНГИ БҮРИЙН ЛИНК ТОХИРУУЛАХ ХЭСЭГ
  */
 export const MY_HERO_ACADEMIA_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://u.pcloud.link/publink/show?code=XZaMHA01JzNq7T0w1xK9mP8q1Xmha',
-  2: 'https://u.pcloud.link/publink/show?code=XZbMHA02JzNq8T0w2xK0mP8q2Ymha',
-  3: 'https://u.pcloud.link/publink/show?code=XZcMHA03JzNq9T0w3xK1mP8q3Zmha',
-  4: 'https://u.pcloud.link/publink/show?code=XZdMHA04JzNq0T0w4xK2mP8q4Amha',
+  1:'https://u.pcloud.link/publink/show?code=XZGTJQJZesY3rVgPfWkQRtacVxNWBVp6ntP7',
+  2: 'https://u.pcloud.link/publink/show?code=XZrTJQJZDfhExNDXLd7ue4LpCjIPykyUv4eV',
+  3: 'https://u.pcloud.link/publink/show?code=XZcTJQJZlvTCvWnQRthb3FpEUUe3YjJIKiD7',
+  4: 'https://u.pcloud.link/publink/show?code=XZXgJQJZNLuWoK4CCdFPnxEAIAVfWFqWruzy',
   5: 'https://u.pcloud.link/publink/show?code=XZeMHA05JzNq1T0w5xK3mP8q5Bmha',
   6: 'https://u.pcloud.link/publink/show?code=XZfMHA06JzNq2T0w6xK4mP8q6Cmha',
   7: 'https://u.pcloud.link/publink/show?code=XZgMHA07JzNq3T0w7xK5mP8q7Dmha',

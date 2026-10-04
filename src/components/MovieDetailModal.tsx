@@ -193,6 +193,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
   const isHunterXHunter = movie.id === 'm_hunter_x_hunter' || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр');
+  const isSpyXFamily = movie.id === 'm_spy_x_family' || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл');
 
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
@@ -271,7 +272,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
     // Parse lines or split by whitespace/commas
     const lines = raw.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
-    const targetCount = Math.max(1, Math.min(148, Number(batchTotalEpCount) || (isHunterXHunter ? 148 : isDeathNote ? 37 : 13)));
+    const targetCount = Math.max(1, Math.min(148, Number(batchTotalEpCount) || (isHunterXHunter ? 148 : isSpyXFamily ? 25 : isDeathNote ? 37 : 13)));
 
     const defaultDeathNoteTitles: Record<number, string> = {
       1: '1-р анги - Сэргэлт (Rebirth)',
@@ -377,6 +378,34 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       14: '14-р анги (26) - Харанхуй дахь гэрэл (Light in the Dark - Төгсгөл)'
     };
 
+    const defaultSpyXFamilyTitles: Record<number, string> = {
+      1: '1-р анги - Стрикс ажиллагаа (Operation Strix)',
+      2: '2-р анги - Эхнэр сонгох даалгавар (Secure a Wife)',
+      3: '3-р анги - Сургуулийн ярилцлагад бэлтгэсэн нь (Prepare for the Interview)',
+      4: '4-р анги - Нэр хүндтэй Эден академийн шалгалт (The Prestigious School\'s Interview)',
+      5: '5-р анги - Тэнцэх үү, эсвэл унах уу? (Will They Pass or Fail)',
+      6: '6-р анги - Нөхөрлөлийн төлөвлөгөө (The Friendship Scheme)',
+      7: '7-р анги - Зорилтот этгээдийн хоёр дахь хүү (The Target\'s Second Son)',
+      8: '8-р анги - Нууц цагдаагийн сөрөг ажиллагаа (The Counter-Secret Police Cover Operation)',
+      9: '9-р анги - Жинхэнэ хосууд гэдгээ харуул (Show Off How in Love You Are)',
+      10: '10-р анги - Доджболлын агуу стратеги (The Great Dodgeball Plan)',
+      11: '11-р анги - Стелла од хүртсэн нь (Stella)',
+      12: '12-р анги - Оцон шувууны хүрээлэнгийн нууц (Penguin Park)',
+      13: '13-р анги - Алим төсөл (Project Apple)',
+      14: '14-р анги - Цаг хугацаат бөмбөгийг аюулгүй болго (Disarm the Time Bomb)',
+      15: '15-р анги - Гэр бүлийн шинэ гишүүн: Бонд (A New Family Member)',
+      16: '16-р анги - Йорын гал тогоо / Мэдээлэгчийн дурлал (Yor\'s Kitchen)',
+      17: '17-р анги - Гриффин ажиллагаа / Ган хатагтай / Омлет (Carry Out the Griffin Plan)',
+      18: '18-р анги - Хувийн багш авга ах Юри / Дэйбрейк тагнуулч (Uncle the Private Tutor)',
+      19: '19-р анги - Десмондын өшөө авалт / Салхи мэт ээж (A Revenge Plot Against Desmond)',
+      20: '20-р анги - Нэгдсэн эмнэлгийн мөрдлөг / Нууц кодын учир (Investigate the Hospital)',
+      21: '21-р анги - Найтфол тагнуулч / Анхны атаархал (Nightfall / First Fit of Jealousy)',
+      22: '22-р анги - Газар доорх теннисний тэмцээн (The Underground Tennis Tournament)',
+      23: '23-р анги - Гуйвшгүй шийдвэр (The Unwavering Path)',
+      24: '24-р анги - Эхнэр ба эхийн үүрэг / Дэлгүүр хэссэн нь (The Role of a Mother and Wife)',
+      25: '25-р анги - Анхны холбоо тогтоолт (First Contact - 1-р бүлгийн төгсгөл)'
+    };
+
     const newEpList: Episode[] = [];
 
     for (let i = 1; i <= targetCount; i++) {
@@ -385,6 +414,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       const existing = episodesList?.find(ep => ep.episodeNumber === i);
       const title = existing?.title || (
         isHunterXHunter ? `${i}-р анги` :
+        isSpyXFamily ? defaultSpyXFamilyTitles[i] || `${i}-р анги` :
         isDeathNote ? defaultDeathNoteTitles[i] || `${i}-р анги` :
         isMyHeroAcademia ? defaultMyHeroTitles[i] || `${i}-р анги` :
         isKorraS2 ? defaultKorraS2Titles[i] || `${i}-р анги` :
