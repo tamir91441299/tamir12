@@ -166,6 +166,15 @@ export async function submitRechargeRequest(data: {
       console.error('Local storage save error:', e);
     }
 
+    // Save to Server REST API for 100% reliable cross-device delivery
+    try {
+      fetch('/api/recharges/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReq),
+      }).catch((e) => console.warn('Server recharge sync error (non-fatal):', e));
+    } catch {}
+
     // Save to Firestore with quota protection
     await safeFirestoreWrite(() =>
       setDoc(doc(db, 'recharge_requests', id), {
@@ -274,25 +283,78 @@ export async function executeDirectInstantTopUp(data: {
 }
 
 export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]) => void) {
-  const emitLocalFallback = () => {
+  let isUnsubscribed = false;
+  let latestFirestoreList: RechargeRequest[] = [];
+  let latestServerList: RechargeRequest[] = [];
+
+  const emitMerged = () => {
+    if (isUnsubscribed) return;
+    const map = new Map<string, RechargeRequest>();
+
+    // 1. LocalStorage
     try {
       const localStr = localStorage.getItem(STORAGE_KEY);
-      const localList: RechargeRequest[] = localStr ? JSON.parse(localStr) : [];
-      callback(Array.isArray(localList) ? localList : []);
-    } catch {
-      callback([]);
-    }
+      if (localStr) {
+        const localList: RechargeRequest[] = JSON.parse(localStr);
+        if (Array.isArray(localList)) {
+          localList.forEach((r) => {
+            if (r && r.id) map.set(r.id, r);
+          });
+        }
+      }
+    } catch {}
+
+    // 2. Server API (High authority cross-device)
+    latestServerList.forEach((r) => {
+      if (r && r.id) map.set(r.id, r);
+    });
+
+    // 3. Firestore (Real-time authority)
+    latestFirestoreList.forEach((r) => {
+      if (r && r.id) map.set(r.id, r);
+    });
+
+    const combined = Array.from(map.values());
+    combined.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    callback(combined);
   };
 
-  emitLocalFallback();
+  emitMerged();
+
+  // Poll server /api/recharges every 3 seconds to guarantee reception across all devices
+  const fetchServerRequests = async () => {
+    try {
+      const res = await fetch('/api/recharges');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.requests)) {
+          latestServerList = data.requests;
+          emitMerged();
+        }
+      }
+    } catch {}
+  };
+
+  fetchServerRequests();
+  const serverInterval = setInterval(fetchServerRequests, 3500);
+
+  const handleCustomUpdated = () => {
+    fetchServerRequests();
+    emitMerged();
+  };
+  window.addEventListener('ioio_recharges_updated', handleCustomUpdated);
 
   if (isFirestoreQuotaExceeded()) {
-    return () => {};
+    return () => {
+      isUnsubscribed = true;
+      clearInterval(serverInterval);
+      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
+    };
   }
 
   try {
     const colRef = collection(db, 'recharge_requests');
-    return onSnapshot(
+    const unsub = onSnapshot(
       colRef,
       (snapshot) => {
         const list: RechargeRequest[] = [];
@@ -302,40 +364,34 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
             list.push(item);
           }
         });
-
-        // Merge with local storage if offline
-        try {
-          const localStr = localStorage.getItem(STORAGE_KEY);
-          if (localStr) {
-            const localList: RechargeRequest[] = JSON.parse(localStr);
-            if (Array.isArray(localList)) {
-              localList.forEach((l) => {
-                if (!list.some((item) => item.id === l.id)) {
-                  list.push(l);
-                }
-              });
-            }
-          }
-        } catch (e) {}
-
-        // Sort latest first
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(list);
+        latestFirestoreList = list;
+        emitMerged();
       },
       (err) => {
         if (isQuotaError(err)) {
           markFirestoreQuotaExceeded();
         }
-        console.warn('subscribeRechargeRequests fallback active:', err);
-        emitLocalFallback();
+        console.warn('subscribeRechargeRequests firestore fallback active:', err);
+        emitMerged();
       }
     );
+
+    return () => {
+      isUnsubscribed = true;
+      clearInterval(serverInterval);
+      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
+      unsub();
+    };
   } catch (e) {
     if (isQuotaError(e)) {
       markFirestoreQuotaExceeded();
     }
     console.warn('subscribeRechargeRequests setup fallback:', e);
-    return () => {};
+    return () => {
+      isUnsubscribed = true;
+      clearInterval(serverInterval);
+      window.removeEventListener('ioio_recharges_updated', handleCustomUpdated);
+    };
   }
 }
 
@@ -345,7 +401,18 @@ export async function updateRechargeRequestStatus(
   adminName: string = 'Админ Тамир'
 ): Promise<void> {
   try {
-    // Update local storage
+    // 1. Update Server REST API
+    try {
+      await fetch(status === 'approved' ? '/api/recharges/approve' : '/api/recharges/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: requestId, processedBy: adminName, reason: adminName }),
+      });
+    } catch (e) {
+      console.warn('Server recharge status update error:', e);
+    }
+
+    // 2. Update local storage
     try {
       const localStr = localStorage.getItem(STORAGE_KEY);
       if (localStr) {
@@ -360,7 +427,7 @@ export async function updateRechargeRequestStatus(
       }
     } catch (e) {}
 
-    // Update Firestore with quota protection
+    // 3. Update Firestore with quota protection
     await safeFirestoreWrite(() =>
       setDoc(
         doc(db, 'recharge_requests', requestId),

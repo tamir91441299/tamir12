@@ -406,6 +406,19 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       const combined = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
       setUsers(combined);
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(combined));
+
+      // Also sync recharges from Server API
+      try {
+        const recRes = await fetch('/api/recharges');
+        if (recRes.ok) {
+          const recData = await recRes.json();
+          if (recData.success && Array.isArray(recData.requests)) {
+            setRechargeRequests(recData.requests);
+            localStorage.setItem('ioio_recharge_requests', JSON.stringify(recData.requests));
+          }
+        }
+      } catch {}
+
       setLastSyncTime(new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
       console.error('Manual sync users error:', e);
@@ -960,6 +973,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleManualSyncUsers}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30"
+              title="Хэрэглэгчид болон цэнэглэлтийн хүсэлтүүдийг серверээс шууд татаж шинэчлэх"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isSyncing ? 'Татаж байна...' : 'Шинэчлэх'}</span>
+            </button>
+
             <button
               onClick={() => setShowAddUserModal(true)}
               className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-md"
@@ -2450,6 +2474,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleManualSyncUsers}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer border border-amber-500/30 shrink-0"
+                  title="Хүсэлтүүдийг шууд шинэчлэн татах"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>Шинэчлэх</span>
+                </button>
+
                 <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
                 <span className="text-xs text-zinc-400 shrink-0">Төлөв:</span>
                 <select

@@ -197,27 +197,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [userNoteInput, setUserNoteInput] = useState<string>('');
 
   // Real-time listener for current user's recharge request approval by Admin Tamir
+  const processedApprovalIdsRef = React.useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    if (!currentUser && !submittedRequestId) return;
-    const cleanPhone = (userPhoneInput || currentUser?.phone || '').trim().replace(/\s+/g, '');
-    const cleanEmail = (currentUser?.email || '').trim().toLowerCase();
-    const cId = (currentUser?.id || '').trim();
+    if (!currentUser || !submittedRequestId) return;
 
     const unsubscribe = subscribeRechargeRequests((requests) => {
-      if (topUpRequestSent) {
-        const approved = requests.find((r) => {
-          if (r.status !== 'approved') return false;
-          if (submittedRequestId && r.id === submittedRequestId) return true;
-          const rPhone = (r.userPhone || '').trim().replace(/\s+/g, '');
-          const rEmail = (r.userEmail || '').trim().toLowerCase();
-          return (
-            (cId && r.userId === cId) ||
-            (cleanPhone && cleanPhone !== '99110000' && rPhone === cleanPhone) ||
-            (cleanEmail && rEmail === cleanEmail)
-          );
-        });
+      if (topUpRequestSent && submittedRequestId) {
+        // STRICT CHECK: Only match the exact request that was submitted in this session!
+        const approved = requests.find((r) => r.id === submittedRequestId && r.status === 'approved');
 
-        if (approved) {
+        if (approved && !processedApprovalIdsRef.current.has(approved.id)) {
+          processedApprovalIdsRef.current.add(approved.id);
           setTopUpRequestSent(false);
           setIsSuccess(true);
           setSuccessMsgText(
@@ -230,7 +221,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     });
 
     return () => unsubscribe();
-  }, [currentUser, topUpRequestSent, submittedRequestId, userPhoneInput]);
+  }, [currentUser, topUpRequestSent, submittedRequestId]);
 
   // Activation Code States
   const [inputActivationCode, setInputActivationCode] = useState('');
@@ -376,8 +367,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     // Check if points are sufficient
-    if (userBalance < activePrice) {
-      const diff = activePrice - userBalance;
+    const effectiveBalance = Math.min(
+      typeof currentUser?.walletBalance === 'number' ? currentUser.walletBalance : userBalance,
+      userBalance
+    );
+
+    if (effectiveBalance < activePrice || userBalance < activePrice || activePrice <= 0) {
+      const diff = activePrice - Math.max(0, effectiveBalance);
       alert(
         `⛔ ТАНЫ ОНОО ХҮРЭЛЦЭХГҮЙ БАЙНА!\n\nТанд одоо ${userBalance.toLocaleString()}₮ оноо байна.\nСонгосон багц (${currentPlan.label}): ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\nДутуу оноо: ${diff.toLocaleString()}₮.\n\nОноогүй хэрэглэгч анимэ эрх авах боломжгүй тул эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж шилжүүлэг хийнэ үү.`
       );
@@ -946,7 +942,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
 
                 {/* Point balance check indicator */}
-                {userBalance >= activePrice ? (
+                {userBalance >= activePrice && (currentUser?.walletBalance ?? 0) >= activePrice ? (
                   <div className="p-2.5 bg-emerald-950/70 border border-emerald-700/80 rounded-lg text-emerald-300 text-xs flex items-center justify-between">
                     <span className="font-bold flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -976,7 +972,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
               {/* Action Buttons for Section 2 */}
               <div className="space-y-2 pt-1">
-                {userBalance >= activePrice ? (
+                {userBalance >= activePrice && (currentUser?.walletBalance ?? 0) >= activePrice && activePrice > 0 ? (
                   <button
                     id="confirm-purchase-permission-btn"
                     type="button"

@@ -932,14 +932,20 @@ export default function App() {
       (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
 
     // SECURITY GUARD: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!
+    if (!currentUser) {
+      alert('⛔ Та эхлээд системд нэвтэрч эрхээ авна уу.');
+      return;
+    }
+
     if (!isCodeRedemption && !isAuthorizedAdmin) {
+      const currentAccBal = typeof currentUser.walletBalance === 'number' ? currentUser.walletBalance : userBalance;
       if (deductedAmount <= 0) {
         alert('⛔ Алдаа: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд дансаа оноогоор цэнэглэнэ үү.');
         return;
       }
-      if (userBalance < deductedAmount) {
+      if (userBalance < deductedAmount || currentAccBal < deductedAmount) {
         alert(
-          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${userBalance.toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хүн анимэ үзэх эрх авах боломжгүй!`
+          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${Math.min(userBalance, currentAccBal).toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хүн анимэ үзэх эрх авах боломжгүй!`
         );
         return;
       }

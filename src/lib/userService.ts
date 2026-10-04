@@ -594,6 +594,15 @@ export async function approveAndCreditRechargeRequest(
       )
     );
 
+    // 1.5. Mark request as approved on Server REST API
+    try {
+      fetch('/api/recharges/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: req.id, processedBy: adminName }),
+      }).catch(() => {});
+    } catch {}
+
     // 2. Mark request as approved in LocalStorage
     try {
       const localReqsStr = localStorage.getItem('ioio_recharge_requests');
