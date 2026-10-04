@@ -1,7 +1,7 @@
 import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { sendAdminNotification, topUpUserBalanceInFirestore } from './userService';
-import { safeFirestoreWrite } from './quotaService';
+import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
 
 export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
@@ -274,6 +274,22 @@ export async function executeDirectInstantTopUp(data: {
 }
 
 export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]) => void) {
+  const emitLocalFallback = () => {
+    try {
+      const localStr = localStorage.getItem(STORAGE_KEY);
+      const localList: RechargeRequest[] = localStr ? JSON.parse(localStr) : [];
+      callback(Array.isArray(localList) ? localList : []);
+    } catch {
+      callback([]);
+    }
+  };
+
+  emitLocalFallback();
+
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
+
   try {
     const colRef = collection(db, 'recharge_requests');
     return onSnapshot(
@@ -307,18 +323,18 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
         callback(list);
       },
       (err) => {
-        console.warn('subscribeRechargeRequests error, using local fallback:', err);
-        try {
-          const localStr = localStorage.getItem(STORAGE_KEY);
-          const localList: RechargeRequest[] = localStr ? JSON.parse(localStr) : [];
-          callback(localList);
-        } catch (e) {
-          callback([]);
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
         }
+        console.warn('subscribeRechargeRequests fallback active:', err);
+        emitLocalFallback();
       }
     );
   } catch (e) {
-    console.error('subscribeRechargeRequests setup failed:', e);
+    if (isQuotaError(e)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('subscribeRechargeRequests setup fallback:', e);
     return () => {};
   }
 }

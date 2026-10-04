@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
-import { safeFirestoreWrite } from './quotaService';
+import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
 
 const LOCAL_STORAGE_PASSCODE_KEY = 'ioio_window_passcode';
 const SESSION_VERIFIED_KEY = 'ioio_window_pin_verified';
@@ -102,6 +102,13 @@ export async function setProtectedWindowPasscode(newCode: string): Promise<boole
  * Subscribe to real-time passcode updates from Firestore
  */
 export function subscribePasscodeFromFirestore(callback: (code: string) => void) {
+  // Always emit initial local passcode immediately
+  callback(getProtectedWindowPasscode());
+
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
+
   try {
     const docRef = doc(db, 'settings', 'window_security');
     return onSnapshot(
@@ -118,12 +125,19 @@ export function subscribePasscodeFromFirestore(callback: (code: string) => void)
         }
         callback(getProtectedWindowPasscode());
       },
-      () => {
+      (err) => {
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
+        }
+        console.warn('Passcode subscription fallback active:', err);
         callback(getProtectedWindowPasscode());
       }
     );
   } catch (err) {
-    console.error('Error subscribing to passcode:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Passcode subscription setup fallback:', err);
     callback(getProtectedWindowPasscode());
     return () => {};
   }

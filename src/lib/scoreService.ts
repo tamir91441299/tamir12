@@ -9,7 +9,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { safeFirestoreWrite } from './quotaService';
+import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
 
 export interface AnswerHistory {
   questionId: number;
@@ -81,6 +81,18 @@ export async function saveScoreToFirestore(data: {
  * Fetch top scores from Firestore "scores" collection
  */
 export async function fetchTopScores(maxCount = 30): Promise<ScoreRecord[]> {
+  const getLocalScores = (): ScoreRecord[] => {
+    try {
+      const saved = localStorage.getItem('ioio_top_scores');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  };
+
+  if (isFirestoreQuotaExceeded()) {
+    return getLocalScores();
+  }
+
   try {
     const scoresCol = collection(db, 'scores');
     const q = query(scoresCol, orderBy('score', 'desc'), limit(maxCount));
@@ -107,9 +119,16 @@ export async function fetchTopScores(maxCount = 30): Promise<ScoreRecord[]> {
       };
     });
 
+    try {
+      localStorage.setItem('ioio_top_scores', JSON.stringify(records));
+    } catch {}
+
     return records;
   } catch (err) {
-    console.error('Error fetching top scores:', err);
-    return [];
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Error fetching top scores, fallback active:', err);
+    return getLocalScores();
   }
 }

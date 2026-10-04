@@ -43,6 +43,20 @@ export function resetFirestoreQuotaFlag(): void {
   } catch {}
 }
 
+export function isQuotaError(err: any): boolean {
+  if (!err) return false;
+  const msg = typeof err === 'string' ? err : (err?.message || err?.code || '');
+  return (
+    err?.code === 'resource-exhausted' ||
+    msg.includes('Quota limit exceeded') ||
+    msg.includes('resource-exhausted') ||
+    msg.includes('quota metric') ||
+    msg.includes('Free daily read units') ||
+    msg.includes('Free daily write units') ||
+    msg.includes('Quota exceeded')
+  );
+}
+
 export const FIRESTORE_UPGRADE_URL =
   'https://console.firebase.google.com/project/corded-mariner-tmbw7/firestore/databases/ai-studio-kinoclassic-88851b34-bc79-405b-873f-c5f583fe2a3d/data?openUpgradeDialog=true';
 
@@ -61,15 +75,9 @@ export async function safeFirestoreWrite<T>(
   try {
     return await writeFn();
   } catch (err: any) {
-    const isQuota =
-      err?.code === 'resource-exhausted' ||
-      err?.message?.includes('Quota limit exceeded') ||
-      err?.message?.includes('resource-exhausted') ||
-      err?.message?.includes('quota metric');
-
-    if (isQuota) {
+    if (isQuotaError(err)) {
       markFirestoreQuotaExceeded();
-      console.warn('⚠️ Firestore daily write quota limit reached. Safely switched to offline/local storage mode.');
+      console.warn('⚠️ Firestore daily quota limit reached. Safely switched to offline/local storage mode.');
       if (fallbackFn) return await fallbackFn();
       return null;
     }
@@ -77,5 +85,29 @@ export async function safeFirestoreWrite<T>(
     console.warn('Firestore write warning:', err?.message || err);
     if (fallbackFn) return await fallbackFn();
     return null;
+  }
+}
+
+/**
+ * Execute a Firestore read with automatic quota detection and fallback.
+ */
+export async function safeFirestoreRead<T>(
+  readFn: () => Promise<T>,
+  fallbackFn: () => T | Promise<T>
+): Promise<T> {
+  if (isFirestoreQuotaExceeded()) {
+    return await fallbackFn();
+  }
+
+  try {
+    return await readFn();
+  } catch (err: any) {
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+      console.warn('⚠️ Firestore daily read quota limit reached. Switched to offline/local cache mode.');
+      return await fallbackFn();
+    }
+    console.warn('Firestore read warning:', err?.message || err);
+    return await fallbackFn();
   }
 }

@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { UserAccount } from '../components/AuthModal';
-import { safeFirestoreWrite } from './quotaService';
+import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
 
 export interface AnimeWatcher {
   id: string;
@@ -189,6 +189,10 @@ export function subscribeAnimeWatchers(
   const extraLocalViews = parseInt(localStorage.getItem(`ioio_anime_total_views_${movieId}`) || '0', 10);
   callback(initialWatchers, baseViewsCount + extraLocalViews + initialWatchers.length);
 
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
+
   // Real-time Firestore subscription
   try {
     const viewsCol = collection(db, 'anime_views');
@@ -234,10 +238,16 @@ export function subscribeAnimeWatchers(
         callback(finalWatchers, totalCalculated);
       },
       (error) => {
-        console.warn('Anime viewers subscription error (fallback active):', error);
+        if (isQuotaError(error)) {
+          markFirestoreQuotaExceeded();
+        }
+        console.warn('Anime viewers subscription fallback active:', error);
       }
     );
   } catch (err) {
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
     console.warn('Could not establish Firestore subscription for anime views:', err);
     return () => {};
   }

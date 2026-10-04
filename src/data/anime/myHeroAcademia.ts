@@ -22,15 +22,17 @@ export const MY_HERO_ACADEMIA_EPISODE_LINKS: Record<number, string> = {
   2: 'https://u.pcloud.link/publink/show?code=XZrTJQJZDfhExNDXLd7ue4LpCjIPykyUv4eV',
   3: 'https://u.pcloud.link/publink/show?code=XZcTJQJZlvTCvWnQRthb3FpEUUe3YjJIKiD7',
   4: 'https://u.pcloud.link/publink/show?code=XZXgJQJZNLuWoK4CCdFPnxEAIAVfWFqWruzy',
-  5: 'https://u.pcloud.link/publink/show?code=XZeMHA05JzNq1T0w5xK3mP8q5Bmha',
-  6: 'https://u.pcloud.link/publink/show?code=XZfMHA06JzNq2T0w6xK4mP8q6Cmha',
-  7: 'https://u.pcloud.link/publink/show?code=XZgMHA07JzNq3T0w7xK5mP8q7Dmha',
-  8: 'https://u.pcloud.link/publink/show?code=XZhMHA08JzNq4T0w8xK6mP8q8Emha',
-  9: 'https://u.pcloud.link/publink/show?code=XZiMHA09JzNq5T0w9xK7mP8q9Fmha',
-  10: 'https://u.pcloud.link/publink/show?code=XZjMHA10JzNq6T0w0xK8mP8q0Gmha',
-  11: 'https://u.pcloud.link/publink/show?code=XZkMHA11JzNq7T0w1xK9mP8q1Hmha',
-  12: 'https://u.pcloud.link/publink/show?code=XZlMHA12JzNq8T0w2xK0mP8q2Imha',
-  13: 'https://u.pcloud.link/publink/show?code=XZmMHA13JzNq9T0w3xK1mP8q3Jmha',
+  5: 'https://u.pcloud.link/publink/show?code=XZJgJQJZsHAOqBpEp55OCRIPo7AB2ydLSmUV',
+  6: 'https://u.pcloud.link/publink/show?code=XZWgJQJZpDb4tMk69FFaNp6tEw3jQpalvwoX',
+  7: 'https://u.pcloud.link/publink/show?code=XZ1gJQJZkJrAVz5Sj8yOXG2bg9p8TVHhSwey',
+  8: 'https://u.pcloud.link/publink/show?code=XZ9gJQJZmaD7dSinWJYGWKmAY2Yvzy7gTKW7',
+  9: 'https://u.pcloud.link/publink/show?code=XZPgJQJZC5kac23NycXmDXcJP5kNV5xYXKJX',
+  10: 'https://u.pcloud.link/publink/show?code=XZKgJQJZ9MxbuC8ojnmJfN3X2tLTzQ8mnWm7',
+  11: 'https://u.pcloud.link/publink/show?code=XZqgJQJZMq0SA0iVJf4JopVFbuXSLJSiEDaX',
+  12: 'https://u.pcloud.link/publink/show?code=XZEgJQJZonEdHvWuJdzWJjgGKWLjObG8ssmk',
+  13: 'https://u.pcloud.link/publink/show?code=XZOgJQJZuNR6CienggbAbUj0R3rxL5zGQkJy',
+  
+  
 };
 
 export const MY_HERO_ACADEMIA_EPISODES: Episode[] = [

@@ -7,7 +7,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { safeFirestoreWrite } from './quotaService';
+import { safeFirestoreWrite, isFirestoreQuotaExceeded, markFirestoreQuotaExceeded, isQuotaError } from './quotaService';
 
 export interface PromoCode {
   id: string;
@@ -230,6 +230,13 @@ export async function deletePromoCode(codeId: string): Promise<void> {
  * Real-time listener for promo codes in Firestore
  */
 export function subscribePromoCodesFromFirestore(callback: (codes: PromoCode[]) => void) {
+  // Always emit initial local codes first
+  callback(getAllPromoCodes());
+
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
+
   try {
     const colRef = collection(db, 'promo_codes');
     return onSnapshot(
@@ -251,12 +258,21 @@ export function subscribePromoCodesFromFirestore(callback: (codes: PromoCode[]) 
         } catch (e) {}
         callback(list);
       },
-      () => {
+      (err) => {
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
+          console.warn('Promo codes subscription quota reached, using local codes.');
+        } else {
+          console.warn('Promo codes subscription warning, using local codes:', err);
+        }
         callback(getAllPromoCodes());
       }
     );
   } catch (err) {
-    console.error('Failed to subscribe promo codes:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Failed to subscribe promo codes, using local codes:', err);
     callback(getAllPromoCodes());
     return () => {};
   }

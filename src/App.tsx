@@ -43,8 +43,8 @@ import {
   clearLegacyDevicePackages,
   calculateExtendedExpiryDate
 } from './lib/permissionService';
-import { isFirestoreQuotaExceeded, FIRESTORE_UPGRADE_URL } from './lib/quotaService';
-import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords } from 'lucide-react';
+import { isFirestoreQuotaExceeded, resetFirestoreQuotaFlag, FIRESTORE_UPGRADE_URL } from './lib/quotaService';
+import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -1096,35 +1096,49 @@ export default function App() {
 
           {/* Firestore Quota Notice Banner (Informative Mongolian Advice) */}
           {firestoreQuotaExceeded && !dismissQuotaBanner && (
-            <div className="mb-4 rounded-2xl bg-amber-950/50 border border-amber-500/40 p-3 sm:p-4 text-xs text-amber-200 flex items-start justify-between gap-3 shadow-xl backdrop-blur-md animate-in fade-in">
-              <div className="flex items-start gap-2.5">
-                <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="mb-4 rounded-2xl bg-amber-950/60 border border-amber-500/40 p-3.5 sm:p-4 text-xs text-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xl backdrop-blur-md animate-in fade-in">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                  <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                </div>
                 <div>
-                  <p className="font-bold text-amber-300 flex items-center gap-2">
-                    <span>⚡ Өдрийн үнэгүй бичилтийн хязгаар (Daily Write Quota) дүүрсэн</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-mono">Spark Tier</span>
-                  </p>
-                  <p className="text-zinc-300 text-[11px] mt-1 leading-relaxed">
-                    Систем автоматаар өндөр хурдны Local/Server горимд амжилттай шилжсэн. Кино, анимэ үзэх, хэтэвчний оноо, хэрэглэгчийн эрхүүд 100% саадгүй хэвийн ажиллана. Маргааш үнэгүй хязгаар автоматаар сэргэнэ.
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-amber-300 text-sm">⚡ Firebase Firestore өдрийн үнэгүй уншилтын лимит (Daily Read Quota) дүүрсэн</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">Spark Tier (50k reads/day)</span>
+                  </div>
+                  <p className="text-zinc-300 text-[11px] sm:text-xs mt-1 leading-relaxed">
+                    Систем автоматаар өндөр хурдтай <strong>Local Cache & Server</strong> горимд амжилттай шилжсэн. Кино, анимэ үзэх, хэтэвч цэнэглэлт, нууц үг, бүх хэрэглэгчийн эрх 100% саадгүй хэвийн ажиллаж байна. Маргааш өдрийн үнэгүй лимит автоматаар сэргэнэ.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetFirestoreQuotaFlag();
+                    window.location.reload();
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-white/10 hover:bg-white/15 text-zinc-200 border border-white/15 flex items-center gap-1.5 transition-colors"
+                  title="Квотын төлөвийг дахин шалгах"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Шалгах</span>
+                </button>
                 <a
                   href={FIRESTORE_UPGRADE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors"
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors flex items-center gap-1"
                 >
-                  Лимит шалгах ↗
+                  <span>Firebase Лимит ↗</span>
                 </a>
                 <button
                   type="button"
                   onClick={() => setDismissQuotaBanner(true)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                  title="Хаах"
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                  title="Мэдэгдлийг хаах"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>

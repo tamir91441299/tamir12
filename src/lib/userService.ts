@@ -14,7 +14,13 @@ import {
 import { db } from './firebase';
 import { UserDetail, INITIAL_USERS } from '../components/UserManagementModal';
 import { UserAccount } from '../components/AuthModal';
-import { safeFirestoreWrite, markFirestoreQuotaExceeded, isFirestoreQuotaExceeded } from './quotaService';
+import {
+  safeFirestoreWrite,
+  safeFirestoreRead,
+  markFirestoreQuotaExceeded,
+  isFirestoreQuotaExceeded,
+  isQuotaError,
+} from './quotaService';
 
 /**
  * Check if a user is a mock sample or bot user that should not appear in production management
@@ -132,7 +138,10 @@ export async function sendNewAnimeNotification(movie: {
     await safeFirestoreWrite(() => setDoc(docRef, payload));
     return payload;
   } catch (err) {
-    console.error('Error sending new anime notification:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('New anime notification warning (saved locally):', err);
     return null;
   }
 }
@@ -151,7 +160,10 @@ export async function sendAdminNotification(notif: Omit<AppNotification, 'id' | 
     };
     await safeFirestoreWrite(() => setDoc(docRef, payload));
   } catch (err) {
-    console.error('Error sending admin notification:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Admin notification warning (fallback):', err);
   }
 }
 
@@ -169,6 +181,11 @@ export function subscribeNotificationsFromFirestore(callback: (notifications: Ap
 
     const initialCombined = [...localAnimeNotifs, ...INITIAL_ANIME_NOTIFICATIONS];
     callback(initialCombined);
+
+    // If quota already exceeded, avoid unnecessary Firestore call
+    if (isFirestoreQuotaExceeded()) {
+      return () => {};
+    }
 
     const notifCol = collection(db, 'notifications');
     const q = query(notifCol, limit(50));
@@ -194,11 +211,19 @@ export function subscribeNotificationsFromFirestore(callback: (notifications: Ap
         callback(notifs);
       },
       (err) => {
-        console.error('Error subscribing to notifications:', err);
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
+          console.warn('Firestore daily read quota limit reached, using local notifications fallback.');
+        } else {
+          console.warn('Notification subscription warning (using local):', err);
+        }
       }
     );
   } catch (err) {
-    console.error('Notification subscription failed:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Notification subscription setup fallback active:', err);
     return () => {};
   }
 }
@@ -1272,6 +1297,15 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // Initial emit from local
     emitMerged([], []);
 
+    if (isFirestoreQuotaExceeded()) {
+      return () => {
+        isUnsubscribed = true;
+        clearInterval(serverInterval);
+        usersSyncChannel?.removeEventListener('message', handleBroadcast);
+        window.removeEventListener('ioio_users_updated', handleWindowUsersUpdated);
+      };
+    }
+
     const usersCol = collection(db, 'users');
     const unsubFirestore = onSnapshot(
       usersCol,
@@ -1291,7 +1325,12 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
         emitMerged(latestFirestoreList, latestServerList);
       },
       (err) => {
-        console.error('Error listening to users from Firestore:', err);
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
+          console.warn('Firestore daily read quota reached for users, using local/server users.');
+        } else {
+          console.warn('Firestore users subscription warning:', err);
+        }
         emitMerged([], latestServerList);
       }
     );
@@ -1304,7 +1343,10 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       unsubFirestore();
     };
   } catch (err) {
-    console.error('Firestore users subscription failed:', err);
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Firestore users subscription setup fallback:', err);
     callback([]);
     return () => {};
   }
@@ -1314,6 +1356,26 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
  * One-time fetch of all users from Firestore
  */
 export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
+  const getLocalUsers = () => {
+    const rawList: UserDetail[] = [];
+    try {
+      const savedList = localStorage.getItem('ioio_registered_users_list');
+      if (savedList) {
+        const parsed: UserDetail[] = JSON.parse(savedList);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u) => {
+            if (u && !isBotOrMockUser(u)) rawList.push({ ...u, isMockUser: false });
+          });
+        }
+      }
+    } catch {}
+    return sortUsersByNewest(deduplicateUserList(rawList));
+  };
+
+  if (isFirestoreQuotaExceeded()) {
+    return getLocalUsers();
+  }
+
   try {
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
@@ -1344,8 +1406,11 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
 
     return sortUsersByNewest(deduplicateUserList(rawList));
   } catch (err) {
-    console.error('Error fetching users from Firestore:', err);
-    return [];
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    }
+    console.warn('Firestore users fetch warning, using local list:', err);
+    return getLocalUsers();
   }
 }
 
@@ -1776,6 +1841,10 @@ export function subscribeUserAccount(
   const cleanEmail = (targetEmail || '').trim().toLowerCase();
 
   const unsubscribes: (() => void)[] = [];
+
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
 
   const handleDocData = (data: any, docId: string) => {
     if (!data) return;
