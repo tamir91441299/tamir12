@@ -321,6 +321,29 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       if (res && res.id) {
         setSubmittedRequestId(res.id);
       }
+
+      // Synchronously post to Server REST API for immediate cross-device visibility
+      try {
+        await fetch('/api/recharges/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: res?.id || `req_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            userId: currentUser.id,
+            userName: currentUser.name || 'Хэрэглэгч',
+            userPhone: phone,
+            userEmail: currentUser.email || '',
+            planId: currentPlan.id,
+            planLabel: `${amountToRequest.toLocaleString()}₮ Оноо авах хүсэлт`,
+            durationDays: currentPlan.durationDays,
+            amount: amountToRequest,
+            method: paymentTransferMethod,
+            note: userNoteInput.trim() || `[Оноо авах хүсэлт] ${amountToRequest.toLocaleString()}₮ (${paymentTransferMethod.toUpperCase()})`,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+          }),
+        });
+      } catch {}
     } catch (e) {
       console.error('Recharge request submission error:', e);
     }
@@ -328,7 +351,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(false);
     setTopUpRequestSent(true);
     setTopUpSuccessNotice(
-      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админ Тамирт амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл оноогүй тул контент түр түгжээтэй байна.`
+      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админд (admin) амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл оноогүй тул контент түр түгжээтэй байна.`
     );
   };
 

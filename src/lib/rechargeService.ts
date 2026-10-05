@@ -446,7 +446,7 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
 export async function updateRechargeRequestStatus(
   requestId: string,
   status: 'approved' | 'rejected',
-  adminName: string = 'Админ Тамир'
+  adminName: string = 'Admin'
 ): Promise<void> {
   try {
     // 1. Update Server REST API

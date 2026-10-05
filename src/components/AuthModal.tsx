@@ -28,9 +28,12 @@ import {
   saveUserAuthRecord, 
   authenticateUserCredentials, 
   persistActiveSession,
-  getLastSavedAccount 
+  getLastSavedAccount,
+  getUserMemberCode,
+  getUserDisplayName
 } from '../lib/userService';
 import { getAnimeExpiryDetails } from '../lib/permissionService';
+import { AnimeAvatar } from './UserProfileView';
 
 export interface UserAccount {
   id: string;
@@ -46,6 +49,8 @@ export interface UserAccount {
   walletBalance?: number;
   purchasedMovies?: string[];
   isMockUser?: boolean;
+  memberCode?: string;
+  avatarUrl?: string;
 }
 
 interface AuthModalProps {
@@ -259,6 +264,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           isMockUser: false,
         });
 
+        // Direct Server REST API write to guarantee immediate cross-device visibility in admin panel
+        try {
+          await fetch('/api/users/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newUser),
+          });
+        } catch (e) {
+          console.warn('Direct server registration sync notice:', e);
+        }
+
         // Persist session securely
         persistActiveSession(newUser, rememberMe);
 
@@ -352,23 +368,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           const isAdmin = currentUser.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
           const animeExpiry = getAnimeExpiryDetails(currentUser);
           const effectiveBalance = typeof userBalance === 'number' ? userBalance : (currentUser.walletBalance || 0);
+          const memberCode = getUserMemberCode(currentUser);
+          const displayName = getUserDisplayName(currentUser);
+          const roleLabel = isAdmin ? 'Админ' : currentUser?.role === 'vip' ? 'VIP Гишүүн' : 'Гишүүн';
 
           return (
             <div className="p-5 sm:p-6 space-y-4">
-              {/* User Identity Header */}
-              <div className="flex items-center gap-3.5 p-3.5 bg-zinc-900 rounded-2xl border border-zinc-800">
-                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 via-rose-500 to-indigo-600 text-black font-black text-xl flex items-center justify-center shadow-lg uppercase shrink-0">
-                  {currentUser.name.charAt(0)}
+              {/* TOP USER CARD: Identical layout to screenshot */}
+              <div className="bg-[#18181c] rounded-2xl p-4 sm:p-5 border border-white/[0.08] shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative">
+                    <AnimeAvatar size={54} />
+                    {isAdmin && (
+                      <span className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1 rounded-full shadow">
+                        👑
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-base sm:text-lg text-white flex items-center gap-1.5 truncate">
+                      <span>{displayName}</span>
+                      <span className="text-zinc-400 font-semibold">#{memberCode}</span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">{roleLabel}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-extrabold text-base text-white flex items-center gap-1.5 truncate">
-                    <span>{currentUser.name}</span>
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  </h3>
-                  <p className="text-xs text-zinc-400 truncate">{currentUser.email || currentUser.phone}</p>
-                  <span className="inline-block mt-1 bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded">
-                    {isAdmin ? '👑 Админ Систем Удирдагч' : '🎌 FlickNime Хэрэглэгч'}
-                  </span>
+
+                <div className="border-t border-white/[0.08] my-3.5" />
+
+                <div className="grid grid-cols-2 divide-x divide-white/[0.08]">
+                  <div className="flex items-center gap-2.5 pr-2">
+                    <Calendar className="w-5 h-5 text-zinc-400 shrink-0" />
+                    <div>
+                      <span className="text-[11px] text-zinc-400 block font-medium">Үлдсэн хоног</span>
+                      {animeExpiry.hasAccess ? (
+                        <span className="text-emerald-400 font-bold text-sm block truncate">
+                          {isAdmin
+                            ? 'Байнгын (2030)'
+                            : animeExpiry.daysRemaining > 0
+                            ? `${animeExpiry.daysRemaining} хоног`
+                            : 'Идэвхтэй'}
+                        </span>
+                      ) : (
+                        <span className="text-red-500 font-bold text-sm block">Дууссан</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 pl-3">
+                    <Wallet className="w-5 h-5 text-zinc-400 shrink-0" />
+                    <div>
+                      <span className="text-[11px] text-zinc-400 block font-medium">Хэтэвч</span>
+                      <span className="text-white font-bold text-sm sm:text-base block truncate">
+                        {effectiveBalance.toLocaleString()}₮
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

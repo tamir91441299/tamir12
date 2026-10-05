@@ -62,7 +62,8 @@ import {
   approveAndCreditRechargeRequest,
   isBotOrMockUser,
   deleteUserFromFirestoreAndServer,
-  cleanupAllBotUsers
+  cleanupAllBotUsers,
+  getUserMemberCode
 } from '../lib/userService';
 import {
   PromoCode,
@@ -503,7 +504,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const confirmMsg = `${req.userName} (${req.userPhone}) хэрэглэгчийн цэнэглэлтийг баталгаажуулж:\n\n• Дансанд +${req.amount.toLocaleString()} ₮ ОНОО оруулах\n• ЗӨВХӨН АНИМЭ ҮЗЭХ ЭРХ (${durationDays} хоног) олгох уу?`;
     if (!confirm(confirmMsg)) return;
 
-    const res = await approveAndCreditRechargeRequest(req, 'Админ Тамир');
+    const res = await approveAndCreditRechargeRequest(req, 'admin');
 
     if (res.success) {
       if (res.targetUser) {
@@ -932,7 +933,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
+  const isAdmin =
+    currentUser?.role === 'admin' ||
+    currentUser?.email === 'tamir91441299@gmail.com' ||
+    currentUser?.phone === '91441299' ||
+    currentUser?.name?.toLowerCase() === 'admin' ||
+    currentUser?.name?.includes('Тамир');
 
   if (!isAdmin) {
     return (
@@ -944,7 +950,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           <h2 className="text-lg font-black text-white">⛔ Хандах Эрх Хязгаарлагдсан!</h2>
           <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 text-center">
             <p className="text-sm font-extrabold text-amber-300">
-              Зөвхөн Тамир админ нэвтэрч болно
+              Зөвхөн admin нэвтэрч болно
             </p>
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
@@ -1292,8 +1298,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               {nu.name.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="font-extrabold text-sm text-white truncate">{nu.name}</span>
+                                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.2 rounded">
+                                  #{getUserMemberCode(nu)}
+                                </span>
                                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full">
                                   ШИНЭ
                                 </span>

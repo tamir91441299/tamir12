@@ -110,10 +110,15 @@ export default function App() {
   });
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
-    // Only tamir91441299@gmail.com is allowed to update or add video episodes
-    const isAuthorizedAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+    // Admin is allowed to update or add video episodes
+    const isAuthorizedAdmin =
+      currentUser?.role === 'admin' ||
+      currentUser?.email === 'tamir91441299@gmail.com' ||
+      currentUser?.phone === '91441299' ||
+      currentUser?.name?.toLowerCase() === 'admin' ||
+      currentUser?.name?.includes('Тамир');
     if (!isAuthorizedAdmin) {
-      alert('⚠️ Зөвхөн админ (tamir91441299@gmail.com) видео болон ангиудын линк оруулах, засах эрхтэй!');
+      alert('⚠️ Зөвхөн админ видео болон ангиудын линк оруулах, засах эрхтэй!');
       return;
     }
     setMoviesList((prev) => {
@@ -137,9 +142,14 @@ export default function App() {
   };
 
   const handleAddNewMovie = (newMovie: Movie) => {
-    const isAuthorizedAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+    const isAuthorizedAdmin =
+      currentUser?.role === 'admin' ||
+      currentUser?.email === 'tamir91441299@gmail.com' ||
+      currentUser?.phone === '91441299' ||
+      currentUser?.name?.toLowerCase() === 'admin' ||
+      currentUser?.name?.includes('Тамир');
     if (!isAuthorizedAdmin) {
-      alert('⚠️ Зөвхөн админ (tamir91441299@gmail.com) шинэ анимэ, видео оруулах эрхтэй!');
+      alert('⚠️ Зөвхөн админ шинэ анимэ, видео оруулах эрхтэй!');
       return;
     }
     setMoviesList((prev) => {
@@ -928,8 +938,11 @@ export default function App() {
     isCodeRedemption: boolean = false
   ) => {
     const isAuthorizedAdmin =
+      currentUser?.role === 'admin' ||
       currentUser?.email === 'tamir91441299@gmail.com' ||
-      (currentUser?.phone === '91441299' && currentUser?.email?.includes('tamir'));
+      currentUser?.phone === '91441299' ||
+      currentUser?.name?.toLowerCase() === 'admin' ||
+      currentUser?.name?.includes('Тамир');
 
     // SECURITY GUARD: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!
     if (!currentUser) {

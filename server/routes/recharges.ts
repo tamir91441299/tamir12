@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
-import { getServerDb } from '../lib/firestoreDb.js';
+import { getServerDb } from '../lib/firestoreDb.ts';
 
 const router = Router();
 const RECHARGES_FILE_PATH = path.join(process.cwd(), 'public', 'recharge_requests.json');

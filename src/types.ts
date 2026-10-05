@@ -9,7 +9,8 @@ export type TabType =
   | 'ai'
   | 'favorites'
   | 'purchased'
-  | 'games';
+  | 'games'
+  | 'profile';
 
 export type MovieSubcategory =
   | 'all'

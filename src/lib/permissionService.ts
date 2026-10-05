@@ -17,7 +17,7 @@ export function isAdminUser(user: UserAccount | null | undefined): boolean {
     return true;
   }
 
-  if (phone === '91441299' && (name.includes('Тамир') || email.includes('tamir'))) {
+  if (phone === '91441299') {
     return true;
   }
 

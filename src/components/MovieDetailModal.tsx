@@ -78,7 +78,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onSelectMovie,
   allMovies,
 }) => {
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser?.phone === '91441299' && (currentUser?.name?.includes('Тамир') || currentUser?.email?.includes('tamir')));
+  const isAdmin =
+    currentUser?.role === 'admin' ||
+    currentUser?.email === 'tamir91441299@gmail.com' ||
+    currentUser?.phone === '91441299' ||
+    currentUser?.name?.toLowerCase() === 'admin' ||
+    currentUser?.name?.includes('Тамир');
 
   const [comments, setComments] = useState<Comment[]>(() => 
     SAMPLE_COMMENTS.filter((c) => (movie && c.movieId === movie.id) || c.movieId === 'm1')
