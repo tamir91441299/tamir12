@@ -18,7 +18,8 @@ import {
   ArrowRight,
   Sparkles,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  User
 } from 'lucide-react';
 import { Movie } from '../types';
 import { UserAccount } from './AuthModal';
@@ -177,7 +178,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   // Points request state
   const [selectedTopUpAmount, setSelectedTopUpAmount] = useState<number>(2500);
   const [customTopUpInput, setCustomTopUpInput] = useState<string>('');
-  const [paymentTransferMethod, setPaymentTransferMethod] = useState<'monpay' | 'qpay'>('monpay');
+  const [paymentTransferMethod, setPaymentTransferMethod] = useState<'qpay' | 'monpay'>('qpay');
 
   // Subscription package duration state
   const [selectedPlanId, setSelectedPlanId] = useState<PlanDurationId>('15d');
@@ -190,7 +191,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [topUpRequestSent, setTopUpRequestSent] = useState(false);
   const [topUpSuccessNotice, setTopUpSuccessNotice] = useState<string>('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
+
+  // Copy feedbacks
+  const [copiedIban, setCopiedIban] = useState(false);
   const [copiedMonpay, setCopiedMonpay] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
+  const [copiedNote, setCopiedNote] = useState(false);
+
+  // Official QPay & Account Details from Admin Tamir
+  const ibanNumber = 'MN12 0050 0991 0688 3518';
+  const ibanNumberRaw = 'MN120050099106883518';
+  const monpayNumber = '9910 6883 518';
+  const monpayNumberRaw = '99106883518';
+  const accountHolder = 'B.Tamir';
+  const accountHolderPhone = '91441299';
 
   // User contact input for recharge confirmation
   const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
@@ -233,12 +247,21 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [inputActivationCode, setInputActivationCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
 
-  const monpayNumber = '99106883518';
-
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, type: 'iban' | 'monpay' | 'amount' | 'note' = 'iban') => {
     navigator.clipboard.writeText(text);
-    setCopiedMonpay(true);
-    setTimeout(() => setCopiedMonpay(false), 2000);
+    if (type === 'iban') {
+      setCopiedIban(true);
+      setTimeout(() => setCopiedIban(false), 2000);
+    } else if (type === 'monpay') {
+      setCopiedMonpay(true);
+      setTimeout(() => setCopiedMonpay(false), 2000);
+    } else if (type === 'amount') {
+      setCopiedAmount(true);
+      setTimeout(() => setCopiedAmount(false), 2000);
+    } else if (type === 'note') {
+      setCopiedNote(true);
+      setTimeout(() => setCopiedNote(false), 2000);
+    }
   };
 
   const handleRedeemActivationCode = (codeToRedeem?: string) => {
@@ -315,8 +338,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         planLabel: `${amountToRequest.toLocaleString()}₮ Оноо авах хүсэлт`,
         durationDays: currentPlan.durationDays,
         amount: amountToRequest,
-        method: paymentTransferMethod,
-        note: userNoteInput.trim() || `[Оноо авах хүсэлт] ${amountToRequest.toLocaleString()}₮ (${paymentTransferMethod.toUpperCase()})`,
+        method: 'qpay',
+        note: userNoteInput.trim() || `[QPay / Данс] ${amountToRequest.toLocaleString()}₮ (IBAN: ${ibanNumber} / ${accountHolder})`,
       });
       if (res && res.id) {
         setSubmittedRequestId(res.id);
@@ -337,8 +360,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             planLabel: `${amountToRequest.toLocaleString()}₮ Оноо авах хүсэлт`,
             durationDays: currentPlan.durationDays,
             amount: amountToRequest,
-            method: paymentTransferMethod,
-            note: userNoteInput.trim() || `[Оноо авах хүсэлт] ${amountToRequest.toLocaleString()}₮ (${paymentTransferMethod.toUpperCase()})`,
+            method: 'qpay',
+            note: userNoteInput.trim() || `[QPay / Данс] ${amountToRequest.toLocaleString()}₮ (IBAN: ${ibanNumber} / ${accountHolder})`,
             status: 'pending',
             createdAt: new Date().toISOString(),
           }),
@@ -351,7 +374,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(false);
     setTopUpRequestSent(true);
     setTopUpSuccessNotice(
-      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админд (admin) амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (MonPay: ${monpayNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл оноогүй тул контент түр түгжээтэй байна.`
+      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админ Тамирт амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (QPay / Данс: ${ibanNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл түр хүлээнэ үү.`
     );
   };
 
@@ -403,7 +426,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     if (effectiveBalance <= 0 || userBalance <= 0) {
       alert(
-        `⛔ ОНООГҮЙ ХЭРЭГЛЭГЧ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!\n\nТаны данс 0 ₮ (оноогүй) байна.\nАнимэ үзэх эрх авахын тулд хамгийн багадаа 2,500₮ оноо шаардлагатай.\n\nТа эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж MonPay (99106883518) эсвэл QPay-ээр шилжүүлэг хийн хүсэлтээ илгээнэ үү.`
+        `⛔ ОНООГҮЙ ХЭРЭГЛЭГЧ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!\n\nТаны данс 0 ₮ (оноогүй) байна.\nАнимэ үзэх эрх авахын тулд хамгийн багадаа 2,500₮ оноо шаардлагатай.\n\nТа эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж QPay / Банкны шилжүүлэг (IBAN: ${ibanNumber} / ${accountHolder})-ээр шилжүүлэг хийн хүсэлтээ илгээнэ үү.`
       );
       setSelectedTopUpAmount(activePrice);
       setCustomTopUpInput(String(activePrice));
@@ -554,10 +577,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {mainTab === 'points_request' && (
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Informative Header Banner */}
-              <div className="p-3 bg-gradient-to-r from-amber-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-amber-500/40 space-y-1.5 shadow-inner">
+              <div className="p-3 bg-gradient-to-r from-cyan-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-cyan-500/40 space-y-1.5 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-amber-400 uppercase font-black tracking-wider flex items-center gap-1.5">
-                    <Send className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-[10px] text-cyan-400 uppercase font-black tracking-wider flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-cyan-400" />
                     <span>ХЭСЭГ 1: АДМИНААС ОНОО АВАХ ХҮСЭЛТ</span>
                   </span>
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
@@ -565,7 +588,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-300 leading-relaxed">
-                  Та <strong>Админ Тамир</strong>-ын MonPay дугаарт (эсвэл QPay-ээр) шилжүүлэг хийсний дараа эндээс оноо авах хүсэлтээ илгээнэ үү. Админ таны шилжүүлгийг шалгаж баталгаажуулснаар дансанд тань оноо орно.
+                  Та <strong>Админ Тамир</strong>-ын QPay & IBAN данс руу шилжүүлэг хийсний дараа эндээс оноо авах хүсэлтээ илгээнэ үү. Админ таны шилжүүлгийг шалгаж баталгаажуулснаар дансанд тань оноо орно.
                 </p>
                 <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-xs">
                   <span className="text-zinc-400">Таны одоогийн дансны үлдэгдэл:</span>
@@ -622,74 +645,87 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* Step 2: Payment Transfer Channel (MonPay or QPay) */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider block">
-                  2. Шилжүүлэг хийх хэрэгслээ сонгох:
-                </label>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentTransferMethod('monpay')}
-                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
-                      paymentTransferMethod === 'monpay'
-                        ? 'bg-rose-600 text-white border-rose-500 ring-2 ring-rose-400 shadow-md'
-                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-pulse" />
-                    <span>MonPay (МонПэй)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentTransferMethod('qpay')}
-                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
-                      paymentTransferMethod === 'qpay'
-                        ? 'bg-cyan-500 text-black border-cyan-400 ring-2 ring-cyan-400 shadow-md font-black'
-                        : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>QPay / Бүх Банк</span>
-                  </button>
+              {/* Step 2: Official QPay & Bank Transfer Card (ЗӨВХӨН QPAY & ДАНС) */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-cyan-400" />
+                    <span>2. QPay & Банкны шилжүүлэг (ЗӨВХӨН QPAY):</span>
+                  </label>
+                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono font-black px-2 py-0.5 rounded-full">
+                    Шилжүүлэх: {effectiveTopUp.toLocaleString()} ₮
+                  </span>
                 </div>
 
-                {/* MonPay Card */}
-                {paymentTransferMethod === 'monpay' && (
-                  <div className="p-3.5 bg-gradient-to-b from-rose-950/40 to-zinc-900 rounded-xl border border-rose-500/30 space-y-2.5">
-                    <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black text-xs">
-                          M
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-xs text-white">MonPay Данс: Тамир</h4>
-                          <p className="text-[10px] text-zinc-400">Шилжүүлэх дүн: {effectiveTopUp.toLocaleString()} ₮</p>
+                {/* THE OFFICIAL QPAY & MONPAY PAYMENT CARD MATCHING USER PHOTO */}
+                <div className="bg-[#f8fafc] text-slate-900 rounded-3xl p-3.5 sm:p-5 border-2 border-cyan-400/50 shadow-2xl space-y-3.5">
+                  {/* Top Header Pill with Avatar and Name */}
+                  <div className="bg-white rounded-2xl p-2.5 sm:p-3 flex items-center gap-3 border border-slate-200 shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight flex items-center gap-2">
+                        <span>{accountHolder}</span>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Админ</span>
+                      </div>
+                      <div className="text-xs text-slate-500 font-mono font-medium">
+                        {accountHolderPhone}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Хүлээн авагч</span>
+                      <span className="text-xs font-black text-rose-600 font-mono">Баталгаажсан</span>
+                    </div>
+                  </div>
+
+                  {/* Clean QR Code Container */}
+                  <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm flex flex-col items-center justify-center relative">
+                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 bg-white p-1 rounded-xl flex items-center justify-center">
+                      <img
+                        src="/images/tamir_qpay_qr.png"
+                        alt="QPay QR"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                      {/* Center MonPay Pill Badge */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-white px-2 py-0.5 rounded-full border border-slate-300 shadow-md flex items-center gap-1 scale-90">
+                          <span className="text-[10px] font-black tracking-tight text-blue-600">mon</span>
+                          <span className="text-[10px] font-black tracking-tight text-purple-600">pay</span>
                         </div>
                       </div>
-                      <span className="font-mono text-sm font-black text-amber-400">
-                        {effectiveTopUp.toLocaleString()} ₮
-                      </span>
                     </div>
 
-                    <div className="bg-black/60 p-2.5 rounded-lg border border-zinc-700/80 flex items-center justify-between">
-                      <div>
-                        <span className="text-[9px] text-zinc-400 block uppercase font-bold">MonPay Дугаар:</span>
-                        <span className="font-mono text-base font-black text-amber-400 tracking-wider">
-                          {monpayNumber}
+                    <div className="mt-2 text-center space-y-0.5">
+                      <p className="text-[11px] font-bold text-slate-700">
+                        Хаан, Голомт, Хас, Төрийн банк, SocialPay, М банк эсвэл MonPay-ээр уншуулна
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        Дэлгэц дээрх QR кодыг банкны апп-ынхаа "QPay / QR уншуулах" цэсээр уншуулна уу
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Account Numbers List */}
+                  <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm space-y-2.5">
+                    {/* IBAN Account */}
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
+                          IBAN дансны дугаар (Бүх банкны QPay-ээр)
                         </span>
-                        <span className="text-zinc-400 text-xs ml-2">(Хүлээн авагч: Тамир)</span>
+                        <span className="font-mono text-xs sm:text-sm font-black text-[#1e3a8a] tracking-wide select-all block truncate">
+                          {ibanNumber}
+                        </span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(monpayNumber)}
-                        className="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow"
+                        onClick={() => copyToClipboard(ibanNumberRaw, 'iban')}
+                        className="px-2.5 py-1.5 bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 shadow-sm"
                       >
-                        {copiedMonpay ? (
+                        {copiedIban ? (
                           <>
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-3.5 h-3.5 text-emerald-300" />
                             <span>Хууллаа!</span>
                           </>
                         ) : (
@@ -701,42 +737,69 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-zinc-900/90 p-2 rounded-xl border border-zinc-800">
-                      <div className="p-1 bg-white rounded-lg shrink-0">
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=MONPAY_${monpayNumber}_${effectiveTopUp}MNT`}
-                          alt="MonPay QR"
-                          className="w-14 h-14 object-contain"
-                        />
+                    {/* MonPay Account */}
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
+                          Монпэй дансны дугаар
+                        </span>
+                        <span className="font-mono text-xs sm:text-sm font-black text-slate-900 tracking-wide select-all block truncate">
+                          {monpayNumber}
+                        </span>
                       </div>
-                      <div className="text-xs text-zinc-300 space-y-0.5">
-                        <p className="font-bold text-white text-[11px]">MonPay QR-ээр шууд уншуулах</p>
-                        <p className="text-[10px] text-zinc-400">
-                          MonPay апп-аараа QR-г уншуулж {effectiveTopUp.toLocaleString()}₮ шилжүүлнэ.
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(monpayNumberRaw, 'monpay')}
+                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 shadow-sm"
+                      >
+                        {copiedMonpay ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-300" />
+                            <span>Хууллаа!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Хуулах</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {/* QPay Card */}
-                {paymentTransferMethod === 'qpay' && (
-                  <div className="p-3.5 bg-zinc-900/90 rounded-xl border border-cyan-500/30 space-y-2 text-center">
-                    <div className="relative inline-block p-2 bg-white rounded-xl shadow-lg border-2 border-cyan-400 mx-auto">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=IOIO_TOPUP_${effectiveTopUp}MNT`}
-                        alt="QPay QR"
-                        className="w-24 h-24 object-contain"
-                      />
-                      <div className="absolute -bottom-2 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        {effectiveTopUp.toLocaleString()} ₮
+                  {/* 1-Tap Quick Copy Bar */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(String(effectiveTopUp), 'amount')}
+                      className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-950 font-bold flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <div className="text-left">
+                        <span className="text-[9px] text-amber-700 block uppercase">Шилжүүлэх дүн:</span>
+                        <span className="font-mono font-black text-xs text-amber-900">+{effectiveTopUp.toLocaleString()} ₮</span>
                       </div>
-                    </div>
-                    <p className="text-[11px] text-zinc-300 font-medium pt-1">
-                      Хаан, Голомт, Хас, Төрийн банк, SocialPay апп-аар QR кодыг уншуулж төлнө үү.
-                    </p>
+                      <span className="text-[10px] text-amber-700 underline shrink-0">
+                        {copiedAmount ? 'Хууллаа' : 'Хуулах'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(userPhoneInput.trim() || currentUser?.phone || accountHolderPhone, 'note')}
+                      className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-950 font-bold flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <div className="text-left min-w-0">
+                        <span className="text-[9px] text-blue-700 block uppercase truncate">Гүйлгээний утга:</span>
+                        <span className="font-mono font-black text-xs text-blue-900 truncate block">
+                          {userPhoneInput.trim() || currentUser?.phone || 'Утасны дугаар'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-blue-700 underline shrink-0">
+                        {copiedNote ? 'Хууллаа' : 'Хуулах'}
+                      </span>
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Step 3: Contact Phone & Note Form */}
