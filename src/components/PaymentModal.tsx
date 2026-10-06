@@ -395,16 +395,26 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    // Check if points are sufficient
+    // Check if points are sufficient - STRICT GUARD: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй
     const effectiveBalance = Math.min(
       typeof currentUser?.walletBalance === 'number' ? currentUser.walletBalance : userBalance,
       userBalance
     );
 
+    if (effectiveBalance <= 0 || userBalance <= 0) {
+      alert(
+        `⛔ ОНООГҮЙ ХЭРЭГЛЭГЧ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!\n\nТаны данс 0 ₮ (оноогүй) байна.\nАнимэ үзэх эрх авахын тулд хамгийн багадаа 2,500₮ оноо шаардлагатай.\n\nТа эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж MonPay (99106883518) эсвэл QPay-ээр шилжүүлэг хийн хүсэлтээ илгээнэ үү.`
+      );
+      setSelectedTopUpAmount(activePrice);
+      setCustomTopUpInput(String(activePrice));
+      setMainTab('points_request');
+      return;
+    }
+
     if (effectiveBalance < activePrice || userBalance < activePrice || activePrice <= 0) {
       const diff = activePrice - Math.max(0, effectiveBalance);
       alert(
-        `⛔ ТАНЫ ОНОО ХҮРЭЛЦЭХГҮЙ БАЙНА!\n\nТанд одоо ${userBalance.toLocaleString()}₮ оноо байна.\nСонгосон багц (${currentPlan.label}): ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\nДутуу оноо: ${diff.toLocaleString()}₮.\n\nОноогүй хэрэглэгч анимэ эрх авах боломжгүй тул эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж шилжүүлэг хийнэ үү.`
+        `⛔ ТАНЫ ОНОО ХҮРЭЛЦЭХГҮЙ БАЙНА!\n\nТанд одоо ${userBalance.toLocaleString()}₮ оноо байна.\nСонгосон багц (${currentPlan.label}): ${activePrice.toLocaleString()}₮ оноо шаардлагатай.\nДутуу оноо: ${diff.toLocaleString()}₮.\n\nОноогүй эсвэл оноо хүрэлцэхгүй хэрэглэгч анимэ эрх авах боломжгүй тул эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж шилжүүлэг хийнэ үү.`
       );
       // Auto prefill missing amount and switch to points request
       setSelectedTopUpAmount(diff > 0 ? diff : activePrice);
@@ -832,6 +842,31 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* ================================================================ */}
           {mainTab === 'get_permission' && (
             <div className="space-y-4 animate-in fade-in duration-200">
+              {/* 0 Points Blocking Banner */}
+              {userBalance <= 0 && (
+                <div className="p-3.5 bg-rose-950/90 rounded-xl border-2 border-rose-500/70 text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-rose-500/20 text-rose-400 rounded-lg shrink-0 border border-rose-500/40">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wide">⛔ ОНООГҮЙ ТУЛ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!</h4>
+                      <p className="text-[11px] text-zinc-300">
+                        Таны данс <strong>0 ₮</strong> байна. Анимэ эрх авахын тулд хамгийн багадаа 2,500₮ оноотой байх шаардлагатай.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMainTab('points_request')}
+                    className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-3.5 py-2 rounded-xl shrink-0 transition-all cursor-pointer shadow flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>👉 1. Оноо авах</span>
+                  </button>
+                </div>
+              )}
+
               {/* Informative Header Banner */}
               <div className="p-3.5 bg-gradient-to-r from-rose-950/70 via-zinc-900 to-zinc-900 rounded-xl border border-rose-500/40 space-y-2 shadow-inner">
                 <div className="flex items-center justify-between">
@@ -1021,14 +1056,29 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       </>
                     )}
                   </button>
+                ) : userBalance <= 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      alert('⛔ ОНООГҮЙ ХЭРЭГЛЭГЧ АНИМЭ ЭРХ АВАХ БОЛОМЖГҮЙ!\n\nТаны данс 0 ₮ байна. Эхлээд "1. Админаас оноо авах хүсэлт" хэсэг рүү орж оноогоо цэнэглүүлнэ үү.');
+                      setMainTab('points_request');
+                    }}
+                    className="w-full bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-200 font-black text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg hover:scale-[1.01]"
+                  >
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>⛔ ОНООГҮЙ ТУЛ ЭРХ АВАХ БОЛОМЖГҮЙ (0 ₮) ➔ ОНОО АВАХ</span>
+                  </button>
                 ) : (
                   <button
                     type="button"
-                    disabled={true}
-                    className="w-full bg-zinc-800 text-zinc-500 font-black text-sm py-3.5 rounded-xl cursor-not-allowed border border-zinc-700 opacity-60 flex items-center justify-center gap-2"
+                    onClick={() => {
+                      alert(`⛔ ТАНЫ ОНОО ХҮРЭЛЦЭХГҮЙ БАЙНА!\n\nТанд ${userBalance.toLocaleString()}₮ байна, ${activePrice.toLocaleString()}₮ оноо шаардлагатай. Эхлээд оноо авна уу.`);
+                      handleSwitchToPointsRequestWithAmount(activePrice - userBalance);
+                    }}
+                    className="w-full bg-amber-950/80 hover:bg-amber-900 border border-amber-500/50 text-amber-200 font-black text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg hover:scale-[1.01]"
                   >
-                    <AlertCircle className="w-4 h-4 text-rose-500" />
-                    <span>{`⛔ ОНОО ХҮРЭЛЦЭХГҮЙ (${userBalance.toLocaleString()}₮ / ${activePrice.toLocaleString()}₮)`}</span>
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>{`⛔ ОНОО ХҮРЭЛЦЭХГҮЙ (${userBalance.toLocaleString()}₮ / ${activePrice.toLocaleString()}₮) ➔ ОНОО АВАХ`}</span>
                   </button>
                 )}
 

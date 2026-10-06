@@ -954,13 +954,13 @@ export default function App() {
 
     if (!isCodeRedemption && !isAuthorizedAdmin) {
       const currentAccBal = typeof currentUser.walletBalance === 'number' ? currentUser.walletBalance : userBalance;
-      if (deductedAmount <= 0) {
-        alert('⛔ Алдаа: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд дансаа оноогоор цэнэглэнэ үү.');
+      if (currentAccBal <= 0 || userBalance <= 0 || deductedAmount <= 0) {
+        alert('⛔ Алдаа: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй! Та эхлээд "1. Админаас Оноо Авах" хэсэг рүү орж дансаа оноогоор цэнэглэнэ үү.');
         return;
       }
       if (userBalance < deductedAmount || currentAccBal < deductedAmount) {
         alert(
-          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${Math.min(userBalance, currentAccBal).toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хүн анимэ үзэх эрх авах боломжгүй!`
+          `⛔ Алдаа: Таны оноо хүрэлцэхгүй байна! Танд ${Math.min(userBalance, currentAccBal).toLocaleString()}₮ оноо байна, шаардлагатай: ${deductedAmount.toLocaleString()}₮. Оноогүй хэрэглэгч анимэ үзэх эрх авах боломжгүй!`
         );
         return;
       }

@@ -7,20 +7,38 @@ import { getServerDb } from '../lib/firestoreDb.ts';
 const router = Router();
 const USERS_FILE_PATH = path.join(process.cwd(), 'public', 'registered_users.json');
 
-// Helper to identify mock/sample bots (Do NOT filter real users with common Mongolian names)
-function isBotUser(u: any): boolean {
-  if (!u) return false;
+// Helper to identify mock/sample bots
+export function isBotUser(u: any): boolean {
+  if (!u) return true;
   if (u.isMockUser === true) return true;
   const id = String(u.id || '').trim();
   const email = String(u.email || '').trim().toLowerCase();
   const name = String(u.name || '').trim();
+  const phone = String(u.phone || '').trim();
 
-  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_')) return true;
+  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005', 'usr_admin_tamir'].includes(id)) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_') || id.startsWith('test_')) return true;
+
+  // Auto-generated dummy placeholder accounts
+  if (name.startsWith('Хэрэглэгч (') && !email.includes('@gmail') && !email.includes('@yahoo') && !email.includes('@mail')) return true;
+  if (id.startsWith('user_phone_') && name.startsWith('Хэрэглэгч (')) return true;
+
+  // Bot / mock names
+  const lowerName = name.toLowerCase();
+  if (
+    lowerName.includes('bot') ||
+    lowerName.includes('mock') ||
+    lowerName.includes('тест') ||
+    lowerName.includes('test') ||
+    lowerName.startsWith('шинэ зочин') ||
+    lowerName === 'зочин'
+  ) return true;
+
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
-  if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
-  if (name.startsWith('Шинэ Зочин (Тест)') || name.startsWith('Bot ') || name.startsWith('Mock ')) return true;
+  if (email.includes('@ioio.mn') || email.includes('visitor_') || email.includes('test_') || email.includes('mock_') || email.includes('bot_')) return true;
+
+  if (name.startsWith('+976') || (phone === '99110000' && !name && !email)) return true;
 
   return false;
 }

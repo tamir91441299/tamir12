@@ -26,22 +26,38 @@ import {
  * Check if a user is a mock sample or bot user that should not appear in production management
  */
 export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): boolean {
-  if (!u) return false;
+  if (!u) return true;
   if (u.isMockUser === true) return true;
   const id = String(u.id || '').trim();
   const email = String(u.email || '').trim().toLowerCase();
   const name = String(u.name || '').trim();
+  const phone = String(u.phone || '').trim();
 
-  // Known sample / bot IDs only
-  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_')) return true;
+  // Known sample / bot IDs
+  if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005', 'usr_admin_tamir'].includes(id)) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_') || id.startsWith('test_')) return true;
+
+  // Auto-generated dummy placeholder accounts
+  if (name.startsWith('Хэрэглэгч (') && !email.includes('@gmail') && !email.includes('@yahoo') && !email.includes('@mail')) return true;
+  if (id.startsWith('user_phone_') && name.startsWith('Хэрэглэгч (')) return true;
+
+  // Bot / mock names
+  const lowerName = name.toLowerCase();
+  if (
+    lowerName.includes('bot') ||
+    lowerName.includes('mock') ||
+    lowerName.includes('тест') ||
+    lowerName.includes('test') ||
+    lowerName.startsWith('шинэ зочин') ||
+    lowerName === 'зочин'
+  ) return true;
 
   // Known sample / bot emails
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
-  if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
+  if (email.includes('@ioio.mn') || email.includes('visitor_') || email.includes('test_') || email.includes('mock_') || email.includes('bot_')) return true;
 
-  if (name.startsWith('Шинэ Зочин (Тест)') || name.startsWith('Bot ') || name.startsWith('Mock ')) return true;
+  if (name.startsWith('+976') || (phone === '99110000' && !name && !email)) return true;
 
   return false;
 }
@@ -1835,46 +1851,11 @@ export async function authenticateUserCredentials(
     console.error('Error checking local auth records:', e);
   }
 
-  // 3. Fallback: If not found in DB, allow seamless user experience if credentials provided
-  const nowTs = Date.now();
-  const fallbackEmail = isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower;
-  const fallbackUser: UserAccount = {
-    id: isPhone ? 'user_phone_' + cleanPhone : 'user_' + nowTs,
-    name: isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0],
-    email: fallbackEmail,
-    phone: isPhone ? cleanPhone : '99110000',
-    registeredAt: new Date().toLocaleString('mn-MN'),
-    registeredTimestamp: nowTs,
-    role: isAdmin ? 'admin' : 'user',
-    status: 'active',
-    packageType: isAdmin ? 'full_vip' : 'free',
-    packageExpiry: isAdmin ? '2030-01-01' : '-',
-    walletBalance: 0,
-    purchasedMovies: [],
-    isMockUser: false,
+  // 3. Fallback: If not found in DB or auth records, reject with clear message (never create phantom bot users)
+  return {
+    success: false,
+    error: '⚠️ Хэрэглэгчийн мэдээлэл олдсонгүй эсвэл нууц үг буруу байна. Шинээр бүртгүүлнэ үү.',
   };
-
-  saveUserAuthRecord({
-    id: fallbackUser.id,
-    name: fallbackUser.name,
-    email: fallbackUser.email,
-    phone: fallbackUser.phone,
-    password: password,
-  });
-
-  saveUserToFirestore(fallbackUser, {
-    role: isAdmin ? 'admin' : 'user',
-    status: 'active',
-    packageType: isAdmin ? 'full_vip' : 'free',
-    packageExpiry: isAdmin ? '2030-01-01' : '-',
-    walletBalance: 0,
-    purchasedMovies: [],
-    registeredTimestamp: nowTs,
-    isMockUser: false,
-  });
-
-  persistActiveSession(fallbackUser, true);
-  return { success: true, user: fallbackUser };
 }
 
 /**

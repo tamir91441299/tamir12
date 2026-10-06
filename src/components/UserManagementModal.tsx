@@ -445,6 +445,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   useEffect(() => {
+    // Automatically purge all bot accounts so management is 100% bot-free
+    cleanupAllBotUsers().catch(() => {});
     handleManualSyncUsers();
 
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
@@ -590,6 +592,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const handleDirectGrantAnime = async (user: UserDetail, durationDays: number, customExpiry?: string) => {
+    if (user.walletBalance <= 0) {
+      if (!confirm(`⚠️ АНХААРУУЛГА: ${user.name} хэрэглэгч 0 ₮ оноотой (оноогүй) байна!\n\nОноогүй хэрэглэгчид шууд Анимэ эрх олгохдоо итгэлтэй байна уу? (Зөвлөмж: Эхлээд дансыг нь цэнэглэнэ үү)\n\n'OK' дарвал эрх олгогдоно, 'Cancel' дарвал цуцлагдана.`)) {
+        return;
+      }
+    }
     setAnimeGrantLoading(true);
     const res = await grantAnimeAccessToUser(user.id, durationDays, customExpiry);
     setAnimeGrantLoading(false);
@@ -642,6 +649,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   const handleChangePackage = (id: string, newPkg: 'full_vip' | 'movie' | 'anime' | 'free') => {
+    const targetUser = users.find((u) => u.id === id);
+    if (targetUser && (newPkg === 'anime' || newPkg === 'full_vip') && targetUser.walletBalance <= 0) {
+      if (!confirm(`⚠️ АНХААРУУЛГА: ${targetUser.name} хэрэглэгч 0 ₮ оноотой (оноогүй) байна!\n\nОноогүй хэрэглэгчид ${newPkg === 'anime' ? 'Анимэ' : 'FULL VIP'} эрх олгохдоо итгэлтэй байна уу?`)) {
+        return;
+      }
+    }
     const updated = users.map((u) => {
       if (u.id === id) {
         const expiryDate = new Date();
@@ -991,10 +1004,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                УДИРДАХ ХЭСЭГ (Админ Самбар)
+              <h2 className="text-lg font-black text-white flex items-center gap-2 flex-wrap">
+                <span>УДИРДАХ ХЭСЭГ (Админ Самбар)</span>
                 <span className="bg-amber-500 text-black text-xs font-black px-2 py-0.5 rounded-full">
                   {users.length} Хэрэглэгч
+                </span>
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-sm">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>Ботуудгүй (Зөвхөн бодит хэрэглэгчид)</span>
                 </span>
               </h2>
               <p className="text-xs text-zinc-400">
@@ -1513,9 +1530,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                         Хэтэвч / Оноо:
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-black text-emerald-400 text-sm">
+                        <span className={`font-black text-sm ${u.walletBalance > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {u.walletBalance.toLocaleString()} ₮
                         </span>
+                        {u.walletBalance <= 0 && (
+                          <span className="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1 py-0.2 rounded font-black">
+                            Оноогүй
+                          </span>
+                        )}
                       </div>
                     </div>
 
