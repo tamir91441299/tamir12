@@ -64,6 +64,7 @@ interface NavbarProps {
   onDeviceModeChange?: (mode: DeviceMode) => void;
   notifications?: AppNotification[];
   onOpenSeoModal?: () => void;
+  onOpenSiteHealthGuide?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -92,6 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onDeviceModeChange,
   notifications = [],
   onOpenSeoModal,
+  onOpenSiteHealthGuide,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAnimeDropdownOpen, setIsAnimeDropdownOpen] = useState(false);
@@ -285,6 +287,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Smartphone className="w-3 h-3 text-cyan-400 shrink-0" />
               <span>Апп татах</span>
+            </button>
+          )}
+
+          {onOpenSiteHealthGuide && (
+            <button
+              id="topbar-site-guide-btn"
+              type="button"
+              onClick={onOpenSiteHealthGuide}
+              className="flex items-center gap-1 bg-cyan-950/70 hover:bg-cyan-900/90 text-cyan-300 hover:text-white border border-cyan-500/40 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              title="Сайтын хөтөч, видео болон системийн алдаа шалгагч"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+              <span>Хөтөч / Алдаа</span>
             </button>
           )}
 

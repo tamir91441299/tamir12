@@ -5,10 +5,11 @@ interface FooterProps {
   onOpenSeoModal?: () => void;
   onOpenInstallModal?: () => void;
   onOpenDisplaySettings?: () => void;
+  onOpenSiteHealthGuide?: () => void;
   isAdmin?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallModal, onOpenDisplaySettings, isAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallModal, onOpenDisplaySettings, onOpenSiteHealthGuide, isAdmin }) => {
   return (
     <footer className="bg-[#050608] border-t border-white/[0.06] text-zinc-400 py-12 px-4 sm:px-6 mt-20 text-xs">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -36,6 +37,18 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
             </p>
 
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {onOpenSiteHealthGuide && (
+                <button
+                  type="button"
+                  onClick={onOpenSiteHealthGuide}
+                  className="inline-flex items-center gap-2 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-sm"
+                  title="Сайтын хөтөч, видео болон системийн алдаа шалгагч"
+                >
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span>🧭 Сайтын Хөтөч & Алдаа Шалгагч</span>
+                </button>
+              )}
+
               {onOpenDisplaySettings && (
                 <button
                   onClick={onOpenDisplaySettings}
@@ -43,7 +56,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenSeoModal, onOpenInstallMod
                   title="Утас, PC, Таблет дэлгэцийн харагдах хэмжээг тохируулах"
                 >
                   <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Дэлгэцийн хэмжээний тохиргоо (Утас / PC / Таблет)</span>
+                  <span>Дэлгэцийн тохиргоо (Утас / PC)</span>
                 </button>
               )}
 

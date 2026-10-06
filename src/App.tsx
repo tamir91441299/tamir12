@@ -21,6 +21,7 @@ import { isPasscodeVerifiedInSession } from './lib/passcodeService';
 import { Footer } from './components/Footer';
 import { SeoHead } from './components/SeoHead';
 import { SeoGuideModal } from './components/SeoGuideModal';
+import { SiteErrorGuideModal } from './components/SiteErrorGuideModal';
 import { ContinueWatching, WatchHistoryItem } from './components/ContinueWatching';
 import { SAMPLE_MOVIES, DEATH_NOTE, SPY_X_FAMILY } from './data/movies';
 import { Movie, TabType, MovieSubcategory } from './types';
@@ -185,6 +186,7 @@ export default function App() {
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
   const [showDisplaySettingsModal, setShowDisplaySettingsModal] = useState<boolean>(false);
+  const [showSiteHealthModal, setShowSiteHealthModal] = useState<boolean>(false);
 
   // Device & Screen Layout Responsive Customization (Phone, Tablet, PC)
   const [deviceMode, setDeviceMode] = useState<DeviceMode>(() => {
@@ -1081,6 +1083,9 @@ export default function App() {
         onOpenSeoModal={() => {
           setShowSeoModal(true);
         }}
+        onOpenSiteHealthGuide={() => {
+          setShowSiteHealthModal(true);
+        }}
         deviceMode={deviceMode}
         onDeviceModeChange={handleDeviceModeChange}
       />
@@ -1702,6 +1707,26 @@ export default function App() {
         <SeoGuideModal onClose={() => setShowSeoModal(false)} />
       )}
 
+      {showSiteHealthModal && (
+        <SiteErrorGuideModal
+          isOpen={showSiteHealthModal}
+          onClose={() => setShowSiteHealthModal(false)}
+          currentUser={currentUser}
+          onOpenAuthModal={() => {
+            setShowSiteHealthModal(false);
+            handleOpenAuthModal('login');
+          }}
+          onOpenInstallModal={() => {
+            setShowSiteHealthModal(false);
+            setShowInstallModal(true);
+          }}
+          onOpenDisplaySettings={() => {
+            setShowSiteHealthModal(false);
+            setShowDisplaySettingsModal(true);
+          }}
+        />
+      )}
+
       {showUserManagementModal && (
         <UserManagementModal
           currentUser={currentUser}
@@ -1711,6 +1736,7 @@ export default function App() {
           movies={moviesList}
           onUpdateMovieEpisodes={handleUpdateMovieEpisodes}
           onAddNewMovie={handleAddNewMovie}
+          onOpenSiteHealthGuide={() => setShowSiteHealthModal(true)}
         />
       )}
 
@@ -1847,6 +1873,7 @@ export default function App() {
         onOpenSeoModal={() => setShowSeoModal(true)} 
         onOpenInstallModal={() => setShowInstallModal(true)}
         onOpenDisplaySettings={() => setShowDisplaySettingsModal(true)}
+        onOpenSiteHealthGuide={() => setShowSiteHealthModal(true)}
         isAdmin={isAdmin}
       />
     </div>

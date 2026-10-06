@@ -30,13 +30,16 @@ import {
   persistActiveSession,
   getLastSavedAccount,
   getUserMemberCode,
-  getUserDisplayName
+  getUserDisplayName,
+  isCustomIdAvailable,
+  sendAdminNotification
 } from '../lib/userService';
 import { getAnimeExpiryDetails } from '../lib/permissionService';
 import { AnimeAvatar } from './UserProfileView';
 
 export interface UserAccount {
   id: string;
+  customId?: string;
   name: string;
   email: string;
   phone: string;
@@ -78,6 +81,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     currentUser ? 'login' : initialMode
   );
   const [formData, setFormData] = useState({
+    customId: '',
     name: '',
     email: '',
     phone: '',
@@ -91,8 +95,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const lastAccount = getLastSavedAccount();
 
+  const handleGenerateRandomId = () => {
+    const random5 = Math.floor(10000 + Math.random() * 90000).toString();
+    setFormData((prev) => ({ ...prev, customId: random5 }));
+    setError(null);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === 'customId') {
+      // Keep up to 5 characters uppercase / digits
+      const sanitized = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase();
+      setFormData((prev) => ({ ...prev, customId: sanitized }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
     setError(null);
   };
 
@@ -141,8 +158,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       // 1. Phone Login mode
       if (mode === 'phone') {
-        if (!cleanPhone || cleanPhone.length < 6) {
-          setError('⚠️ Зөв утасны дугаараа оруулна уу (Жишээ нь: 99112233, 88105544).');
+        const lookup = cleanPhone || formData.customId.trim();
+        if (!lookup || lookup.length < 5) {
+          setError('⚠️ 5 оронтой Хэрэглэгчийн ID эсвэл утасны дугаараа оруулна уу (Жишээ нь: 54321, 99112233).');
           setIsSubmitting(false);
           return;
         }
@@ -153,7 +171,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        const res = await authenticateUserCredentials(cleanPhone, cleanPassword);
+        const res = await authenticateUserCredentials(lookup, cleanPassword);
         if (!res.success || !res.user) {
           setError(res.error || '⚠️ Нууц үг буруу эсвэл хэрэглэгч олдсонгүй.');
           setIsSubmitting(false);
@@ -174,7 +192,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         persistActiveSession(userToLogin, rememberMe);
         await saveUserToFirestore(userToLogin, { walletBalance: targetBal });
 
-        setSuccessMessage('✓ Утасны дугаараар амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
+        setSuccessMessage('✓ Амжилттай нэвтэрлээ! (Бүртгэл хадгалагдлаа)');
         setTimeout(() => {
           onLoginSuccess(userToLogin);
           onClose();
@@ -184,6 +202,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       // 2. Register mode
       if (mode === 'register') {
+        const cleanCustomId = formData.customId.trim().toUpperCase();
+
+        if (!cleanCustomId || cleanCustomId.length !== 5) {
+          setError('⚠️ 5 оронтой Хэрэглэгчийн ID-гаа өөрөө зохиож оруулна уу (Жишээ: 54321, BAT88). Яг 5 оронтой байх ёстой.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!/^[A-Z0-9]{5}$/i.test(cleanCustomId)) {
+          setError('⚠️ 5 оронтой ID зөвхөн тоо болон англи үсгээс бүрдэх ёстой (Жишээ: 77889, AZ109).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const isAvail = await isCustomIdAvailable(cleanCustomId);
+        if (!isAvail) {
+          setError(`⚠️ "${cleanCustomId}" ID-г өөр хэрэглэгч авсан байна. Өөр 5 оронтой ID зохиож оруулна уу.`);
+          setIsSubmitting(false);
+          return;
+        }
+
         if (!cleanName) {
           setError('⚠️ Заавал өөрийн нэр эсвэл хоч нэрээ оруулна уу.');
           setIsSubmitting(false);
@@ -217,14 +256,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        const finalEmail = cleanEmail || `${cleanPhone || Date.now()}@flicknime.mn`;
-        const newUserRole = finalEmail === 'tamir91441299@gmail.com' ? ('admin' as const) : ('user' as const);
+        const finalEmail = cleanEmail || `${cleanPhone || cleanCustomId}@flicknime.mn`;
+        const newUserRole = (finalEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299' || cleanCustomId === '91441') ? ('admin' as const) : ('user' as const);
         const now = new Date();
         const formattedRegisteredAt = `${now.toLocaleDateString('mn-MN')} ${now.toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' })}`;
         const nowTimestamp = now.getTime();
 
         const newUser: UserAccount = {
-          id: 'user_' + nowTimestamp,
+          id: cleanCustomId,
+          customId: cleanCustomId,
           name: cleanName,
           email: finalEmail,
           phone: cleanPhone || '',
@@ -246,7 +286,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         // Save credentials into both Firestore and LocalStorage
         await saveUserAuthRecord({
-          id: newUser.id,
+          id: cleanCustomId,
+          customId: cleanCustomId,
           name: cleanName,
           email: finalEmail,
           phone: cleanPhone || '',
@@ -254,6 +295,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         });
 
         await saveUserToFirestore(newUser, {
+          id: cleanCustomId,
+          customId: cleanCustomId,
           role: newUserRole,
           status: 'active',
           packageType: 'free',
@@ -278,22 +321,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         // Persist session securely
         persistActiveSession(newUser, rememberMe);
 
-        // Notify app and admin panel immediately
+        // Notify app and admin panel immediately via Firestore & events
+        try {
+          await sendAdminNotification({
+            type: 'NEW_USER',
+            title: `🎉 Шинэ хэрэглэгч бүртгэгдлээ: ${newUser.name}`,
+            message: `5 оронтой ID: #${cleanCustomId} | Утас: ${newUser.phone || '-'} | И-мэйл: ${newUser.email || '-'}`,
+            userName: newUser.name,
+            userPhone: newUser.phone,
+            userEmail: newUser.email,
+          });
+        } catch (err) {
+          console.warn('Admin notification warning:', err);
+        }
+
         try {
           window.dispatchEvent(new CustomEvent('ioio_new_user_registered', { detail: newUser }));
         } catch {}
 
-        setSuccessMessage('🎉 Бүртгэл амжилттай үүсэж хадгалагдлаа! Шууд нэвтэрч байна...');
+        setSuccessMessage(`🎉 Амжилттай бүртгэгдлээ! Таны 5 оронтой ID: #${cleanCustomId}. Шууд нэвтэрч байна...`);
         setTimeout(() => {
           onLoginSuccess(newUser);
           onClose();
-        }, 600);
+        }, 700);
         return;
       }
 
-      // 3. PC / Standard Email Login mode
-      if (!cleanEmail && !cleanPhone) {
-        setError('⚠️ Бүртгүүлсэн Gmail хаяг эсвэл нэвтрэх нэрээ оруулна уу.');
+      // 3. PC / Standard Email / ID Login mode
+      const lookupTarget = cleanEmail || cleanPhone || formData.customId.trim();
+      if (!lookupTarget) {
+        setError('⚠️ 5 оронтой ID, Gmail хаяг эсвэл утасны дугаараа оруулна уу.');
         setIsSubmitting(false);
         return;
       }
@@ -304,7 +361,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         return;
       }
 
-      const lookupTarget = cleanEmail || cleanPhone;
       const res = await authenticateUserCredentials(lookupTarget, cleanPassword);
       if (!res.success || !res.user) {
         setError(res.error || '⚠️ Нууц үг буруу эсвэл бүртгэл олдсонгүй.');
@@ -759,31 +815,77 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {mode === 'register' && (
-                <div>
-                  <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Нэр / Хоч нэр:</span>
-                    <span className="text-amber-400 text-[10px] font-semibold">(Заавал)</span>
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Жишээ: Батзориг"
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
-                    />
+                <>
+                  {/* 5-digit Custom ID Field */}
+                  <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-3 rounded-xl border border-amber-500/30">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>5 Оронтой ID (Өөрөө зохиох):</span>
+                      </label>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${
+                        formData.customId.length === 5 
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      }`}>
+                        {formData.customId.length}/5 орон {formData.customId.length === 5 ? '✓' : ''}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">#</span>
+                        <input
+                          type="text"
+                          name="customId"
+                          maxLength={5}
+                          required
+                          value={formData.customId}
+                          onChange={handleChange}
+                          placeholder="Жишээ: 54321, BAT88"
+                          className="w-full bg-zinc-950 border border-amber-500/40 focus:border-amber-400 rounded-xl py-2 pl-7 pr-3 text-xs text-amber-200 font-mono font-black tracking-widest placeholder-zinc-600 focus:outline-none transition-colors uppercase"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateRandomId}
+                        className="px-2.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[11px] rounded-xl shrink-0 transition-colors cursor-pointer shadow flex items-center gap-1"
+                        title="Санамсаргүй 5 оронтой ID үүсгэх"
+                      >
+                        <span>🎲 Санамсаргүй</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-amber-300/80 mt-1.5">
+                      💡 Та энэхүү 5 оронтой ID-гаа өөрөө зохион системд нэвтрэхдээ ашиглана (Яг 5 оронтой тоо эсвэл үсэг).
+                    </p>
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>Нэр / Хоч нэр:</span>
+                      <span className="text-amber-400 text-[10px] font-semibold">(Заавал)</span>
+                    </label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        name="name"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="Жишээ: Батзориг"
+                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Phone Field for Phone Mode or Register Mode */}
+              {/* Phone or 5-digit ID Field for Phone Mode or Register Mode */}
               {(mode === 'phone' || mode === 'register') && (
                 <div>
                   <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Утасны дугаар:</span>
+                    <span>{mode === 'phone' ? '5 оронтой ID эсвэл Утасны дугаар:' : 'Утасны дугаар:'}</span>
                     <span className={mode === 'phone' ? 'text-cyan-400 text-[10px] font-semibold' : 'text-zinc-500 text-[10px]'}>
                       {mode === 'phone' ? '(Заавал)' : '(Нэмэлт)'}
                     </span>
@@ -791,28 +893,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="relative">
                     <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="tel"
+                      type="text"
                       name="phone"
                       required={mode === 'phone'}
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="Жишээ нь: 99112233, 88105544"
+                      placeholder={mode === 'phone' ? '5 оронтой ID (54321) эсвэл утас (99112233)' : 'Жишээ нь: 99112233, 88105544'}
                       className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors font-mono tracking-wider"
                     />
                   </div>
                   {mode === 'phone' && (
                     <p className="text-[10px] text-zinc-400 mt-1">
-                      Монгол улсын 8 оронтой гар утасны дугаараа бичнэ үү.
+                      Та 5 оронтой Хэрэглэгчийн ID эсвэл 8 оронтой гар утасны дугаараараа нэвтэрч болно.
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Email field for PC mode or Register mode */}
+              {/* Email or ID field for PC mode or Register mode */}
               {(mode === 'pc' || mode === 'login' || mode === 'register') && (
                 <div>
                   <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>{mode === 'pc' || mode === 'login' ? 'Gmail / Нэвтрэх нэр:' : 'Gmail хаяг:'}</span>
+                    <span>{mode === 'pc' || mode === 'login' ? '5 оронтой ID / Gmail / Нэвтрэх нэр:' : 'Gmail хаяг:'}</span>
                     <span className="text-cyan-400 text-[10px] font-semibold">(Заавал)</span>
                   </label>
                   <div className="relative">
@@ -823,12 +925,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required={mode !== 'phone'}
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder={mode === 'register' ? 'yourname@gmail.com' : 'Gmail хаяг эсвэл утасны дугаар'}
+                      placeholder={mode === 'register' ? 'yourname@gmail.com' : '5 оронтой ID, Gmail эсвэл утасны дугаар'}
                       className="w-full bg-zinc-900 border border-zinc-800 focus:border-cyan-500 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors font-mono"
                     />
                   </div>
                   <p className="text-[10px] text-zinc-500 mt-1">
-                    {mode === 'register' ? 'Бүртгэл баталгаажуулах үндсэн Gmail хаяг' : 'Бүртгэлтэй Gmail хаягаа оруулна уу'}
+                    {mode === 'register' ? 'Бүртгэл баталгаажуулах үндсэн Gmail хаяг' : '5 оронтой ID, бүртгэлтэй Gmail эсвэл утасны дугаараа оруулна уу'}
                   </p>
                 </div>
               )}

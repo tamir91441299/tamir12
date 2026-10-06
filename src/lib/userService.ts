@@ -34,14 +34,14 @@ export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): bool
 
   // Known sample / bot IDs only
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_')) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_')) return true;
 
   // Known sample / bot emails
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
   if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
 
-  if (name.startsWith('Шинэ Зочин (Тест)')) return true;
+  if (name.startsWith('Шинэ Зочин (Тест)') || name.startsWith('Bot ') || name.startsWith('Mock ')) return true;
 
   return false;
 }
@@ -57,7 +57,7 @@ export interface AuthRecord {
 
 export interface AppNotification {
   id: string;
-  type: 'NEW_USER' | 'TOP_UP_REQUEST' | 'PACKAGE_PURCHASE' | 'NEW_ANIME';
+  type: 'NEW_USER' | 'TOP_UP_REQUEST' | 'PACKAGE_PURCHASE' | 'NEW_ANIME' | 'ERROR_REPORT';
   title: string;
   message: string;
   movieId?: string;
@@ -1102,6 +1102,7 @@ export async function saveUserToFirestore(
 
     const userPayload: UserDetail = {
       id: rawId,
+      customId: (user as any).customId || extraData?.customId || existingRecord?.customId || (rawId.length === 5 ? rawId : ''),
       name: user.name || existingRecord?.name || 'Хэрэглэгч',
       email: cleanEmail || existingRecord?.email || '',
       phone: cleanPhone || existingRecord?.phone || '',
@@ -1490,6 +1491,7 @@ export async function cleanupAllBotUsers(): Promise<{ deletedCount: number; mess
  */
 export async function saveUserAuthRecord(record: {
   id?: string;
+  customId?: string;
   name: string;
   email: string;
   phone: string;
@@ -1497,7 +1499,8 @@ export async function saveUserAuthRecord(record: {
 }): Promise<void> {
   const cleanEmail = (record.email || '').trim().toLowerCase();
   const cleanPhone = (record.phone || '').trim().replace(/\s+/g, '');
-  const cleanId = record.id || (cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now());
+  const cleanCustomId = (record.customId || (record.id && record.id.length === 5 ? record.id : '')).trim();
+  const cleanId = record.id || cleanCustomId || (cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9_-]/g, '_') : 'usr_' + Date.now());
 
   // 1. Save to localStorage auth records
   try {
@@ -1505,6 +1508,7 @@ export async function saveUserAuthRecord(record: {
     const credMap = existingStr ? JSON.parse(existingStr) : {};
     const entryData = {
       id: cleanId,
+      customId: cleanCustomId,
       name: record.name,
       email: cleanEmail,
       phone: cleanPhone,
@@ -1513,10 +1517,14 @@ export async function saveUserAuthRecord(record: {
     };
     if (cleanEmail) credMap[cleanEmail] = entryData;
     if (cleanPhone) credMap[cleanPhone] = entryData;
+    if (cleanCustomId) credMap[cleanCustomId] = entryData;
+    if (cleanId) credMap[cleanId] = entryData;
     localStorage.setItem('ioio_user_auth_records', JSON.stringify(credMap));
 
     // Save last saved account info for fast-fill / auto-login
     localStorage.setItem('ioio_last_account_info', JSON.stringify({
+      id: cleanId,
+      customId: cleanCustomId,
       name: record.name,
       email: cleanEmail,
       phone: cleanPhone,
@@ -1533,6 +1541,7 @@ export async function saveUserAuthRecord(record: {
         docRef,
         {
           id: cleanId,
+          customId: cleanCustomId,
           name: record.name,
           email: cleanEmail,
           phone: cleanPhone,
@@ -1548,7 +1557,47 @@ export async function saveUserAuthRecord(record: {
 }
 
 /**
- * Authenticate user by Phone or Email from Firestore and LocalStorage
+ * Check if a 5-digit custom ID is available for new registration
+ */
+export async function isCustomIdAvailable(customId: string): Promise<boolean> {
+  const cleanId = customId.trim();
+  if (cleanId.length !== 5) return false;
+
+  // 1. Check local storage list
+  try {
+    const saved = localStorage.getItem('ioio_registered_users_list');
+    if (saved) {
+      const list: UserDetail[] = JSON.parse(saved);
+      if (Array.isArray(list)) {
+        const found = list.some((u) => u && (u.id === cleanId || (u as any).customId === cleanId));
+        if (found) return false;
+      }
+    }
+  } catch {}
+
+  // 2. Check server list
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users)) {
+        const found = data.users.some((u: any) => u && (u.id === cleanId || u.customId === cleanId));
+        if (found) return false;
+      }
+    }
+  } catch {}
+
+  // 3. Check Firestore
+  try {
+    const snap = await getDoc(doc(db, 'users', cleanId));
+    if (snap.exists()) return false;
+  } catch {}
+
+  return true;
+}
+
+/**
+ * Authenticate user by Phone, Email, or 5-digit Custom ID from Firestore and LocalStorage
  */
 export async function authenticateUserCredentials(
   identifier: string,
@@ -1557,15 +1606,16 @@ export async function authenticateUserCredentials(
   const clean = identifier.trim();
   const cleanLower = clean.toLowerCase();
   const cleanPhone = clean.replace(/\s+/g, '');
-  const isPhone = /^[0-9]{6,12}$/.test(cleanPhone);
+  const isPhone = /^[0-9]{8,12}$/.test(cleanPhone);
   const password = inputPassword ? inputPassword.trim() : '';
 
   // Special Admin Shortcut
-  const isAdmin = cleanPhone === '91441299' || cleanLower === 'tamir91441299@gmail.com' || cleanLower === 'admin';
+  const isAdmin = cleanPhone === '91441299' || cleanLower === 'tamir91441299@gmail.com' || cleanLower === 'admin' || clean === '91441';
   if (isAdmin) {
     const adminUser: UserAccount = {
-      id: 'usr_admin_tamir',
-      name: 'admin',
+      id: '91441',
+      customId: '91441',
+      name: 'Tamir (Admin)',
       email: 'tamir91441299@gmail.com',
       phone: '91441299',
       registeredAt: '2026-01-01',
@@ -1585,7 +1635,27 @@ export async function authenticateUserCredentials(
     const usersCol = collection(db, 'users');
     let matchedDoc: any = null;
 
-    if (isPhone) {
+    // Direct check by ID in Firestore (5-digit custom ID or user ID)
+    if (clean) {
+      try {
+        const idSnap = await getDoc(doc(db, 'users', clean));
+        if (idSnap.exists()) {
+          matchedDoc = { ...idSnap.data(), id: idSnap.id };
+        }
+      } catch (e) {}
+    }
+
+    if (!matchedDoc && clean.length === 5) {
+      try {
+        const qCustom = query(usersCol, where('customId', '==', clean), limit(1));
+        const customSnap = await getDocs(qCustom);
+        if (!customSnap.empty) {
+          matchedDoc = { ...customSnap.docs[0].data(), id: customSnap.docs[0].id };
+        }
+      } catch (e) {}
+    }
+
+    if (!matchedDoc && isPhone) {
       const qPhone = query(usersCol, where('phone', '==', cleanPhone), limit(1));
       const snap = await getDocs(qPhone);
       if (!snap.empty) {
@@ -1608,7 +1678,8 @@ export async function authenticateUserCredentials(
 
       const bal = typeof matchedDoc.walletBalance === 'number' ? matchedDoc.walletBalance : 0;
       const userAcc: UserAccount = {
-        id: matchedDoc.id || ('user_phone_' + cleanPhone),
+        id: matchedDoc.id || matchedDoc.customId || ('user_phone_' + cleanPhone),
+        customId: matchedDoc.customId || (matchedDoc.id && matchedDoc.id.length === 5 ? matchedDoc.id : undefined),
         name: matchedDoc.name || 'Хэрэглэгч',
         email: matchedDoc.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
         phone: matchedDoc.phone || (isPhone ? cleanPhone : '99110000'),
@@ -1624,6 +1695,7 @@ export async function authenticateUserCredentials(
       // Save credentials locally for faster future auth
       saveUserAuthRecord({
         id: userAcc.id,
+        customId: userAcc.customId,
         name: userAcc.name,
         email: userAcc.email,
         phone: userAcc.phone,
@@ -1650,7 +1722,10 @@ export async function authenticateUserCredentials(
           if (!u || isBotOrMockUser(u)) return false;
           const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
           const uEmail = (u.email || '').trim().toLowerCase();
+          const uId = String(u.id || '').trim();
+          const uCustomId = String(u.customId || '').trim();
           return (
+            (clean && (uId === clean || uCustomId === clean)) ||
             (cleanPhone && cleanPhone.length >= 8 && uPhone === cleanPhone) ||
             (cleanLower && cleanLower.includes('@') && uEmail === cleanLower)
           );
@@ -1658,7 +1733,8 @@ export async function authenticateUserCredentials(
         if (foundServerUser) {
           const sBal = typeof foundServerUser.walletBalance === 'number' ? foundServerUser.walletBalance : 0;
           const userAcc: UserAccount = {
-            id: foundServerUser.id || (isPhone ? 'user_phone_' + cleanPhone : 'user_' + Date.now()),
+            id: foundServerUser.id || foundServerUser.customId || (isPhone ? 'user_phone_' + cleanPhone : 'user_' + Date.now()),
+            customId: foundServerUser.customId || (foundServerUser.id && foundServerUser.id.length === 5 ? foundServerUser.id : undefined),
             name: foundServerUser.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
             email: foundServerUser.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
             phone: foundServerUser.phone || (isPhone ? cleanPhone : ''),
@@ -1673,6 +1749,7 @@ export async function authenticateUserCredentials(
           };
           saveUserAuthRecord({
             id: userAcc.id,
+            customId: userAcc.customId,
             name: userAcc.name,
             email: userAcc.email,
             phone: userAcc.phone,
@@ -1695,10 +1772,14 @@ export async function authenticateUserCredentials(
     const credMapStr = localStorage.getItem('ioio_user_auth_records');
     if (credMapStr) {
       const credMap = JSON.parse(credMapStr);
-      let found = (cleanLower && credMap[cleanLower]) || (cleanPhone && credMap[cleanPhone]);
+      let found = (clean && credMap[clean]) || (cleanLower && credMap[cleanLower]) || (cleanPhone && credMap[cleanPhone]);
       if (!found) {
         const entry = Object.values(credMap).find(
-          (v: any) => v && ((cleanPhone && cleanPhone.length >= 8 && v.phone && v.phone.replace(/\s+/g, '') === cleanPhone) || (cleanLower && cleanLower.includes('@') && v.email && v.email.toLowerCase() === cleanLower))
+          (v: any) => v && (
+            (clean && (v.id === clean || v.customId === clean)) ||
+            (cleanPhone && cleanPhone.length >= 8 && v.phone && v.phone.replace(/\s+/g, '') === cleanPhone) ||
+            (cleanLower && cleanLower.includes('@') && v.email && v.email.toLowerCase() === cleanLower)
+          )
         );
         if (entry) found = entry;
       }
@@ -1715,7 +1796,12 @@ export async function authenticateUserCredentials(
           const listStr = localStorage.getItem('ioio_registered_users_list');
           if (listStr) {
             const list: UserDetail[] = JSON.parse(listStr);
-            const reg = list.find((u) => u && ((found.id && u.id === found.id) || (cleanLower && cleanLower.includes('@') && u.email && u.email.toLowerCase() === cleanLower) || (cleanPhone && cleanPhone.length >= 8 && u.phone && u.phone.replace(/\s+/g, '') === cleanPhone)));
+            const reg = list.find((u) => u && (
+              (found.id && u.id === found.id) ||
+              (clean && (u.id === clean || (u as any).customId === clean)) ||
+              (cleanLower && cleanLower.includes('@') && u.email && u.email.toLowerCase() === cleanLower) ||
+              (cleanPhone && cleanPhone.length >= 8 && u.phone && u.phone.replace(/\s+/g, '') === cleanPhone)
+            ));
             if (reg) {
               if (typeof reg.walletBalance === 'number') currentBalance = reg.walletBalance;
               if (reg.packageType) currentPackage = reg.packageType;
@@ -1726,6 +1812,7 @@ export async function authenticateUserCredentials(
 
         const userAcc: UserAccount = {
           id: found.id || (isPhone ? 'user_phone_' + cleanPhone : 'usr_' + Date.now()),
+          customId: found.customId || (found.id && found.id.length === 5 ? found.id : undefined),
           name: found.name || (isPhone ? `Хэрэглэгч (${cleanPhone})` : cleanLower.split('@')[0]),
           email: found.email || (isPhone ? `${cleanPhone}@flicknime.mn` : cleanLower),
           phone: found.phone || (isPhone ? cleanPhone : ''),
@@ -2026,6 +2113,15 @@ export function getLastSavedAccount(): { name: string; email: string; phone: str
  */
 export function getUserMemberCode(user: Partial<UserAccount> | null | undefined): string {
   if (!user) return '163462';
+
+  // If user has chosen a 5-digit custom ID, return it!
+  if ((user as any).customId && String((user as any).customId).trim().length === 5) {
+    return String((user as any).customId).trim();
+  }
+  if (user.id && user.id.trim().length === 5) {
+    return user.id.trim();
+  }
+
   if ((user as any).memberCode) {
     return String((user as any).memberCode).replace(/^#/, '');
   }

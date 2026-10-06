@@ -16,11 +16,11 @@ function isBotUser(u: any): boolean {
   const name = String(u.name || '').trim();
 
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_')) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_')) return true;
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
   if (email.includes('@ioio.mn') || email.includes('visitor_')) return true;
-  if (name.startsWith('Шинэ Зочин (Тест)')) return true;
+  if (name.startsWith('Шинэ Зочин (Тест)') || name.startsWith('Bot ') || name.startsWith('Mock ')) return true;
 
   return false;
 }
@@ -119,6 +119,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const cleanId = (payload.id || '').trim();
+    const cleanCustomId = (payload.customId || (cleanId.length === 5 ? cleanId : '')).trim();
     const cleanPhone = (payload.phone || '').trim().replace(/\s+/g, '');
     const cleanEmail = (payload.email || '').trim().toLowerCase();
 
@@ -128,7 +129,9 @@ router.post('/register', async (req: Request, res: Response) => {
     const existingIndex = users.findIndex((u) => {
       const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
       const uEmail = (u.email || '').trim().toLowerCase();
+      const uCustomId = (u.customId || (u.id && u.id.length === 5 ? u.id : '')).trim();
       return (
+        (cleanCustomId && uCustomId === cleanCustomId) ||
         (cleanId && u.id === cleanId) ||
         (cleanPhone && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
         (cleanEmail && uEmail === cleanEmail)
@@ -137,7 +140,8 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const userObj = {
       ...payload,
-      id: cleanId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`),
+      id: cleanId || cleanCustomId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`),
+      customId: cleanCustomId || payload.customId || '',
       name: payload.name || 'Хэрэглэгч',
       phone: cleanPhone || '',
       email: cleanEmail || '',
@@ -167,6 +171,23 @@ router.post('/register', async (req: Request, res: Response) => {
         await setDoc(doc(db, 'users', userObj.id), userObj, { merge: true });
         if (cleanPhone && cleanPhone !== '99110000' && userObj.id !== `user_phone_${cleanPhone}`) {
           await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userObj, { merge: true });
+        }
+
+        // If new registration, create admin notification
+        if (existingIndex < 0) {
+          const notifId = `notif_user_${userObj.customId || Date.now()}`;
+          await setDoc(doc(db, 'notifications', notifId), {
+            id: notifId,
+            type: 'NEW_USER',
+            title: `🎉 Шинэ хэрэглэгч бүртгэгдлээ: ${userObj.name}`,
+            message: `5 оронтой ID: #${userObj.customId || userObj.id} | Утас: ${userObj.phone || '-'} | И-мэйл: ${userObj.email || '-'}`,
+            userName: userObj.name,
+            userPhone: userObj.phone,
+            userEmail: userObj.email,
+            customId: userObj.customId,
+            createdAt: new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now(),
+          }, { merge: true });
         }
       } catch (err) {
         console.warn('Firestore setDoc warning in /api/users/register:', err);
