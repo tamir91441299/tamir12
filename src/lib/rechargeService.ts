@@ -397,7 +397,7 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
   };
 
   fetchServerRequests();
-  const serverInterval = setInterval(fetchServerRequests, 3500);
+  const serverInterval = setInterval(fetchServerRequests, 10000);
 
   const handleCustomUpdated = () => {
     fetchServerRequests();

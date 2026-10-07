@@ -6,6 +6,12 @@ import { getServerDb } from '../lib/firestoreDb.ts';
 
 const router = Router();
 const USERS_FILE_PATH = path.join(process.cwd(), 'public', 'registered_users.json');
+const RECHARGES_FILE_PATH = path.join(process.cwd(), 'public', 'recharge_requests.json');
+
+// In-memory Firestore cache and quota backoff to prevent burning Firestore read units
+let lastFirestoreFetchTime = 0;
+let cachedFirestoreUsers: any[] = [];
+let firestoreQuotaBlockedUntil = 0;
 
 // Helper to identify mock/sample bots
 export function isBotUser(u: any): boolean {
@@ -77,7 +83,69 @@ function getUserTimestamp(u: any): number {
   return 0;
 }
 
-// GET /api/users - List all registered users (Firestore + JSON file)
+// Ensure any users who submitted recharge requests exist in user list
+function mergeUsersFromRechargeRequests(usersMap: Map<string, any>): void {
+  try {
+    if (fs.existsSync(RECHARGES_FILE_PATH)) {
+      const content = fs.readFileSync(RECHARGES_FILE_PATH, 'utf-8');
+      const recharges = JSON.parse(content);
+      if (Array.isArray(recharges)) {
+        for (const req of recharges) {
+          if (!req || (!req.userPhone && !req.userEmail && !req.userId)) continue;
+          const cleanPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+          const cleanEmail = (req.userEmail || '').trim().toLowerCase();
+          const cleanUserId = (req.userId || '').trim();
+          const cleanCustomId = (req.customId || (cleanUserId.length === 5 ? cleanUserId : '')).trim();
+
+          // Check if already in map
+          let foundKey: string | null = null;
+          for (const [key, existing] of usersMap.entries()) {
+            const exPhone = (existing.phone || '').trim().replace(/\s+/g, '');
+            const exEmail = (existing.email || '').trim().toLowerCase();
+            const exId = String(existing.id || '').trim();
+            const exCustomId = String(existing.customId || '').trim();
+
+            if (
+              (cleanUserId && (exId === cleanUserId || exCustomId === cleanUserId)) ||
+              (cleanCustomId && (exCustomId === cleanCustomId || exId === cleanCustomId)) ||
+              (cleanPhone && cleanPhone.length >= 8 && cleanPhone !== '99110000' && exPhone === cleanPhone) ||
+              (cleanEmail && cleanEmail.includes('@') && exEmail === cleanEmail)
+            ) {
+              foundKey = key;
+              break;
+            }
+          }
+
+          if (!foundKey) {
+            // Create user record for this recharge request user
+            const primaryId = cleanCustomId || cleanUserId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
+            const autoUser = {
+              id: primaryId,
+              customId: cleanCustomId || (primaryId.length === 5 ? primaryId : ''),
+              name: req.userName || 'Хэрэглэгч',
+              phone: cleanPhone || '',
+              email: cleanEmail || '',
+              registeredAt: req.createdAt ? new Date(req.createdAt).toLocaleDateString('mn-MN') : new Date().toLocaleDateString('mn-MN'),
+              registeredTimestamp: req.createdAt ? new Date(req.createdAt).getTime() : Date.now(),
+              role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : 'user',
+              status: 'active',
+              packageType: 'free',
+              packageExpiry: '-',
+              walletBalance: 0,
+              isMockUser: false,
+              updatedAt: new Date().toISOString(),
+            };
+            usersMap.set(primaryId, autoUser);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Notice merging recharge request users:', e);
+  }
+}
+
+// GET /api/users - List all registered users (JSON file + throttled Firestore)
 router.get('/', async (req: Request, res: Response) => {
   try {
     const localUsers = readStoredUsers();
@@ -90,10 +158,18 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
+    // Auto-discover users who sent recharge requests
+    mergeUsersFromRechargeRequests(map);
+
+    const now = Date.now();
     const db = getServerDb();
-    if (db) {
+
+    // Only query Firestore if NOT blocked by quota and at least 60s has passed since last fetch
+    if (db && now > firestoreQuotaBlockedUntil && now - lastFirestoreFetchTime > 60000) {
       try {
+        lastFirestoreFetchTime = now;
         const snap = await getDocs(collection(db, 'users'));
+        const firestoreList: any[] = [];
         snap.forEach((docSnap) => {
           const d = docSnap.data();
           if (d && !isBotUser(d) && !isBotUser({ id: docSnap.id })) {
@@ -102,17 +178,29 @@ router.get('/', async (req: Request, res: Response) => {
               id: docSnap.id,
               isMockUser: false,
             };
-            const key = userObj.id || userObj.phone || userObj.email;
-            if (key) {
-              const existing = map.get(key);
-              map.set(key, { ...existing, ...userObj });
-            }
+            firestoreList.push(userObj);
           }
         });
-      } catch (err) {
-        console.warn('Firestore fetch warning on /api/users:', err);
+        cachedFirestoreUsers = firestoreList;
+      } catch (err: any) {
+        const msg = String(err?.message || err);
+        if (msg.includes('Quota exceeded') || msg.includes('quota') || msg.includes('resource-exhausted')) {
+          firestoreQuotaBlockedUntil = now + 300000; // Block Firestore queries for 5 minutes
+          console.warn('Firestore daily read quota limit reached. Using resilient local cache.');
+        } else {
+          console.warn('Firestore fetch warning on /api/users:', err?.message || err);
+        }
       }
     }
+
+    // Merge cached Firestore docs into map
+    cachedFirestoreUsers.forEach((userObj) => {
+      const key = userObj.id || userObj.phone || userObj.email;
+      if (key) {
+        const existing = map.get(key);
+        map.set(key, { ...existing, ...userObj });
+      }
+    });
 
     const merged = Array.from(map.values());
     merged.sort((a, b) => getUserTimestamp(b) - getUserTimestamp(a));
@@ -148,67 +236,72 @@ router.post('/register', async (req: Request, res: Response) => {
       const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
       const uEmail = (u.email || '').trim().toLowerCase();
       const uCustomId = (u.customId || (u.id && u.id.length === 5 ? u.id : '')).trim();
+      const uId = String(u.id || '').trim();
       return (
-        (cleanCustomId && uCustomId === cleanCustomId) ||
-        (cleanId && u.id === cleanId) ||
-        (cleanPhone && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
-        (cleanEmail && uEmail === cleanEmail)
+        (cleanCustomId && (uCustomId === cleanCustomId || uId === cleanCustomId)) ||
+        (cleanId && (uId === cleanId || uCustomId === cleanId)) ||
+        (cleanPhone && cleanPhone.length >= 8 && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
+        (cleanEmail && cleanEmail.includes('@') && uEmail === cleanEmail)
       );
     });
 
+    const existingUser = existingIndex >= 0 ? users[existingIndex] : null;
+
+    // Preserve wallet balance and active package if already present
+    const resolvedBalance = typeof payload.walletBalance === 'number' && payload.walletBalance > 0
+      ? payload.walletBalance
+      : typeof existingUser?.walletBalance === 'number'
+      ? existingUser.walletBalance
+      : (typeof payload.walletBalance === 'number' ? payload.walletBalance : 0);
+
+    const resolvedPackage = (payload.packageType && payload.packageType !== 'free')
+      ? payload.packageType
+      : (existingUser?.packageType || payload.packageType || 'free');
+
+    const resolvedExpiry = (payload.packageExpiry && payload.packageExpiry !== '-' && payload.packageExpiry !== 'Идэвхгүй')
+      ? payload.packageExpiry
+      : (existingUser?.packageExpiry || payload.packageExpiry || '-');
+
+    const primaryId = cleanCustomId || cleanId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
+
     const userObj = {
+      ...existingUser,
       ...payload,
-      id: cleanId || cleanCustomId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`),
-      customId: cleanCustomId || payload.customId || '',
-      name: payload.name || 'Хэрэглэгч',
-      phone: cleanPhone || '',
-      email: cleanEmail || '',
-      registeredAt: payload.registeredAt || new Date().toLocaleString('mn-MN'),
-      registeredTimestamp: payload.registeredTimestamp || Date.now(),
-      role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : (payload.role || 'user'),
-      status: payload.status || 'active',
-      packageType: payload.packageType || 'free',
-      packageExpiry: payload.packageExpiry || '-',
-      walletBalance: typeof payload.walletBalance === 'number' ? payload.walletBalance : 0,
+      id: primaryId,
+      customId: cleanCustomId || existingUser?.customId || (primaryId.length === 5 ? primaryId : ''),
+      name: payload.name || existingUser?.name || 'Хэрэглэгч',
+      phone: cleanPhone || existingUser?.phone || '',
+      email: cleanEmail || existingUser?.email || '',
+      registeredAt: existingUser?.registeredAt || payload.registeredAt || new Date().toLocaleString('mn-MN'),
+      registeredTimestamp: existingUser?.registeredTimestamp || payload.registeredTimestamp || Date.now(),
+      role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299' || cleanCustomId === '91441') ? 'admin' : (payload.role || existingUser?.role || 'user'),
+      status: payload.status || existingUser?.status || 'active',
+      packageType: resolvedPackage,
+      packageExpiry: resolvedExpiry,
+      walletBalance: resolvedBalance,
       isMockUser: false,
       updatedAt: new Date().toISOString(),
     };
 
     if (existingIndex >= 0) {
-      users[existingIndex] = { ...users[existingIndex], ...userObj };
+      users[existingIndex] = userObj;
     } else {
       users.unshift(userObj);
     }
 
     writeStoredUsers(users);
 
-    // Persist to Firestore
+    // Persist to Firestore asynchronously
     const db = getServerDb();
-    if (db) {
-      try {
-        await setDoc(doc(db, 'users', userObj.id), userObj, { merge: true });
-        if (cleanPhone && cleanPhone !== '99110000' && userObj.id !== `user_phone_${cleanPhone}`) {
-          await setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userObj, { merge: true });
+    if (db && Date.now() > firestoreQuotaBlockedUntil) {
+      setDoc(doc(db, 'users', userObj.id), userObj, { merge: true }).catch((err) => {
+        const msg = String(err?.message || err);
+        if (msg.includes('Quota exceeded') || msg.includes('quota')) {
+          firestoreQuotaBlockedUntil = Date.now() + 300000;
         }
-
-        // If new registration, create admin notification
-        if (existingIndex < 0) {
-          const notifId = `notif_user_${userObj.customId || Date.now()}`;
-          await setDoc(doc(db, 'notifications', notifId), {
-            id: notifId,
-            type: 'NEW_USER',
-            title: `🎉 Шинэ хэрэглэгч бүртгэгдлээ: ${userObj.name}`,
-            message: `5 оронтой ID: #${userObj.customId || userObj.id} | Утас: ${userObj.phone || '-'} | И-мэйл: ${userObj.email || '-'}`,
-            userName: userObj.name,
-            userPhone: userObj.phone,
-            userEmail: userObj.email,
-            customId: userObj.customId,
-            createdAt: new Date().toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' }),
-            timestamp: Date.now(),
-          }, { merge: true });
-        }
-      } catch (err) {
-        console.warn('Firestore setDoc warning in /api/users/register:', err);
+      });
+      if (cleanPhone && cleanPhone !== '99110000' && userObj.id !== `user_phone_${cleanPhone}`) {
+        setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userObj, { merge: true }).catch(() => {});
       }
     }
 
@@ -232,27 +325,68 @@ router.post('/update', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'userId and updates required' });
     }
 
+    const cleanTargetId = String(userId).trim();
     let users = readStoredUsers();
-    const idx = users.findIndex((u) => u.id === userId || u.phone === userId || u.email === userId);
+
+    const idx = users.findIndex((u) => {
+      const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uId = String(u.id || '').trim();
+      const uCustomId = String(u.customId || '').trim();
+      return (
+        uId === cleanTargetId ||
+        uCustomId === cleanTargetId ||
+        (cleanTargetId.length >= 8 && uPhone === cleanTargetId) ||
+        (cleanTargetId.includes('@') && uEmail === cleanTargetId.toLowerCase())
+      );
+    });
+
     let updatedUser: any = null;
 
     if (idx >= 0) {
       users[idx] = { ...users[idx], ...updates, updatedAt: new Date().toISOString() };
       updatedUser = users[idx];
-      writeStoredUsers(users);
+    } else {
+      // User not in list yet, create with updates
+      const isPhone = cleanTargetId.match(/^[0-9]{8}$/);
+      const isEmail = cleanTargetId.includes('@');
+      updatedUser = {
+        id: cleanTargetId,
+        customId: cleanTargetId.length === 5 ? cleanTargetId : '',
+        name: updates.name || 'Хэрэглэгч',
+        phone: isPhone ? cleanTargetId : (updates.phone || ''),
+        email: isEmail ? cleanTargetId.toLowerCase() : (updates.email || ''),
+        role: updates.role || 'user',
+        status: updates.status || 'active',
+        packageType: updates.packageType || 'free',
+        packageExpiry: updates.packageExpiry || '-',
+        walletBalance: typeof updates.walletBalance === 'number' ? updates.walletBalance : 0,
+        registeredAt: new Date().toLocaleDateString('mn-MN'),
+        registeredTimestamp: Date.now(),
+        isMockUser: false,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      users.unshift(updatedUser);
     }
 
-    // Persist to Firestore
+    writeStoredUsers(users);
+
+    // Persist to Firestore asynchronously
     const db = getServerDb();
-    if (db) {
-      try {
-        await setDoc(doc(db, 'users', userId), { ...updates, updatedAt: new Date().toISOString() }, { merge: true });
-      } catch (err) {
-        console.warn('Firestore update warning in /api/users/update:', err);
+    if (db && Date.now() > firestoreQuotaBlockedUntil) {
+      setDoc(doc(db, 'users', updatedUser.id), updatedUser, { merge: true }).catch((err) => {
+        const msg = String(err?.message || err);
+        if (msg.includes('Quota exceeded') || msg.includes('quota')) {
+          firestoreQuotaBlockedUntil = Date.now() + 300000;
+        }
+      });
+      if (updatedUser.phone && updatedUser.phone !== '99110000') {
+        setDoc(doc(db, 'users', `user_phone_${updatedUser.phone}`), updatedUser, { merge: true }).catch(() => {});
       }
     }
 
-    return res.json({ success: true, user: updatedUser });
+    return res.json({ success: true, user: updatedUser, message: 'Хэрэглэгчийн мэдээлэл шинэчлэгдлээ.' });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Update failed' });
   }
@@ -267,7 +401,7 @@ router.post('/delete', async (req: Request, res: Response) => {
     }
 
     let users = readStoredUsers();
-    users = users.filter((u) => u.id !== userId && u.phone !== userId && u.email !== userId);
+    users = users.filter((u) => u.id !== userId && u.phone !== userId && u.email !== userId && u.customId !== userId);
     writeStoredUsers(users);
 
     const db = getServerDb();
@@ -304,3 +438,4 @@ router.post('/cleanup-bots', (req: Request, res: Response) => {
 });
 
 export default router;
+

@@ -460,7 +460,23 @@ export async function topUpUserBalanceInFirestore(
     const primaryDocId = rawId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
     matchingDocIds.add(primaryDocId);
 
-    // 5. Persist to primary Firestore document with quota-safe wrapper
+    // 5. Persist to Server REST API so all devices and server database immediately have updated balance
+    try {
+      fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: primaryDocId,
+          updates: {
+            walletBalance: newBalance,
+            lastTopUpAmount: pointsAmount,
+            lastTopUpAt: new Date().toISOString(),
+          },
+        }),
+      }).catch((e) => console.warn('Server balance sync notice:', e));
+    } catch {}
+
+    // 5.5. Persist to primary Firestore document with quota-safe wrapper
     await safeFirestoreWrite(() =>
       setDoc(
         doc(db, 'users', primaryDocId),
@@ -801,6 +817,25 @@ export async function approveAndCreditRechargeRequest(
       }
     }
 
+    // 5.5. Persist to Server REST API
+    try {
+      fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: primaryId,
+          updates: {
+            walletBalance: newBalance,
+            packageType: resolvedPackage,
+            packageExpiry: expiryStr,
+            status: 'active',
+            lastTopUpAmount: cleanAmount,
+            lastTopUpAt: new Date().toISOString(),
+          },
+        }),
+      }).catch((e) => console.warn('Server user balance sync notice:', e));
+    } catch {}
+
     // 6. Update local storage list
     let updatedList = list.filter((u) => {
       if (!u) return false;
@@ -954,16 +989,34 @@ export async function grantAnimeAccessToUser(
       expiryStr = baseDate.toISOString().split('T')[0];
     }
 
-    // 1. Update Firestore document
+    // 1. Update Server REST API
+    try {
+      fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          updates: {
+            packageType: 'anime',
+            packageExpiry: expiryStr,
+            status: 'active',
+          },
+        }),
+      }).catch(() => {});
+    } catch {}
+
+    // 1.5. Update Firestore document
     const docRef = doc(db, 'users', userId);
-    await setDoc(
-      docRef,
-      {
-        packageType: 'anime',
-        packageExpiry: expiryStr,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          packageType: 'anime',
+          packageExpiry: expiryStr,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
     );
 
     // 2. Update local storage users list
@@ -1031,6 +1084,21 @@ export async function grantAnimeAccessToUser(
  */
 export async function revokeUserPackage(userId: string): Promise<boolean> {
   try {
+    // 1. Update Server REST API
+    try {
+      fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          updates: {
+            packageType: 'free',
+            packageExpiry: '-',
+          },
+        }),
+      }).catch(() => {});
+    } catch {}
+
     const docRef = doc(db, 'users', userId);
     await safeFirestoreWrite(() =>
       setDoc(
@@ -1295,7 +1363,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     };
 
     fetchServerUsers();
-    const serverInterval = setInterval(fetchServerUsers, 3500);
+    const serverInterval = setInterval(fetchServerUsers, 10000);
 
     // BroadcastChannel listener
     const handleBroadcast = (ev: MessageEvent) => {
@@ -1310,8 +1378,14 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       if (e.detail && Array.isArray(e.detail)) {
         emitMerged(latestFirestoreList, e.detail.filter((u: any) => !isBotOrMockUser(u)));
       }
+      fetchServerUsers();
     };
     window.addEventListener('ioio_users_updated', handleWindowUsersUpdated);
+
+    const handleBalanceUpdated = () => {
+      fetchServerUsers();
+    };
+    window.addEventListener('ioio_balance_updated', handleBalanceUpdated);
 
     // Initial emit from local
     emitMerged([], []);
@@ -1345,6 +1419,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
       clearInterval(serverInterval);
       usersSyncChannel?.removeEventListener('message', handleBroadcast);
       window.removeEventListener('ioio_users_updated', handleWindowUsersUpdated);
+      window.removeEventListener('ioio_balance_updated', handleBalanceUpdated);
       unsubFirestore();
     };
   } catch (err) {
