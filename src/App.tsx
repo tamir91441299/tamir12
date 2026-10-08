@@ -44,6 +44,7 @@ import {
   clearLegacyDevicePackages,
   calculateExtendedExpiryDate
 } from './lib/permissionService';
+import { initSecurityGuard } from './lib/securityGuard';
 import { isFirestoreQuotaExceeded, resetFirestoreQuotaFlag, FIRESTORE_UPGRADE_URL } from './lib/quotaService';
 import { Sparkles, Heart, CheckCircle2, Wallet, UserCheck, Gamepad2, Bell, X, UserPlus, Film, Flame, Globe, Zap, Star, Skull, Smile, Cpu, Crown, Swords, RefreshCw } from 'lucide-react';
 
@@ -368,22 +369,22 @@ export default function App() {
     return () => window.removeEventListener('ioio_balance_updated', handleBalanceEvent);
   }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
 
-  // F12 & DevTools key interceptor: only shows the warning when F12 is pressed
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
-        (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
-      ) {
-        e.preventDefault();
-        setShowSecurityModal(true);
-      }
-    };
+  const [securityModalReason, setSecurityModalReason] = useState<string>(
+    'Сайт дотор зураг дарах, видео хийх болон эх код харахыг хориглосон байна. Зөвхөн админ (batorgiltamir9@gmail.com) хийх эрхтэй.'
+  );
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // Security Guard: Blocks screenshots, screen recording, F12 & devtools for non-admins
+  // ONLY Admin is permitted to take screenshots and record videos ("zowhn admin tegej boln")
+  useEffect(() => {
+    const cleanup = initSecurityGuard({
+      isAdmin,
+      onViolation: (_type, message) => {
+        setSecurityModalReason(message);
+        setShowSecurityModal(true);
+      },
+    });
+    return cleanup;
+  }, [isAdmin]);
 
   // Pending movie & episode for direct URL launch if passcode is required
   const [pendingDirectMovie, setPendingDirectMovie] = useState<Movie | null>(null);
@@ -1729,6 +1730,7 @@ export default function App() {
         <SecurityShieldModal
           isOpen={showSecurityModal}
           onClose={() => setShowSecurityModal(false)}
+          reason={securityModalReason}
           currentUser={currentUser}
           onOpenAuthModal={() => {
             setShowSecurityModal(false);

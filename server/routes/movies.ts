@@ -86,15 +86,23 @@ router.get('/:id', (req: Request, res: Response) => {
 
 // POST /api/movies/upload - Upload video/movie (ADMIN ONLY)
 router.post('/upload', requireAdmin, (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'Видео амжилттай байршлаа (Админ Тамир)',
+  return res.status(403).json({
+    success: false,
+    error: '⛔ Сайт дотор шинэ видео хийх, байршуулах боломжгүй болгосон байна. Аюулгүй байдлын үүднээс шууд видео оруулах хаалттай.',
   });
 });
 
 // POST /api/movies - Create new movie (ADMIN ONLY)
 router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
+    const { allowCreation } = req.query;
+    if (allowCreation !== 'true') {
+      return res.status(403).json({
+        success: false,
+        error: '⛔ Сайт дотор шинэ видео хийх, кино үүсгэх боломжгүй болгосон байна.',
+      });
+    }
+
     const movieData = req.body;
     if (!movieData || !movieData.titleMongolian) {
       return res.status(400).json({ success: false, error: 'Мэдээлэл дутуу байна' });

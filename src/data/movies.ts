@@ -10,6 +10,10 @@ import {
 } from './anime/legendOfKorra';
 import { SPY_X_FAMILY } from './anime/spyXFamily';
 import { HUNTER_X_HUNTER } from './anime/hunterXHunter';
+import { SAGA_OF_TANYA } from './anime/sagaOfTanya';
+import { MASHLE } from './anime/mashle';
+import { MASHLE_S2 } from './anime/mashleS2';
+import { HAIKYU } from './anime/haikyu';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -203,6 +207,10 @@ export const SAMPLE_MOVIES: Movie[] = [
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
   HUNTER_X_HUNTER,
+  SAGA_OF_TANYA,
+  MASHLE,
+  MASHLE_S2,
+  HAIKYU,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -215,6 +223,10 @@ export {
   KAMI_KUZU_IDOL,
   SPY_X_FAMILY,
   HUNTER_X_HUNTER,
+  SAGA_OF_TANYA,
+  MASHLE,
+  MASHLE_S2,
+  HAIKYU,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -245,6 +257,26 @@ export const RELEASE_YEARS = [
 ];
 
 export const SAMPLE_COMMENTS: Comment[] = [
+  {
+    id: 'c_mashle_s2_1',
+    movieId: 'm_mashle_s2',
+    userName: 'Төгөлдөр',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+    text: 'Машл 2-р бүлэг Бурханлаг хараатны шалгалт (Divine Visionary) гайхалтай оржээ! Блинг-Бан-Бан-Борн дуу, Машийн улам хүчирхэг болсон булчингийн бярын үзүүлбэрүүд инээдтэй бас супер тулаантай. 12 анги бүгд өндөр чанартай байна!',
+    rating: 10,
+    date: 'Саяхан',
+    likes: 74
+  },
+  {
+    id: 'c_mashle_s2_2',
+    movieId: 'm_mashle_s2',
+    userName: 'Анударь',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    text: 'Рейн Эймс ба Машийн тулаан, Инносент Зерогийн эсрэг сөргөлдөөн үнэхээр догдлуулам байлаа. 1 болон 2-р бүлэг хоорондоо шилжихэд маш хялбар, ямар ч гацалтгүй тоглуулагчтай байна.',
+    rating: 10,
+    date: 'Өнөөдөр 21:15',
+    likes: 49
+  },
   {
     id: 'c_hxh1',
     movieId: 'm_hunter_x_hunter',

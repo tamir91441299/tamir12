@@ -136,7 +136,7 @@ router.post('/submit', async (req: Request, res: Response) => {
       amount: cleanAmount,
       packageType: 'anime',
       method: payload.method || 'qpay',
-      status: payload.status || 'pending',
+      status: 'pending', // SECURITY: ALWAYS pending! Never accept 'approved' from client payload!
       note: payload.note || '',
       createdAt: payload.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),

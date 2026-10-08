@@ -42,6 +42,7 @@ import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
 import { checkUserContentAccess, getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 import { generateEpisodeLinksCode } from '../lib/episodeLinkManager';
 import { HUNTER_X_HUNTER_EPISODE_LINKS } from '../data/anime/hunterXHunter';
+import { isVideoCreationAllowed } from '../lib/securityGuard';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -192,6 +193,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const is91Days = movie.id === 'm_91_days' || movie.title.toLowerCase().includes('91 day') || movie.titleMongolian.includes('91 Өдөр');
   const isKorraS2 = movie.id === 'm_legend_of_korra_s2' || (movie.title.toLowerCase().includes('korra') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
   const isKorra = (movie.id === 'm_legend_of_korra' || movie.title.toLowerCase().includes('korra') || movie.titleMongolian.includes('Корра')) && !isKorraS2;
+  const isMashleS2 = movie.id === 'm_mashle_s2' || (movie.title.toLowerCase().includes('mashle') && (movie.title.includes('2') || movie.titleMongolian.includes('2')));
+  const isMashleS1 = (movie.id === 'm_mashle' || movie.title.toLowerCase().includes('mashle') || movie.titleMongolian.toLowerCase().includes('машл')) && !isMashleS2;
+  const isMashleSeries = isMashleS1 || isMashleS2;
   const isHunterXHunter = movie.id === 'm_hunter_x_hunter' || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр');
   const isSpyXFamily = movie.id === 'm_spy_x_family' || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл');
 
@@ -971,6 +975,70 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </div>
             )}
 
+            {/* Season Switcher for Mashle: Magic and Muscles (Season 1 & Season 2) */}
+            {isMashleSeries && (
+              <div className="pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    Бүлгүүд (Seasons):
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-medium">Нийт 2 бүлэг, 24 анги</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isMashleS2 && onSelectMovie && allMovies) {
+                        const s1 = allMovies.find((m) => m.id === 'm_mashle');
+                        if (s1) onSelectMovie(s1);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isMashleS1
+                        ? 'bg-amber-500 text-black border-amber-400 font-black shadow-lg shadow-amber-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>🏋️‍♂️</span>
+                      <span>1-р Бүлэг: Шид ба Булчин</span>
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      isMashleS1 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-zinc-400'
+                    }`}>
+                      12 анги
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isMashleS2 && onSelectMovie && allMovies) {
+                        const s2 = allMovies.find((m) => m.id === 'm_mashle_s2');
+                        if (s2) onSelectMovie(s2);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isMashleS2
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black border-amber-400 font-black shadow-lg shadow-amber-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>2-р Бүлэг: Бурханлаг хараатны шалгалт</span>
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      isMashleS2 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-amber-400'
+                    }`}>
+                      12 анги
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Arc Navigation for Hunter x Hunter (7 Arcs, 148 Episodes) */}
             {isHunterXHunter && (
               <div className="pt-3 border-t border-zinc-800">
@@ -1146,6 +1214,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       )}
                       <button
                         onClick={() => {
+                          if (!isVideoCreationAllowed()) {
+                            alert('⛔ Сайт дотор видео анги нэмэх, холбоос оруулах боломжгүй болгосон байна (Түгжигдсэн).');
+                            return;
+                          }
                           setShowBatchLinkForm(!showBatchLinkForm);
                           setShowAddEpForm(false);
                         }}
@@ -1157,6 +1229,10 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       </button>
                       <button
                         onClick={() => {
+                          if (!isVideoCreationAllowed()) {
+                            alert('⛔ Сайт дотор шинэ видео анги нэмэх боломжгүй болгосон байна (Түгжигдсэн).');
+                            return;
+                          }
                           setShowAddEpForm(!showAddEpForm);
                           setShowBatchLinkForm(false);
                         }}

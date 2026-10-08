@@ -88,6 +88,46 @@ export interface AppNotification {
 // Initial anime announcements for all users
 export const INITIAL_ANIME_NOTIFICATIONS: AppNotification[] = [
   {
+    id: 'notif_init_haikyu',
+    type: 'NEW_ANIME',
+    title: 'Шинэ Анимэ Нэмэгдлээ! 🏐',
+    message: '«Хайкью!! (Haikyuu!!)» бүх 25 анги амжилттай нэмэгдлээ. Волейболын гал цогтой тулааныг шууд хүлээн авч үзээрэй!',
+    movieId: 'm_haikyu',
+    movieTitle: 'Хайкью!!: Волейболын Оргил',
+    poster: 'https://m.media-amazon.com/images/M/MV5BNTI2YTY0OGQtNjAzMS00YjVmLWJmYjMtOWQxYjQ1M2Y2NGQxXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    createdAt: 'Өнөөдөр 20:00',
+  },
+  {
+    id: 'notif_init_mashle_s2',
+    type: 'NEW_ANIME',
+    title: 'Шинэ Бүлэг Нэмэгдлээ! 🏋️‍♂️✨',
+    message: '«Машл 2-р бүлэг: Бурханлаг хараатны шалгалт (Mashle Season 2)» бүх 12 анги нэмэгдлээ. Алдарт Bling-Bang-Bang-Born хэмнэлтэй шинэ ангиудыг хүлээн авч үзээрэй!',
+    movieId: 'm_mashle_s2',
+    movieTitle: 'Машл 2-р бүлэг: Бурханлаг хараатны шалгалт',
+    poster: '/images/mashle_s2_poster.jpg',
+    createdAt: 'Яг одоо',
+  },
+  {
+    id: 'notif_init_mashle',
+    type: 'NEW_ANIME',
+    title: 'Шинэ Анимэ Нэмэгдлээ! 🏋️‍♂️',
+    message: '«Машл: Шид ба Булчин (Mashle)» бүх 12 анги нэмэгдлээ. Шидийн академийг булчингийн хүчээрээ байлдан дагуулагч Машийн адал явдлыг үзээрэй!',
+    movieId: 'm_mashle',
+    movieTitle: 'Машл: Шид ба Булчин',
+    poster: 'https://m.media-amazon.com/images/M/MV5BZmUyMmE2MDMtMmFjMS00NzY1LTg5YjktYmI5ODkxN2Y4ODBiXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg',
+    createdAt: 'Өнөөдөр 19:45',
+  },
+  {
+    id: 'notif_init_tanya',
+    type: 'NEW_ANIME',
+    title: 'Шинэ Анимэ Нэмэгдлээ! 🎖️',
+    message: '«Танягийн Туульс (Saga of Tanya the Evil)» бүх 12 анги нэмэгдлээ. Райны Чөтгөр Танягийн шидэт цэргийн агуу тулааныг үзээрэй!',
+    movieId: 'm_saga_of_tanya',
+    movieTitle: 'Танягийн Туульс: Бяцхан Чөтгөр',
+    poster: 'https://m.media-amazon.com/images/M/MV5BMjA3NTYyMDQ0Ml5BMl5BanBnXkFtZTgwNTUwMDc0MTI@._V1_FMjpg_UX1000_.jpg',
+    createdAt: 'Өнөөдөр 19:30',
+  },
+  {
     id: 'notif_init_korra_s3',
     type: 'NEW_ANIME',
     title: 'Шинэ Цуврал Нэмэгдлээ! 🌪️',
@@ -2343,4 +2383,125 @@ export async function updateUserProfile(
   } catch (err: any) {
     return { success: false, message: err?.message || 'Хадгалахад алдаа гарлаа.' };
   }
+}
+
+/**
+ * Find user immediately by 5-6 digit Member Code (e.g. 163462), ID, phone, email, or name
+ * Searches local list -> Firestore -> Server API
+ */
+export async function findUserByIdOrCode(
+  searchQuery: string,
+  localUsers?: UserDetail[]
+): Promise<UserDetail | null> {
+  const cleanQ = (searchQuery || '').trim().replace(/^#/, '');
+  if (!cleanQ) return null;
+
+  const lowerQ = cleanQ.toLowerCase();
+
+  // 1. Check local users first
+  const sourceList: UserDetail[] = localUsers && localUsers.length > 0 ? localUsers : (() => {
+    try {
+      const saved = localStorage.getItem('ioio_registered_users_list');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const foundLocal = sourceList.find((u) => {
+    if (!u || isBotOrMockUser(u)) return false;
+    const memberCode = getUserMemberCode(u);
+    const customId = String((u as any).customId || '').trim();
+    const uId = String(u.id || '').trim();
+    const uPhone = String(u.phone || '').trim().replace(/\s+/g, '');
+    const uEmail = String(u.email || '').trim().toLowerCase();
+    const uName = String(u.name || '').trim().toLowerCase();
+
+    return (
+      memberCode === cleanQ ||
+      customId === cleanQ ||
+      uId === cleanQ ||
+      uPhone === cleanQ ||
+      uEmail === lowerQ ||
+      uName === lowerQ ||
+      uId.toLowerCase().includes(lowerQ)
+    );
+  });
+
+  if (foundLocal) {
+    return foundLocal;
+  }
+
+  // 2. Query Firestore if quota allows
+  if (!isFirestoreQuotaExceeded()) {
+    try {
+      // Direct doc ID get
+      const docSnap = await getDoc(doc(db, 'users', cleanQ));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && !isBotOrMockUser(data)) {
+          return { ...data, id: docSnap.id } as UserDetail;
+        }
+      }
+
+      // Query by phone
+      if (/^\d{6,12}$/.test(cleanQ)) {
+        const qPhone = query(collection(db, 'users'), where('phone', '==', cleanQ), limit(1));
+        const snapPhone = await getDocs(qPhone);
+        if (!snapPhone.empty) {
+          const docItem = snapPhone.docs[0];
+          return { ...docItem.data(), id: docItem.id } as UserDetail;
+        }
+      }
+
+      // Query by customId / memberCode
+      const qCode = query(collection(db, 'users'), where('memberCode', '==', cleanQ), limit(1));
+      const snapCode = await getDocs(qCode);
+      if (!snapCode.empty) {
+        const docItem = snapCode.docs[0];
+        return { ...docItem.data(), id: docItem.id } as UserDetail;
+      }
+    } catch (e) {
+      if (isQuotaError(e)) {
+        markFirestoreQuotaExceeded();
+      }
+    }
+  }
+
+  // 3. Fallback to Server API
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users)) {
+        const match = data.users.find((u: any) => {
+          if (!u || isBotOrMockUser(u)) return false;
+          const memberCode = getUserMemberCode(u);
+          const customId = String(u.customId || '').trim();
+          const uId = String(u.id || '').trim();
+          const uPhone = String(u.phone || '').trim().replace(/\s+/g, '');
+          const uEmail = String(u.email || '').trim().toLowerCase();
+          const uName = String(u.name || '').trim().toLowerCase();
+
+          return (
+            memberCode === cleanQ ||
+            customId === cleanQ ||
+            uId === cleanQ ||
+            uPhone === cleanQ ||
+            uEmail === lowerQ ||
+            uName === lowerQ ||
+            uId.toLowerCase().includes(lowerQ)
+          );
+        });
+
+        if (match) {
+          return match as UserDetail;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Server user search fallback warning:', err);
+  }
+
+  return null;
 }

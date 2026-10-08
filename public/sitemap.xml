@@ -98,4 +98,14 @@
       <image:title>Дэлхийн Сүйрэл Зомби Апокалипсис - Онлайн үзэх</image:title>
     </image:image>
   </url>
+  <url>
+    <loc>https://flicknime.com/?movie=m_mashle_s2</loc>
+    <lastmod>2026-10-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
+    <image:image>
+      <image:loc>https://flicknime.com/images/mashle_s2_poster.jpg</image:loc>
+      <image:title>Машл 2-р бүлэг: Бурханлаг хараатны шалгалт (Mashle Season 2) - Үзэх</image:title>
+    </image:image>
+  </url>
 </urlset>

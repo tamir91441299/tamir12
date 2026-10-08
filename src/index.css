@@ -355,6 +355,26 @@ video::-webkit-media-controls-enclosure {
   -webkit-touch-callout: none;
 }
 
+/* Anti-Screenshot, Anti-Print & Media Drag Protection for Non-Admin Users */
+@media print {
+  body.non-admin-mode,
+  html.non-admin-mode {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+body.non-admin-mode img,
+body.non-admin-mode video {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 /* Hide scrollbar for clean carousel and pill elements */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

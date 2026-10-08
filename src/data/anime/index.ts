@@ -4,3 +4,7 @@ export * from './kamiKuzuIdol';
 export * from './legendOfKorra';
 export * from './spyXFamily';
 export * from './hunterXHunter';
+export * from './sagaOfTanya';
+export * from './mashle';
+export * from './mashleS2';
+export * from './haikyu';

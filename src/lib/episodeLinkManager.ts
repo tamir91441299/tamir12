@@ -49,6 +49,30 @@ import {
   setMyHeroAcademiaEpisodeLink,
   batchSetMyHeroAcademiaEpisodeLinks,
 } from '../data/anime/myHeroAcademia';
+import {
+  SAGA_OF_TANYA,
+  SAGA_OF_TANYA_EPISODE_LINKS,
+  setSagaOfTanyaEpisodeLink,
+  batchSetSagaOfTanyaEpisodeLinks,
+} from '../data/anime/sagaOfTanya';
+import {
+  MASHLE,
+  MASHLE_EPISODE_LINKS,
+  setMashleEpisodeLink,
+  batchSetMashleEpisodeLinks,
+} from '../data/anime/mashle';
+import {
+  MASHLE_S2,
+  MASHLE_S2_EPISODE_LINKS,
+  setMashleS2EpisodeLink,
+  batchSetMashleS2EpisodeLinks,
+} from '../data/anime/mashleS2';
+import {
+  HAIKYU,
+  HAIKYU_EPISODE_LINKS,
+  setHaikyuEpisodeLink,
+  batchSetHaikyuEpisodeLinks,
+} from '../data/anime/haikyu';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -172,6 +196,14 @@ export function batchConnectEpisodes(
     batchSetLegendOfKorraS2EpisodeLinks(linksMap);
   } else if (movie.id === LEGEND_OF_KORRA.id || movie.title.toLowerCase().includes('korra')) {
     batchSetLegendOfKorraEpisodeLinks(linksMap);
+  } else if (movie.id === SAGA_OF_TANYA.id || movie.title.toLowerCase().includes('tanya') || movie.titleMongolian.toLowerCase().includes('таня')) {
+    batchSetSagaOfTanyaEpisodeLinks(linksMap);
+  } else if (movie.id === MASHLE_S2.id || (movie.title.toLowerCase().includes('mashle') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) {
+    batchSetMashleS2EpisodeLinks(linksMap);
+  } else if (movie.id === MASHLE.id || movie.title.toLowerCase().includes('mashle') || movie.titleMongolian.toLowerCase().includes('машл')) {
+    batchSetMashleEpisodeLinks(linksMap);
+  } else if (movie.id === HAIKYU.id || movie.title.toLowerCase().includes('haikyu') || movie.titleMongolian.toLowerCase().includes('хайкью')) {
+    batchSetHaikyuEpisodeLinks(linksMap);
   }
 
   const currentEpisodes = movie.episodes || [];
@@ -198,12 +230,68 @@ export function batchConnectEpisodes(
   return updatedEpisodes;
 }
 
+export function connectSagaOfTanyaEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setSagaOfTanyaEpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[SAGA_OF_TANYA.id] = SAGA_OF_TANYA.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Saga of Tanya episode link:', e);
+  }
+  return SAGA_OF_TANYA.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+export function connectMashleEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setMashleEpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[MASHLE.id] = MASHLE.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Mashle episode link:', e);
+  }
+  return MASHLE.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+export function connectMashleS2Episode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setMashleS2EpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[MASHLE_S2.id] = MASHLE_S2.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Mashle S2 episode link:', e);
+  }
+  return MASHLE_S2.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+export function connectHaikyuEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setHaikyuEpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[HAIKYU.id] = HAIKYU.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Haikyu episode link:', e);
+  }
+  return HAIKYU.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
 /**
  * 📋 Код үүсгэгч (Code Generator)
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4',
+  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4' | 'SagaOfTanya' | 'Mashle' | 'Haikyu',
   links: Record<number, string>
 ): string {
   const varName = seriesName === 'DeathNote'
@@ -220,6 +308,12 @@ export function generateEpisodeLinksCode(
     ? 'LEGEND_OF_KORRA_S3_EPISODE_LINKS'
     : seriesName === 'LegendOfKorraS4'
     ? 'LEGEND_OF_KORRA_S4_EPISODE_LINKS'
+    : seriesName === 'SagaOfTanya'
+    ? 'SAGA_OF_TANYA_EPISODE_LINKS'
+    : seriesName === 'Mashle'
+    ? 'MASHLE_EPISODE_LINKS'
+    : seriesName === 'Haikyu'
+    ? 'HAIKYU_EPISODE_LINKS'
     : 'LEGEND_OF_KORRA_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))

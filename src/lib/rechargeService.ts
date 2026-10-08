@@ -76,7 +76,8 @@ export function hasUserPendingRechargeRequest(user?: { id?: string; phone?: stri
 }
 
 /**
- * Clear or mark all pending recharge requests as approved for a user
+ * Clear or cancel pending recharge requests for a user without granting free points.
+ * Strict security: NEVER mark as 'approved' automatically! Only manual admin approval grants points.
  */
 export function clearUserPendingRechargeRequests(user?: { id?: string; phone?: string; email?: string } | null): void {
   if (!user) return;
@@ -100,9 +101,10 @@ export function clearUserPendingRechargeRequests(user?: { id?: string; phone?: s
         (cleanEmail && reqEmail === cleanEmail)
       ) {
         if (req.status === 'pending') {
-          req.status = 'approved';
+          // Keep as pending or cancelled - NEVER auto-approve!
+          req.status = 'rejected';
           req.processedAt = new Date().toISOString();
-          req.processedBy = 'Шууд цэнэглэлт';
+          req.processedBy = 'Систем цуцалсан';
           changed = true;
         }
       }

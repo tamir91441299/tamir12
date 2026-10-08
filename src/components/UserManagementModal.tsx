@@ -63,7 +63,8 @@ import {
   isBotOrMockUser,
   deleteUserFromFirestoreAndServer,
   cleanupAllBotUsers,
-  getUserMemberCode
+  getUserMemberCode,
+  findUserByIdOrCode
 } from '../lib/userService';
 import {
   PromoCode,
@@ -85,6 +86,7 @@ import {
   RechargeRequest
 } from '../lib/rechargeService';
 import { isAdminUser } from '../lib/permissionService';
+import { isVideoCreationAllowed, setVideoCreationAllowed } from '../lib/securityGuard';
 
 const maskPhoneNumber = (phone?: string, email?: string): string => {
   if (!phone) return '';
@@ -182,6 +184,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [pointsInputAmount, setPointsInputAmount] = useState<number>(2500);
   const [selectedGrantPkg, setSelectedGrantPkg] = useState<'none' | 'full_vip' | 'movie' | 'anime'>('none');
 
+  // Fast ID Search & Instant Direct Recharge state
+  const [idSearchInput, setIdSearchInput] = useState<string>('');
+  const [idSearchResult, setIdSearchResult] = useState<UserDetail | null>(null);
+  const [idSearchLoading, setIdSearchLoading] = useState<boolean>(false);
+  const [idSearchMessage, setIdSearchMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [idTopUpAmount, setIdTopUpAmount] = useState<number>(5000);
+  const [idTopUpLoading, setIdTopUpLoading] = useState<boolean>(false);
+  const [copiedIdCode, setCopiedIdCode] = useState<boolean>(false);
+
   // New User Form State
   const [showAddUserModal, setShowAddUserModal] = useState<boolean>(false);
   const [newUserForm, setNewUserForm] = useState({
@@ -226,6 +237,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [epDurationInput, setEpDurationInput] = useState<string>('24 мин');
 
   // New Anime/Movie creation state - Only accessible by Admin
+  const [videoCreationAllowed, setVideoCreationAllowedState] = useState<boolean>(() => isVideoCreationAllowed());
   const [showAddNewMovieForm, setShowAddNewMovieForm] = useState(false);
   const [newMovieTitle, setNewMovieTitle] = useState('');
   const [newMovieTitleMongolian, setNewMovieTitleMongolian] = useState('');
@@ -235,12 +247,28 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [newMovieGenre, setNewMovieGenre] = useState('Shounen, Action');
   const [newMovieDescription, setNewMovieDescription] = useState('');
 
+  const handleToggleVideoCreation = () => {
+    const nextState = !videoCreationAllowed;
+    setVideoCreationAllowedState(nextState);
+    setVideoCreationAllowed(nextState);
+    if (!nextState) {
+      setShowAddNewMovieForm(false);
+      alert('🔒 Сайт дотор шинэ видео хийх, кино үүсгэх боломжийг бүрэн хааж түгжлээ.');
+    } else {
+      alert('🔓 Сайт дотор шинэ видео хийх эрхийг түр нээлээ (Зөвхөн Админ).');
+    }
+  };
+
   const allMoviesList = movies || SAMPLE_MOVIES;
   const currentSelectedMovie = allMoviesList.find((m) => m.id === selectedMovieId) || allMoviesList[0];
   const currentMovieEpisodes = currentSelectedMovie?.episodes || [];
 
   const handleCreateNewMovie = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!videoCreationAllowed) {
+      alert('⛔ Сайт дотор шинэ видео хийх боломжгүй болгосон байна (Түгжигдсэн горим)!');
+      return;
+    }
     if (!isAdmin) {
       alert('⚠️ Хориглогдсон: Видео болон кино оруулах эрх зөвхөн админ (batorgiltamir9@gmail.com)-д олгогдсон!');
       return;
@@ -293,6 +321,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleAddOrUpdateEpisode = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!videoCreationAllowed) {
+      alert('⛔ Сайт дотор видео анги нэмэх, засах боломжгүй болгосон байна (Түгжигдсэн)!');
+      return;
+    }
     if (!isAdmin) {
       alert('⚠️ Хориглогдсон: Энэ сайтын админаас (batorgiltamir9@gmail.com) өөр хүн видео хийх, холбоос оруулах боломжгүй!');
       return;
@@ -855,6 +887,137 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
+  const handleSearchUserById = async (queryStr?: string) => {
+    const q = (queryStr !== undefined ? queryStr : idSearchInput).trim();
+    if (!q) {
+      setIdSearchResult(null);
+      setIdSearchMessage(null);
+      return;
+    }
+
+    setIdSearchLoading(true);
+    setIdSearchMessage(null);
+
+    try {
+      const found = await findUserByIdOrCode(q, users);
+      if (found) {
+        setIdSearchResult(found);
+        setIdSearchMessage({
+          type: 'success',
+          text: `✓ Хэрэглэгч "${found.name}" (#${getUserMemberCode(found)}) олдлоо.`,
+        });
+      } else {
+        setIdSearchResult(null);
+        setIdSearchMessage({
+          type: 'error',
+          text: `⚠️ "${q}" ID эсвэл кодоор хэрэглэгч олдсонгүй. 5-6 оронтой ID (#163462 гэх мэт), утасны дугаар эсвэл имэйлээ шалгана уу.`,
+        });
+      }
+    } catch (e: any) {
+      setIdSearchMessage({
+        type: 'error',
+        text: 'Хайлт хийхэд алдаа гарлаа: ' + (e?.message || ''),
+      });
+    } finally {
+      setIdSearchLoading(false);
+    }
+  };
+
+  const handleDirectRechargeByIdResult = async (amount: number) => {
+    if (!idSearchResult) return;
+    setIdTopUpLoading(true);
+    try {
+      const target = idSearchResult;
+      const newBal = (target.walletBalance || 0) + amount;
+
+      const res = await topUpUserBalanceInFirestore(
+        target,
+        amount,
+        `ID-аар шууд цэнэглэлт (+${amount.toLocaleString()}₮)`,
+        newBal
+      );
+
+      if (res.success) {
+        const updatedUser: UserDetail = {
+          ...target,
+          walletBalance: newBal,
+          isMockUser: false,
+        };
+
+        const updatedList = users.map((u) => (u.id === target.id ? updatedUser : u));
+        saveUsersState(updatedList);
+        setIdSearchResult(updatedUser);
+
+        if (currentUser && (currentUser.id === target.id || currentUser.email === target.email || currentUser.phone === target.phone)) {
+          onUpdateBalance(newBal);
+        }
+
+        setIdSearchMessage({
+          type: 'success',
+          text: `🎉 АМЖИЛТТАЙ! ${target.name} хэрэглэгчийн дансанд +${amount.toLocaleString()}₮ нэмэгдэж нийт үлдэгдэл ${newBal.toLocaleString()}₮ боллоо.`,
+        });
+      } else {
+        setIdSearchMessage({
+          type: 'error',
+          text: res.message || 'Цэнэглэлт хийхэд алдаа гарлаа.',
+        });
+      }
+    } catch (e: any) {
+      setIdSearchMessage({
+        type: 'error',
+        text: 'Цэнэглэх явцад алдаа гарлаа: ' + (e?.message || ''),
+      });
+    } finally {
+      setIdTopUpLoading(false);
+    }
+  };
+
+  const handleDirectPackageGrantByIdResult = async (pkgType: 'anime' | 'full_vip' | 'free', days: number = 30) => {
+    if (!idSearchResult) return;
+    setIdTopUpLoading(true);
+    try {
+      if (pkgType === 'free') {
+        await revokeUserPackage(idSearchResult.id);
+        const updated: UserDetail = {
+          ...idSearchResult,
+          packageType: 'free',
+          packageExpiry: '-',
+          role: idSearchResult.email === 'batorgiltamir9@gmail.com' ? 'admin' : 'user',
+        };
+        const updatedList = users.map((u) => (u.id === idSearchResult.id ? updated : u));
+        saveUsersState(updatedList);
+        setIdSearchResult(updated);
+        setIdSearchMessage({
+          type: 'info',
+          text: `✓ ${idSearchResult.name} хэрэглэгчийн эрхийг цуцалж "Үнэгүй" төлөвт шилжүүллээ.`,
+        });
+      } else {
+        const res = await grantAnimeAccessToUser(idSearchResult.id, days);
+        if (res.success && res.user) {
+          const finalUser: UserDetail = {
+            ...res.user,
+            packageType: pkgType,
+            role: pkgType === 'full_vip' ? 'vip' : res.user.role,
+          };
+          const updatedList = users.map((u) => (u.id === idSearchResult.id ? finalUser : u));
+          saveUsersState(updatedList);
+          setIdSearchResult(finalUser);
+          setIdSearchMessage({
+            type: 'success',
+            text: `🎉 АМЖИЛТТАЙ! ${idSearchResult.name}-д ${pkgType === 'full_vip' ? 'FULL VIP' : 'Анимэ'} эрх (${days} хоног) амжилттай олгогдлоо!`,
+          });
+        }
+      }
+    } catch (e: any) {
+      setIdSearchMessage({
+        type: 'error',
+        text: 'Эрх олгоход алдаа гарлаа: ' + (e?.message || ''),
+      });
+    } finally {
+      setIdTopUpLoading(false);
+    }
+  };
+
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserForm.name.trim()) return;
@@ -923,13 +1086,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const totalBalance = users.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
 
   const filteredUsers = users.filter((u) => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase().replace(/^#/, '');
+    const memberCode = getUserMemberCode(u).toLowerCase();
+    const customId = String((u as any).customId || '').toLowerCase();
     const matchesSearch =
       !q ||
       (u.name || '').toLowerCase().includes(q) ||
       (u.email || '').toLowerCase().includes(q) ||
       (u.phone || '').includes(q) ||
-      (u.id || '').toLowerCase().includes(q);
+      (u.id || '').toLowerCase().includes(q) ||
+      memberCode.includes(q) ||
+      customId.includes(q);
 
     let matchesPkg = true;
     if (filterPackage === 'new') {
@@ -1297,6 +1464,291 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
             {/* User Table List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* ⚡ ХЭРЭГЛЭГЧИЙН ID-ААР ШУУД ХАЙЖ ЦЭНЭГЛЭХ БОЛОН МЭДЭЭЛЭЛ ХАРАХ САМБАР */}
+              <div className="bg-gradient-to-r from-[#171720] via-[#1a1c26] to-[#171720] border-2 border-cyan-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-cyan-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-inner">
+                      <Zap className="w-5 h-5 text-cyan-400 animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white flex items-center gap-2">
+                        <span>ХЭРЭГЛЭГЧИЙГ ID-ААР ШУУД ХАЙЖ ЦЭНЭГЛЭХ</span>
+                        <span className="bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                          ШУУРХАЙ
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-zinc-400">
+                        Хэрэглэгчийн 5-6 оронтой ID (#163462 гэх мэт), утасны дугаар эсвэл имэйлийг оруулахад бүх мэдээлэл шууд гарч ирж данс цэнэглэгдэнэ.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Input Bar */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearchUserById();
+                  }}
+                  className="mt-3.5 flex flex-col sm:flex-row items-center gap-2"
+                >
+                  <div className="relative flex-1 w-full">
+                    <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={idSearchInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setIdSearchInput(val);
+                        if (val.trim().length >= 4) {
+                          handleSearchUserById(val);
+                        } else if (!val.trim()) {
+                          setIdSearchResult(null);
+                          setIdSearchMessage(null);
+                        }
+                      }}
+                      placeholder="Хэрэглэгчийн ID оруулна уу (Жишээ: 163462, утас, имэйл)..."
+                      className="w-full bg-zinc-950/90 border border-cyan-500/40 focus:border-cyan-400 rounded-xl py-2.5 pl-10 pr-3 text-xs sm:text-sm text-white placeholder-zinc-500 font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500/30"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={idSearchLoading || !idSearchInput.trim()}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+                  >
+                    {idSearchLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                        <span>Хайж байна...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4 text-black" />
+                        <span>ID-аар Олох</span>
+                      </>
+                    )}
+                  </button>
+                  {idSearchResult && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIdSearchInput('');
+                        setIdSearchResult(null);
+                        setIdSearchMessage(null);
+                      }}
+                      className="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+                    >
+                      Цэвэрлэх
+                    </button>
+                  )}
+                </form>
+
+                {/* Status/Error/Success Message */}
+                {idSearchMessage && (
+                  <div
+                    className={`mt-2.5 p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                      idSearchMessage.type === 'success'
+                        ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 font-bold'
+                        : idSearchMessage.type === 'error'
+                        ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                        : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300'
+                    }`}
+                  >
+                    {idSearchMessage.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    )}
+                    <span>{idSearchMessage.text}</span>
+                  </div>
+                )}
+
+                {/* 🌟 USER INFO & INSTANT RECHARGE CARD WHEN FOUND */}
+                {idSearchResult && (
+                  <div className="mt-3.5 bg-black/70 border-2 border-cyan-400/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+                      {/* Left: User identity */}
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-700 text-black font-black text-2xl flex items-center justify-center shrink-0 uppercase shadow-lg ring-2 ring-cyan-400/50">
+                          {idSearchResult.name.charAt(0)}
+                        </div>
+
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-black text-base text-white truncate">
+                              {idSearchResult.name}
+                            </span>
+                            <span className="font-mono text-xs font-black text-amber-400 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                              <span>#{getUserMemberCode(idSearchResult)}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(getUserMemberCode(idSearchResult));
+                                  setCopiedIdCode(true);
+                                  setTimeout(() => setCopiedIdCode(false), 2000);
+                                }}
+                                className="cursor-pointer hover:text-white"
+                                title="ID хуулах"
+                              >
+                                {copiedIdCode ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            </span>
+                            {getPackageBadge(idSearchResult.packageType)}
+                            {idSearchResult.role === 'admin' && (
+                              <span className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-[10px] font-black px-2 py-0.5 rounded">
+                                АДМИН
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300">
+                            {idSearchResult.phone && (
+                              <span className="flex items-center gap-1 font-mono text-cyan-300 font-bold">
+                                <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                                <span>{maskPhoneNumber(idSearchResult.phone, idSearchResult.email)}</span>
+                              </span>
+                            )}
+                            {idSearchResult.email && (
+                              <span className="flex items-center gap-1 text-zinc-400 truncate max-w-[220px]">
+                                <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                                <span>{idSearchResult.email}</span>
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-zinc-500 text-[11px]">
+                              <Calendar className="w-3 h-3 text-zinc-500" />
+                              <span>Бүртгүүлсэн: {idSearchResult.registeredAt || '-'}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Wallet Balance & Expiry badge */}
+                      <div className="flex items-center gap-3 self-stretch lg:self-auto justify-between lg:justify-end bg-zinc-900/90 p-3 rounded-xl border border-zinc-800">
+                        <div className="text-left">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase block">
+                            Дансны Үлдэгдэл:
+                          </span>
+                          <span className="text-xl sm:text-2xl font-mono font-black text-amber-400 block tracking-tight">
+                            {idSearchResult.walletBalance.toLocaleString()} ₮
+                          </span>
+                        </div>
+
+                        <div className="h-8 w-px bg-zinc-800 mx-1" />
+
+                        <div className="text-left">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase block">
+                            Эрх дуусах:
+                          </span>
+                          <span className="text-xs font-mono font-bold text-zinc-200 block">
+                            {idSearchResult.packageExpiry || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DIRECT TOP-UP & PACKAGE ACTIONS */}
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4 text-cyan-400" />
+                          <span>Данс Шууд Цэнэглэх (+ Оноо оруулах)</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          Товч дармагц дансанд шууд орно
+                        </span>
+                      </div>
+
+                      {/* Preset recharge buttons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {[
+                          { amt: 2500, label: '+2,500 ₮' },
+                          { amt: 5000, label: '+5,000 ₮' },
+                          { amt: 10000, label: '+10,000 ₮' },
+                          { amt: 20000, label: '+20,000 ₮' },
+                          { amt: 50000, label: '+50,000 ₮' },
+                        ].map((btn) => (
+                          <button
+                            key={btn.amt}
+                            type="button"
+                            disabled={idTopUpLoading}
+                            onClick={() => handleDirectRechargeByIdResult(btn.amt)}
+                            className="p-2.5 rounded-xl bg-gradient-to-r from-emerald-950 to-teal-950 hover:from-emerald-900 hover:to-teal-900 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>{btn.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom Amount and Package Grant Row */}
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                        <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+                          <input
+                            type="number"
+                            min="100"
+                            step="500"
+                            value={idTopUpAmount}
+                            onChange={(e) => setIdTopUpAmount(Math.max(0, Number(e.target.value)))}
+                            placeholder="Дүн оруулах..."
+                            className="w-full bg-zinc-950 border border-zinc-700 focus:border-cyan-400 rounded-xl py-2 px-3 text-xs font-mono text-white focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            disabled={idTopUpLoading || idTopUpAmount <= 0}
+                            onClick={() => handleDirectRechargeByIdResult(idTopUpAmount)}
+                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Цэнэглэх</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-end">
+                          <button
+                            type="button"
+                            disabled={idTopUpLoading}
+                            onClick={() => handleDirectPackageGrantByIdResult('anime', 30)}
+                            className="flex-1 sm:flex-none px-3 py-2 bg-purple-950 hover:bg-purple-900 border border-purple-500/60 text-purple-200 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                            title="30 хоног Анимэ эрх олгох"
+                          >
+                            <Crown className="w-3.5 h-3.5 text-purple-400" />
+                            <span>+1 сар Анимэ</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={idTopUpLoading}
+                            onClick={() => handleDirectPackageGrantByIdResult('full_vip', 30)}
+                            className="flex-1 sm:flex-none px-3 py-2 bg-amber-950 hover:bg-amber-900 border border-amber-500/60 text-amber-200 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                            title="30 хоног Full VIP эрх олгох"
+                          >
+                            <Crown className="w-3.5 h-3.5 text-amber-400" />
+                            <span>+1 сар FULL VIP</span>
+                          </button>
+
+                          {idSearchResult.packageType !== 'free' && (
+                            <button
+                              type="button"
+                              disabled={idTopUpLoading}
+                              onClick={() => handleDirectPackageGrantByIdResult('free')}
+                              className="px-2.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-rose-400 text-xs rounded-xl transition-all cursor-pointer shrink-0"
+                              title="Эрх цуцлах"
+                            >
+                              Цуцлах
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 🌟 ШИНЭЭР БҮРТГҮҮЛСЭН ХЭРЭГЛЭГЧДИЙН ШУУД УДИРДАХ САМБАР */}
               {newUsersCount > 0 && (
                 <div className="bg-gradient-to-br from-emerald-950/70 via-zinc-900/90 to-teal-950/50 border-2 border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
@@ -1716,29 +2168,73 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         ) : activeAdminTab === 'episodes' ? (
           /* Episode & Content Management Tab View */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-            {/* Top Admin Security Notice & Add Content Button */}
-            <div className="bg-amber-950/20 border border-amber-500/30 p-3 sm:p-4 rounded-xl flex flex-wrap items-center justify-between gap-3">
+            {/* Top Admin Security Notice & Video Creation Lock Control */}
+            <div className={`p-3 sm:p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 border ${
+              videoCreationAllowed
+                ? 'bg-amber-950/20 border-amber-500/30'
+                : 'bg-rose-950/30 border-rose-500/40'
+            }`}>
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-lg bg-amber-500/20 text-amber-400">
-                  <ShieldAlert className="w-5 h-5" />
+                <span className={`p-2 rounded-lg ${
+                  videoCreationAllowed ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
+                }`}>
+                  {videoCreationAllowed ? <ShieldAlert className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                 </span>
                 <div>
-                  <h4 className="text-xs font-bold text-amber-300">
-                    Зөвхөн Админ видео оруулах эрхтэй (batorgiltamir9@gmail.com)
-                  </h4>
-                  <p className="text-[11px] text-zinc-400">
-                    Энэ сайтад өөр ямар ч хэрэглэгч видео, анги болон кино оруулах эрхгүй. Систем бүрэн хамгаалагдсан.
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-white">
+                      Сайт дотор видео хийх горим:
+                    </h4>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                      videoCreationAllowed
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}>
+                      {videoCreationAllowed ? 'Нээлттэй (Админ)' : '🔒 БОЛОМЖГҮЙ (ХААГДСАН)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {videoCreationAllowed
+                      ? 'Зөвхөн админ эрхтэйгээр шинэ видео болон анги оруулах боломжтой байна.'
+                      : 'Сайт дотор шинэ видео хийх, файл байршуулах үйлдэл бүрэн хаагдсан байна.'}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAddNewMovieForm(!showAddNewMovieForm)}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              >
-                <Plus className="w-4 h-4" />
-                <span>{showAddNewMovieForm ? 'Хаах' : '➕ Шинэ Анимэ / Кино нэмэх'}</span>
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleVideoCreation}
+                  className={`text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border ${
+                    videoCreationAllowed
+                      ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+                  }`}
+                  title="Сайт дотор видео хийх горимыг солих"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{videoCreationAllowed ? 'Видео хийхийг хаах' : 'Түгжээ нээх'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!videoCreationAllowed) {
+                      alert('⛔ Сайт дотор видео хийх боломжийг хаасан байна. Эхлээд "Түгжээ нээх" товчийг дарж зөвшөөрөл олгоно уу.');
+                      return;
+                    }
+                    setShowAddNewMovieForm(!showAddNewMovieForm);
+                  }}
+                  className={`font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow ${
+                    videoCreationAllowed
+                      ? 'bg-amber-500 hover:bg-amber-400 text-black'
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{showAddNewMovieForm ? 'Хаах' : '➕ Шинэ Анимэ / Кино нэмэх'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Admin Add New Anime/Movie Form */}
