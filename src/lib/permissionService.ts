@@ -9,16 +9,16 @@ export function isAdminUser(user: UserAccount | null | undefined): boolean {
   if (!user) return false;
 
   const email = (user.email || '').trim().toLowerCase();
-  const phone = (user.phone || '').trim().replace(/\s+/g, '');
-  const name = (user.name || '').trim();
   const role = (user as any).role;
 
-  if (email === 'tamir91441299@gmail.com' || email === 'admin@ioio.mn') {
+  // Explicitly check for master admin: batorgiltamir9@gmail.com
+  if (email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
     return true;
   }
 
-  if (phone === '91441299') {
-    return true;
+  // tamir91441299@gmail.com is explicitly NOT admin
+  if (email === 'tamir91441299@gmail.com') {
+    return false;
   }
 
   if (role === 'admin') {

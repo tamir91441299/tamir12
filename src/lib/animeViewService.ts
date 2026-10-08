@@ -92,7 +92,7 @@ export async function recordAnimeView(
   const phone = user?.phone ? `${user.phone.slice(0, 4)}****` : '';
   const email = user?.email || '';
   const packageType = (user as any)?.packageType || 'free';
-  const role = user?.email === 'tamir91441299@gmail.com' ? 'admin' : ((user as any)?.role || 'user');
+  const role = user?.email === 'batorgiltamir9@gmail.com' ? 'admin' : ((user as any)?.role || 'user');
 
   const formattedTime = 'Яг одоо';
   const viewRecord: AnimeWatcher = {

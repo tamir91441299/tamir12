@@ -693,7 +693,7 @@ export const SiteHealthGuideModal: React.FC<SiteHealthGuideModalProps> = ({
                   <span>4. Админ туслахтай шууд холбогдох:</span>
                 </h4>
                 <p className="text-[11px] text-zinc-300 leading-relaxed">
-                  Шуурхай асуудлаар албан ёсны Facebook page эсвэл <strong>91441299</strong> дугаарт хандан шууд шийдвэрлүүлэх боломжтой.
+                  Шуурхай асуудлаар албан ёсны Facebook page эсвэл шууд чатаар хандан шийдвэрлүүлэх боломжтой.
                 </p>
               </div>
             </div>

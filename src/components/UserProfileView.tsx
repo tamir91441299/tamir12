@@ -29,7 +29,7 @@ import {
   changeUserPassword,
   updateUserProfile,
 } from '../lib/userService';
-import { getAnimeExpiryDetails } from '../lib/permissionService';
+import { getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 
 // Crisp illustrated Anime Character avatar matching the screenshot
 export const AnimeAvatar: React.FC<{ className?: string; size?: number }> = ({
@@ -176,12 +176,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const memberCode = getUserMemberCode(currentUser);
   const displayName = getUserDisplayName(currentUser);
 
-  const isAdmin =
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'tamir91441299@gmail.com' ||
-    currentUser?.phone === '91441299' ||
-    currentUser?.name?.toLowerCase() === 'admin' ||
-    currentUser?.name?.includes('Тамир');
+  const isAdmin = isAdminUser(currentUser);
 
   const roleLabel = isAdmin ? 'Админ' : currentUser?.role === 'vip' ? 'VIP Гишүүн' : 'Гишүүн';
 

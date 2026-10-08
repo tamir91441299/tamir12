@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldCheck, ShieldAlert, Lock, KeyRound, X, Check, Terminal, EyeOff, Sparkles, UserCheck } from 'lucide-react';
 import { UserAccount } from './AuthModal';
+import { isAdminUser } from '../lib/permissionService';
 
 interface SecurityShieldModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ export const SecurityShieldModal: React.FC<SecurityShieldModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const isAdmin = currentUser?.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+  const isAdmin = isAdminUser(currentUser);
 
   return (
     <div

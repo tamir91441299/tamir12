@@ -34,7 +34,7 @@ import {
   isCustomIdAvailable,
   sendAdminNotification
 } from '../lib/userService';
-import { getAnimeExpiryDetails } from '../lib/permissionService';
+import { getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 import { AnimeAvatar } from './UserProfileView';
 
 export interface UserAccount {
@@ -257,7 +257,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         const finalEmail = cleanEmail || `${cleanPhone || cleanCustomId}@flicknime.mn`;
-        const newUserRole = (finalEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299' || cleanCustomId === '91441') ? ('admin' as const) : ('user' as const);
+        const newUserRole = (finalEmail.toLowerCase() === 'batorgiltamir9@gmail.com') ? ('admin' as const) : ('user' as const);
         const now = new Date();
         const formattedRegisteredAt = `${now.toLocaleDateString('mn-MN')} ${now.toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' })}`;
         const nowTimestamp = now.getTime();
@@ -421,7 +421,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* If user is already logged in -> Profile details View */}
         {currentUser ? (() => {
-          const isAdmin = currentUser.email === 'tamir91441299@gmail.com' || (currentUser as any)?.role === 'admin';
+          const isAdmin = isAdminUser(currentUser);
           const animeExpiry = getAnimeExpiryDetails(currentUser);
           const effectiveBalance = typeof userBalance === 'number' ? userBalance : (currentUser.walletBalance || 0);
           const memberCode = getUserMemberCode(currentUser);

@@ -10,12 +10,13 @@ export interface SecurityGuardOptions {
   enableDebuggerTrap?: boolean;
 }
 
-const ADMIN_EMAIL = 'tamir91441299@gmail.com';
+const ADMIN_EMAIL = 'batorgiltamir9@gmail.com';
 
 export function isSystemAdminUser(user?: { email?: string; role?: string } | null): boolean {
   if (!user) return false;
   const cleanEmail = (user.email || '').trim().toLowerCase();
-  return cleanEmail === ADMIN_EMAIL.toLowerCase();
+  if (cleanEmail === 'tamir91441299@gmail.com') return false;
+  return cleanEmail === ADMIN_EMAIL.toLowerCase() || user.role === 'admin';
 }
 
 /**

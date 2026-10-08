@@ -84,6 +84,16 @@ import {
   parseRechargeTime,
   RechargeRequest
 } from '../lib/rechargeService';
+import { isAdminUser } from '../lib/permissionService';
+
+const maskPhoneNumber = (phone?: string, email?: string): string => {
+  if (!phone) return '';
+  const clean = phone.trim().replace(/\s+/g, '');
+  if (clean === '91441299' || email === 'batorgiltamir9@gmail.com' || email === 'tamir91441299@gmail.com') {
+    return '91••••99';
+  }
+  return phone;
+};
 
 export interface UserDetail extends UserAccount {
   role: 'admin' | 'user' | 'vip';
@@ -141,7 +151,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (currentUser && !isBotOrMockUser(currentUser)) {
       rawList.unshift({
         ...currentUser,
-        role: currentUser.email === 'tamir91441299@gmail.com' ? 'admin' : (currentUser.role || 'user'),
+        role: currentUser.email === 'batorgiltamir9@gmail.com' ? 'admin' : (currentUser.role || 'user'),
         status: 'active',
         packageType: currentUser.packageType || 'free',
         packageExpiry: currentUser.packageExpiry || '-',
@@ -232,7 +242,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleCreateNewMovie = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
-      alert('⚠️ Хориглогдсон: Видео болон кино оруулах эрх зөвхөн админ (tamir91441299@gmail.com)-д олгогдсон!');
+      alert('⚠️ Хориглогдсон: Видео болон кино оруулах эрх зөвхөн админ (batorgiltamir9@gmail.com)-д олгогдсон!');
       return;
     }
     if (!newMovieTitleMongolian.trim()) return;
@@ -284,7 +294,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleAddOrUpdateEpisode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
-      alert('⚠️ Хориглогдсон: Энэ сайтын админаас (tamir91441299@gmail.com) өөр хүн видео хийх, холбоос оруулах боломжгүй!');
+      alert('⚠️ Хориглогдсон: Энэ сайтын админаас (batorgiltamir9@gmail.com) өөр хүн видео хийх, холбоос оруулах боломжгүй!');
       return;
     }
     if (!epUrlInput.trim() || !currentSelectedMovie) return;
@@ -571,7 +581,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const isUserNew = (u: UserDetail): boolean => {
     if (u.isMockUser) return false;
-    if (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') return false;
+    if (u.email === 'batorgiltamir9@gmail.com' || u.role === 'admin') return false;
     // Any real registered user is recognized as a new registration
     return !u.isMockUser;
   };
@@ -623,7 +633,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             ...u,
             packageType: 'free' as const,
             packageExpiry: '-',
-            role: (u.email === 'tamir91441299@gmail.com' ? ('admin' as const) : ('user' as const)),
+            role: (u.email === 'batorgiltamir9@gmail.com' ? ('admin' as const) : ('user' as const)),
           }
         : u
     );
@@ -960,12 +970,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  const isAdmin =
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'tamir91441299@gmail.com' ||
-    currentUser?.phone === '91441299' ||
-    currentUser?.name?.toLowerCase() === 'admin' ||
-    currentUser?.name?.includes('Тамир');
+  const isAdmin = isAdminUser(currentUser);
 
   if (!isAdmin) {
     return (
@@ -1362,7 +1367,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                   title="Дугаар хуулах"
                                 >
                                   <Phone className="w-3 h-3 shrink-0" />
-                                  <span>{nu.phone}</span>
+                                  <span>{maskPhoneNumber(nu.phone, nu.email)}</span>
                                   {copiedPhoneUserId === nu.id ? (
                                     <Check className="w-3 h-3 text-emerald-400 shrink-0" />
                                   ) : (
@@ -1495,7 +1500,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             title="Утасны дугаар хуулах"
                           >
                             <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
-                            <span className="font-mono font-bold text-white">{u.phone}</span>
+                            <span className="font-mono font-bold text-white">{maskPhoneNumber(u.phone, u.email)}</span>
                             {copiedPhoneUserId === u.id ? (
                               <Check className="w-3 h-3 text-emerald-400 shrink-0" />
                             ) : (
@@ -1719,7 +1724,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </span>
                 <div>
                   <h4 className="text-xs font-bold text-amber-300">
-                    Зөвхөн Админ видео оруулах эрхтэй (tamir91441299@gmail.com)
+                    Зөвхөн Админ видео оруулах эрхтэй (batorgiltamir9@gmail.com)
                   </h4>
                   <p className="text-[11px] text-zinc-400">
                     Энэ сайтад өөр ямар ч хэрэглэгч видео, анги болон кино оруулах эрхгүй. Систем бүрэн хамгаалагдсан.
@@ -2619,7 +2624,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           <span className="font-extrabold text-sm text-white">{req.userName}</span>
                           <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
                             <Phone className="w-3 h-3 text-amber-400" />
-                            {req.userPhone}
+                            {maskPhoneNumber(req.userPhone, req.userEmail)}
                           </span>
                           <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1">
                             🎌 Зөвхөн Анимэ эрх

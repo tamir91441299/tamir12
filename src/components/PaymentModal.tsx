@@ -198,25 +198,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [copiedNote, setCopiedNote] = useState(false);
 
-  // Official QPay & Account Details from Admin Tamir
+  // Official QPay & Account Details from Admin
   const ibanNumber = 'MN12 0050 0991 0688 3518';
   const ibanNumberRaw = 'MN120050099106883518';
-  const monpayNumber = '9910 6883 518';
-  const monpayNumberRaw = '99106883518';
-  const accountHolder = 'B.Tamir';
-  const accountHolderPhone = '91441299';
+  const accountHolder = 'Админ';
 
   // User contact input for recharge confirmation
-  const [userPhoneInput, setUserPhoneInput] = useState<string>(currentUser?.phone || '');
+  const [userPhoneInput, setUserPhoneInput] = useState<string>(() => {
+    if (currentUser?.phone && currentUser.phone !== '91441299') {
+      return currentUser.phone;
+    }
+    return '';
+  });
   const [userNoteInput, setUserNoteInput] = useState<string>('');
 
   useEffect(() => {
-    if (currentUser?.phone && !userPhoneInput) {
+    if (currentUser?.phone && currentUser.phone !== '91441299' && !userPhoneInput) {
       setUserPhoneInput(currentUser.phone);
     }
   }, [currentUser?.phone]);
 
-  // Real-time listener for current user's recharge request approval by Admin Tamir
+  // Real-time listener for current user's recharge request approval by Admin
   const processedApprovalIdsRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -232,7 +234,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           setTopUpRequestSent(false);
           setIsSuccess(true);
           setSuccessMsgText(
-            `🎉 ТАНЫ ХҮСЭЛТИЙГ АДМИН ТАМИР БАТАЛГААЖУУЛЛАА!\n\n+${approved.amount.toLocaleString()} ₮ оноо таны дансанд амжилттай орлоо.\n\nТа одоо "2. Эрх Авах" хэсэг рүү орж анимэ үзэх эрхээ шууд идэвхжүүлэх боломжтой!`
+            `🎉 ТАНЫ ХҮСЭЛТИЙГ АДМИН БАТАЛГААЖУУЛЛАА!\n\n+${approved.amount.toLocaleString()} ₮ оноо таны дансанд амжилттай орлоо.\n\nТа одоо "2. Эрх Авах" хэсэг рүү орж анимэ үзэх эрхээ шууд идэвхжүүлэх боломжтой!`
           );
           onTopUpBalance(approved.amount);
           clearUserPendingRechargeRequests(currentUser);
@@ -305,7 +307,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return selectedTopUpAmount;
   };
 
-  // 1. Send Point Request to Admin Tamir
+  // 1. Send Point Request to Admin
   const handleSubmitPointsRequestToAdmin = async () => {
     if (!currentUser) {
       alert('⚠️ Админаас оноо авах хүсэлт илгээхийн тулд эхлээд системд нэвтэрнэ үү.');
@@ -316,7 +318,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     const phone = (userPhoneInput.trim() || currentUser.phone || '').trim();
     if (!phone) {
-      alert('⚠️ Админ Тамир таны шилжүүлгийг шалгаж баталгаажуулахад гар утасны дугаар шаардлагатай. Утасны дугаараа оруулна уу.');
+      alert('⚠️ Админ таны шилжүүлгийг шалгаж баталгаажуулахад гар утасны дугаар шаардлагатай. Утасны дугаараа оруулна уу.');
       return;
     }
 
@@ -374,7 +376,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsVerifying(false);
     setTopUpRequestSent(true);
     setTopUpSuccessNotice(
-      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админ Тамирт амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (QPay / Данс: ${ibanNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл түр хүлээнэ үү.`
+      `📩 Таны +${amountToRequest.toLocaleString()} ₮ оноо авах хүсэлт Админд амжилттай очлоо.\n\nАдмин таны шилжүүлгийг (QPay / Данс: ${ibanNumber}) шалгаж баталгаажуулсны дараа таны дансанд шууд оноо орж, анимэ эрх авах боломжтой болно.\n\n⚠️ Админ шалгаж зөвшөөрөх хүртэл түр хүлээнэ үү.`
     );
   };
 
@@ -491,7 +493,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
               <p className="text-[11px] text-zinc-400">
                 {mainTab === 'points_request'
-                  ? '1-р хэсэг: Админ Тамираас оноо авах хүсэлт явуулах'
+                  ? '1-р хэсэг: Админаас оноо авах хүсэлт явуулах'
                   : mainTab === 'get_permission'
                   ? '2-р хэсэг: Цуглуулсан оноогоороо анимэ эрх авах / сунгах'
                   : '3-р хэсэг: Админаас авсан эрхийн код идэвхжүүлэх'}
@@ -588,7 +590,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-zinc-300 leading-relaxed">
-                  Та <strong>Админ Тамир</strong>-ын QPay & IBAN данс руу шилжүүлэг хийсний дараа эндээс оноо авах хүсэлтээ илгээнэ үү. Админ таны шилжүүлгийг шалгаж баталгаажуулснаар дансанд тань оноо орно.
+                  Та <strong>Админ</strong>-ын QPay & IBAN данс руу шилжүүлэг хийсний дараа эндээс оноо авах хүсэлтээ илгээнэ үү. Админ таны шилжүүлгийг шалгаж баталгаажуулснаар дансанд тань оноо орно.
                 </p>
                 <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-xs">
                   <span className="text-zinc-400">Таны одоогийн дансны үлдэгдэл:</span>
@@ -667,10 +669,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight flex items-center gap-2">
                         <span>{accountHolder}</span>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Админ</span>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Албан ёсны</span>
                       </div>
-                      <div className="text-xs text-slate-500 font-mono font-medium">
-                        {accountHolderPhone}
+                      <div className="text-xs text-slate-500 font-medium">
+                        Албан ёсны хүлээн авагч
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -736,35 +738,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         )}
                       </button>
                     </div>
-
-                    {/* MonPay Account */}
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
-                          Монпэй дансны дугаар
-                        </span>
-                        <span className="font-mono text-xs sm:text-sm font-black text-slate-900 tracking-wide select-all block truncate">
-                          {monpayNumber}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(monpayNumberRaw, 'monpay')}
-                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 shadow-sm"
-                      >
-                        {copiedMonpay ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-300" />
-                            <span>Хууллаа!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Хуулах</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
                   </div>
 
                   {/* 1-Tap Quick Copy Bar */}
@@ -785,13 +758,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => copyToClipboard(userPhoneInput.trim() || currentUser?.phone || accountHolderPhone, 'note')}
+                      onClick={() => copyToClipboard(userPhoneInput.trim() || (currentUser?.phone !== '91441299' ? currentUser?.phone : '') || 'Утасны дугаар', 'note')}
                       className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-950 font-bold flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <div className="text-left min-w-0">
                         <span className="text-[9px] text-blue-700 block uppercase truncate">Гүйлгээний утга:</span>
                         <span className="font-mono font-black text-xs text-blue-900 truncate block">
-                          {userPhoneInput.trim() || currentUser?.phone || 'Утасны дугаар'}
+                          {userPhoneInput.trim() || (currentUser?.phone !== '91441299' ? currentUser?.phone : '') || 'Утасны дугаар'}
                         </span>
                       </div>
                       <span className="text-[10px] text-blue-700 underline shrink-0">
@@ -828,7 +801,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     </span>
                     <input
                       type="text"
-                      placeholder="Жишээ: 91441299 Тамир оноо авах"
+                      placeholder="Жишээ: 99112233 Оноо авах"
                       value={userNoteInput}
                       onChange={(e) => setUserNoteInput(e.target.value)}
                       className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -1275,7 +1248,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <CheckCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-white font-black text-sm flex items-center gap-1.5">
-                    <span>📩 Хүсэлт Админ Тамирт илгээгдлээ</span>
+                    <span>📩 Хүсэлт Админд илгээгдлээ</span>
                     <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
                       Шалгагдаж байна
                     </span>

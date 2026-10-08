@@ -112,12 +112,7 @@ export default function App() {
 
   const handleUpdateMovieEpisodes = (movieId: string, episodes: Movie['episodes']) => {
     // Admin is allowed to update or add video episodes
-    const isAuthorizedAdmin =
-      currentUser?.role === 'admin' ||
-      currentUser?.email === 'tamir91441299@gmail.com' ||
-      currentUser?.phone === '91441299' ||
-      currentUser?.name?.toLowerCase() === 'admin' ||
-      currentUser?.name?.includes('Тамир');
+    const isAuthorizedAdmin = isAdminUser(currentUser);
     if (!isAuthorizedAdmin) {
       alert('⚠️ Зөвхөн админ видео болон ангиудын линк оруулах, засах эрхтэй!');
       return;
@@ -143,12 +138,7 @@ export default function App() {
   };
 
   const handleAddNewMovie = (newMovie: Movie) => {
-    const isAuthorizedAdmin =
-      currentUser?.role === 'admin' ||
-      currentUser?.email === 'tamir91441299@gmail.com' ||
-      currentUser?.phone === '91441299' ||
-      currentUser?.name?.toLowerCase() === 'admin' ||
-      currentUser?.name?.includes('Тамир');
+    const isAuthorizedAdmin = isAdminUser(currentUser);
     if (!isAuthorizedAdmin) {
       alert('⚠️ Зөвхөн админ шинэ анимэ, видео оруулах эрхтэй!');
       return;
@@ -939,12 +929,7 @@ export default function App() {
     durationDays?: number,
     isCodeRedemption: boolean = false
   ) => {
-    const isAuthorizedAdmin =
-      currentUser?.role === 'admin' ||
-      currentUser?.email === 'tamir91441299@gmail.com' ||
-      currentUser?.phone === '91441299' ||
-      currentUser?.name?.toLowerCase() === 'admin' ||
-      currentUser?.name?.includes('Тамир');
+    const isAuthorizedAdmin = isAdminUser(currentUser);
 
     // SECURITY GUARD: Оноогүй хэрэглэгч анимэ эрх авах боломжгүй!
     if (!currentUser) {

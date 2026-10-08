@@ -46,7 +46,7 @@ import { UserAccount } from './AuthModal';
 import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { recordAnimeView } from '../lib/animeViewService';
-import { checkUserContentAccess, getAnimeExpiryDetails } from '../lib/permissionService';
+import { checkUserContentAccess, getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 import {
   getEmbedUrl,
   extractGoogleDriveId,
@@ -88,12 +88,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   isMoviePackage = false,
   onOpenAuthModal,
 }) => {
-  const isAdmin =
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'tamir91441299@gmail.com' ||
-    currentUser?.phone === '91441299' ||
-    currentUser?.name?.toLowerCase() === 'admin' ||
-    currentUser?.name?.includes('Тамир');
+  const isAdmin = isAdminUser(currentUser);
 
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number>(() =>
     movie?.episodes && initialEpisodeNumber && initialEpisodeNumber > 0

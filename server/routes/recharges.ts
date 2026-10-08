@@ -176,7 +176,7 @@ router.post('/submit', async (req: Request, res: Response) => {
           name: newReq.userName,
           phone: cleanPhone,
           email: cleanEmail,
-          role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : 'user',
+          role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
           status: 'active',
           packageType: 'free',
           packageExpiry: '-',
@@ -224,7 +224,7 @@ router.post('/approve', async (req: Request, res: Response) => {
 
     const list = readStoredRecharges();
     const idx = list.findIndex((r) => r.id === id);
-    const adminName = processedBy || 'Админ Тамир';
+    const adminName = processedBy || 'Админ';
 
     let targetReq = idx >= 0 ? list[idx] : null;
 
@@ -335,7 +335,7 @@ router.post('/approve', async (req: Request, res: Response) => {
         name: targetReq.userName || 'Хэрэглэгч',
         phone: cleanPhone,
         email: cleanEmail,
-        role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : 'user',
+        role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
         status: 'active',
         packageType: 'anime',
         packageExpiry: newExpiryStr,
@@ -405,7 +405,7 @@ router.post('/reject', async (req: Request, res: Response) => {
 
     const list = readStoredRecharges();
     const idx = list.findIndex((r) => r.id === id);
-    const adminName = processedBy || 'Админ Тамир';
+    const adminName = processedBy || 'Админ';
 
     let targetReq = idx >= 0 ? list[idx] : null;
     const db = getServerDb();

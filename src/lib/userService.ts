@@ -329,7 +329,7 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       walletBalance: resolvedBalance,
       packageType: resolvedPackage as any,
       packageExpiry: resolvedExpiry,
-      role: (resolvedEmail === 'tamir91441299@gmail.com' || resolvedPhone === '91441299') ? 'admin' : (u.role || baseObj?.role || 'user'),
+      role: (resolvedEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (resolvedEmail === 'tamir91441299@gmail.com' ? 'user' : (u.role || baseObj?.role || 'user')),
       status: u.status || baseObj?.status || 'active',
       registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       registeredTimestamp: parsedTimestamp,
@@ -766,7 +766,7 @@ export async function approveAndCreditRechargeRequest(
     baseDate.setDate(baseDate.getDate() + durationDays);
     const expiryStr = baseDate.toISOString().split('T')[0];
 
-    const resolvedRole = (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : (targetUser?.role || 'user');
+    const resolvedRole = (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (targetUser?.role || 'user'));
     const resolvedPackage = targetUser?.packageType === 'full_vip' ? 'full_vip' : 'anime';
     const primaryId = rawUserId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
 
@@ -1192,7 +1192,7 @@ export async function saveUserToFirestore(
       phone: cleanPhone || existingRecord?.phone || '',
       registeredAt: user.registeredAt || existingRecord?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       registeredTimestamp: (user as UserDetail).registeredTimestamp || existingRecord?.registeredTimestamp || nowTimestamp,
-      role: (cleanEmail === 'tamir91441299@gmail.com' || cleanPhone === '91441299') ? 'admin' : (user as UserDetail).role || existingRecord?.role || 'user',
+      role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : ((user as UserDetail).role || existingRecord?.role || 'user')),
       status: (user as UserDetail).status || existingRecord?.status || 'active',
       packageType: resolvedPackage,
       packageExpiry: resolvedExpiry,
@@ -1325,7 +1325,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
             phone: u.phone || '',
             registeredAt: u.registeredAt || new Date().toLocaleString('mn-MN'),
             registeredTimestamp: u.registeredTimestamp || Date.now(),
-            role: (u.email === 'tamir91441299@gmail.com' || u.phone === '91441299') ? 'admin' : (u.role || 'user'),
+            role: (u.email === 'batorgiltamir9@gmail.com') ? 'admin' : (u.email === 'tamir91441299@gmail.com' ? 'user' : (u.role || 'user')),
             status: u.status || 'active',
             packageType: u.packageType || 'free',
             packageExpiry: u.packageExpiry || 'Идэвхгүй',
@@ -1701,14 +1701,14 @@ export async function authenticateUserCredentials(
   const password = inputPassword ? inputPassword.trim() : '';
 
   // Special Admin Shortcut
-  const isAdmin = cleanPhone === '91441299' || cleanLower === 'tamir91441299@gmail.com' || cleanLower === 'admin' || clean === '91441';
+  const isAdmin = cleanLower === 'batorgiltamir9@gmail.com' || cleanLower === 'admin';
   if (isAdmin) {
     const adminUser: UserAccount = {
-      id: '91441',
-      customId: '91441',
-      name: 'Tamir (Admin)',
-      email: 'tamir91441299@gmail.com',
-      phone: '91441299',
+      id: 'admin_batorgil',
+      customId: '88888',
+      name: 'Админ',
+      email: 'batorgiltamir9@gmail.com',
+      phone: '',
       registeredAt: '2026-01-01',
       role: 'admin',
       status: 'active',
@@ -1831,7 +1831,7 @@ export async function authenticateUserCredentials(
             phone: foundServerUser.phone || (isPhone ? cleanPhone : ''),
             registeredAt: foundServerUser.registeredAt || new Date().toLocaleDateString('mn-MN'),
             registeredTimestamp: foundServerUser.registeredTimestamp || Date.now(),
-            role: (foundServerUser.email === 'tamir91441299@gmail.com' || foundServerUser.phone === '91441299') ? 'admin' : (foundServerUser.role || 'user'),
+            role: (foundServerUser.email === 'batorgiltamir9@gmail.com') ? 'admin' : (foundServerUser.email === 'tamir91441299@gmail.com' ? 'user' : (foundServerUser.role || 'user')),
             status: foundServerUser.status || 'active',
             packageType: foundServerUser.packageType || 'free',
             packageExpiry: foundServerUser.packageExpiry || '-',
@@ -1977,7 +1977,7 @@ export function subscribeUserAccount(
       email: data.email || currentSession?.email || (cleanPhone ? `${cleanPhone}@flicknime.mn` : ''),
       phone: data.phone || currentSession?.phone || cleanPhone,
       registeredAt: data.registeredAt || currentSession?.registeredAt || new Date().toLocaleString('mn-MN'),
-      role: (data.email === 'tamir91441299@gmail.com' || data.phone === '91441299') ? 'admin' : (data.role || currentSession?.role || 'user'),
+      role: (data.email === 'batorgiltamir9@gmail.com') ? 'admin' : (data.email === 'tamir91441299@gmail.com' ? 'user' : (data.role || currentSession?.role || 'user')),
       status: data.status || currentSession?.status || 'active',
       packageType: data.packageType || currentSession?.packageType || 'free',
       packageExpiry: data.packageExpiry || currentSession?.packageExpiry || '-',
@@ -2202,7 +2202,7 @@ export function getUserMemberCode(user: Partial<UserAccount> | null | undefined)
   }
 
   // Admin user
-  if (email === 'tamir91441299@gmail.com' || phone === '91441299') {
+  if (email === 'batorgiltamir9@gmail.com') {
     return '163462';
   }
 
@@ -2217,10 +2217,10 @@ export function getUserMemberCode(user: Partial<UserAccount> | null | undefined)
 }
 
 /**
- * Returns display username (e.g. tamir73828)
+ * Returns display username (e.g. Хэрэглэгч)
  */
 export function getUserDisplayName(user: Partial<UserAccount> | null | undefined): string {
-  if (!user) return 'tamir73828';
+  if (!user) return 'Хэрэглэгч';
   if (user.name && user.name.trim() && user.name !== 'Хэрэглэгч') {
     return user.name.trim();
   }
@@ -2231,7 +2231,7 @@ export function getUserDisplayName(user: Partial<UserAccount> | null | undefined
   if (user.phone) {
     return user.phone;
   }
-  return 'tamir73828';
+  return 'Хэрэглэгч';
 }
 
 /**

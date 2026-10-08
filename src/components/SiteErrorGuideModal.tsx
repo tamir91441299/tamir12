@@ -146,7 +146,7 @@ export const SiteErrorGuideModal: React.FC<SiteErrorGuideModalProps> = ({
     },
     {
       q: '🔑 5 оронтой Хэрэглэгчийн ID-гаа мартсан бол яаж нэвтрэх вэ?',
-      a: 'Та заавал 5 оронтой ID-гаа санах шаардлагагүй. Бүртгүүлэхдээ оруулсан Гар утасны дугаар (Жишээ: 91441299) эсвэл Gmail хаягаа бичээд нууц үгээ оруулан шууд нэвтэрч болно. Мөн манай албан ёсны Facebook хуудсаар холбогдож ID-гаа лавлах боломжтой.',
+      a: 'Та заавал 5 оронтой ID-гаа санах шаардлагагүй. Бүртгүүлэхдээ оруулсан Гар утасны дугаар (Жишээ: 88112233) эсвэл Gmail хаягаа бичээд нууц үгээ оруулан шууд нэвтэрч болно. Мөн манай албан ёсны Facebook хуудсаар холбогдож ID-гаа лавлах боломжтой.',
     },
     {
       q: '🌟 Шинэ хэрэглэгч бүртгүүлэхэд яагаад 5 оронтой ID өгдөг вэ?',
@@ -531,7 +531,7 @@ export const SiteErrorGuideModal: React.FC<SiteErrorGuideModalProps> = ({
                     type="text"
                     value={reportContact}
                     onChange={(e) => setReportContact(e.target.value)}
-                    placeholder="91441299 эсвэл bat@gmail.com"
+                    placeholder="88112233 эсвэл bat@gmail.com"
                     className="w-full bg-zinc-950 border border-zinc-800 focus:border-cyan-500 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none"
                   />
                 </div>

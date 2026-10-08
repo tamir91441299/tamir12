@@ -36,7 +36,7 @@ import { Movie, TabType, MovieSubcategory } from '../types';
 import { UserAccount } from './AuthModal';
 import { DeviceMode } from './DisplaySettingsModal';
 import { AppNotification } from '../lib/userService';
-import { getAnimeExpiryDetails } from '../lib/permissionService';
+import { getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -101,12 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const animeDropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isAdmin =
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'tamir91441299@gmail.com' ||
-    currentUser?.phone === '91441299' ||
-    currentUser?.name?.toLowerCase() === 'admin' ||
-    currentUser?.name?.includes('Тамир');
+  const isAdmin = isAdminUser(currentUser);
   const newUsersNotifsCount = notifications.filter((n) => n.type === 'NEW_USER').length;
 
   const animeCategories: {

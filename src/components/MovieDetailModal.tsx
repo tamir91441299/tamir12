@@ -39,7 +39,7 @@ import { isPasscodeVerifiedInSession } from '../lib/passcodeService';
 import { PasscodePromptModal } from './PasscodePromptModal';
 import { UserAccount } from './AuthModal';
 import { AnimeWatcher, subscribeAnimeWatchers } from '../lib/animeViewService';
-import { checkUserContentAccess, getAnimeExpiryDetails } from '../lib/permissionService';
+import { checkUserContentAccess, getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
 import { generateEpisodeLinksCode } from '../lib/episodeLinkManager';
 import { HUNTER_X_HUNTER_EPISODE_LINKS } from '../data/anime/hunterXHunter';
 
@@ -78,12 +78,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onSelectMovie,
   allMovies,
 }) => {
-  const isAdmin =
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'tamir91441299@gmail.com' ||
-    currentUser?.phone === '91441299' ||
-    currentUser?.name?.toLowerCase() === 'admin' ||
-    currentUser?.name?.includes('Тамир');
+  const isAdmin = isAdminUser(currentUser);
 
   const [comments, setComments] = useState<Comment[]>(() => 
     SAMPLE_COMMENTS.filter((c) => (movie && c.movieId === movie.id) || c.movieId === 'm1')
@@ -225,7 +220,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     if (currentAccess.hasAccess) {
       onPlay(movie, epNumber);
     } else if (currentAccess.reason === 'PENDING_APPROVAL') {
-      alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
+      alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
     } else {
       // Анимэ эрхээ аваагүй тул уг анги түгжээтэй, төлбөр төлөх эсвэл багц авах цонх нээнэ
       if (onRequestPurchase) {
@@ -454,7 +449,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     // Check if non-admin tries to post a URL/link or video file in comments
     const containsUrl = /(https?:\/\/|www\.|youtu\.be|youtube\.com|drive\.google\.com|facebook\.com|fb\.watch|vimeo\.com|bilibili|dailymotion|\.mp4|\.m3u8|\.webm|\.avi|\.mov|<iframe|<video)/i.test(newCommentText);
     if (containsUrl && !isAdmin) {
-      alert('⚠️ Хориглогдсон: Энэ сайт дээр админаас (tamir91441299@gmail.com) өөр хүн видео болон холбоос оруулах боломжгүй! Видео болон ангийн линк оруулах эрх зөвхөн админд бий.');
+      alert('⚠️ Хориглогдсон: Энэ сайт дээр админаас (batorgiltamir9@gmail.com) өөр хүн видео болон холбоос оруулах боломжгүй! Видео болон ангийн линк оруулах эрх зөвхөн админд бий.');
       return;
     }
 
@@ -548,7 +543,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     const chk = checkUserContentAccess(currentUser, movie, isPurchased);
                     if (!chk.hasAccess) {
                       if (chk.reason === 'PENDING_APPROVAL') {
-                        alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
+                        alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
                       } else if (onRequestPurchase) {
                         onRequestPurchase(movie);
                       } else {
@@ -784,7 +779,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       const chk = checkUserContentAccess(currentUser, movie, isPurchased);
                       if (!chk.hasAccess) {
                         if (chk.reason === 'PENDING_APPROVAL') {
-                          alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ Тамир шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
+                          alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
                         } else if (onRequestPurchase) {
                           onRequestPurchase(movie);
                         } else {
