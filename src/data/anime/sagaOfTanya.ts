@@ -115,7 +115,7 @@ export const SAGA_OF_TANYA: Movie = {
   title: 'Saga of Tanya the Evil',
   titleMongolian: 'Танягийн Туульс: Бяцхан Чөтгөр (Youjo Senki)',
   type: 'anime',
-  poster: 'https://m.media-amazon.com/images/M/MV5BMjA3NTYyMDQ0Ml5BMl5BanBnXkFtZTgwNTUwMDc0MTI@._V1_FMjpg_UX1000_.jpg',
+  poster: 'https://m.media-amazon.com/images/I/81wlGn876zL._SL1500_.jpg',
   backdrop: 'https://images.alphacoders.com/834/834898.jpg',
   year: 2017,
   duration: '12 анги (Бүрэн)',
