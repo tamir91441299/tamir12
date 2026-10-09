@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore/lite';
 import { getServerDb } from '../lib/firestoreDb.ts';
 
 const router = Router();

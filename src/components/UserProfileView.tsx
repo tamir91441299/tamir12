@@ -30,6 +30,7 @@ import {
   updateUserProfile,
 } from '../lib/userService';
 import { getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
+import { GitHubConnectModal } from './GitHubConnectModal';
 
 // Crisp illustrated Anime Character avatar matching the screenshot
 export const AnimeAvatar: React.FC<{ className?: string; size?: number }> = ({
@@ -149,6 +150,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [showMyProfileModal, setShowMyProfileModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
   // Edit name state inside profile modal

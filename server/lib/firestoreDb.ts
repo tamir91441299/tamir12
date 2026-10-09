@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, setLogLevel } from 'firebase/firestore/lite';
+
+try {
+  setLogLevel('silent');
+} catch {}
 
 let serverDb: Firestore | null = null;
 

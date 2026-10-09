@@ -12,22 +12,29 @@ try {
 } catch {}
 
 let inMemoryQuotaExceeded = false;
+let quotaExceededUntil = 0;
 
 export function isFirestoreQuotaExceeded(): boolean {
-  // Always allow fresh attempts; never hard-lock the app for hours
-  return inMemoryQuotaExceeded;
+  if (!inMemoryQuotaExceeded) return false;
+  if (Date.now() > quotaExceededUntil) {
+    inMemoryQuotaExceeded = false;
+    return false;
+  }
+  return true;
 }
 
-export function markFirestoreQuotaExceeded(): void {
+export function markFirestoreQuotaExceeded(cooldownMs: number = 300000): void {
   inMemoryQuotaExceeded = true;
-  // Automatically reset after 10 seconds so subsequent interactions retry
-  setTimeout(() => {
-    inMemoryQuotaExceeded = false;
-  }, 10000);
+  quotaExceededUntil = Date.now() + cooldownMs;
+  try {
+    localStorage.setItem(QUOTA_STORAGE_KEY, String(quotaExceededUntil));
+    window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: true } }));
+  } catch {}
 }
 
 export function resetFirestoreQuotaFlag(): void {
   inMemoryQuotaExceeded = false;
+  quotaExceededUntil = 0;
   try {
     localStorage.removeItem(QUOTA_STORAGE_KEY);
     window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: false } }));

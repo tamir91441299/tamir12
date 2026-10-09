@@ -58,7 +58,10 @@ if (typeof window !== 'undefined') {
         msg.includes('ResizeObserver') ||
         msg.includes('Script error') ||
         msg.includes('chrome-extension') ||
-        msg.includes('safari-extension')
+        msg.includes('safari-extension') ||
+        msg.includes('Disconnecting idle stream') ||
+        msg.includes('Timed out waiting for new targets') ||
+        msg.includes('GrpcConnection')
       ) {
         return;
       }
@@ -97,7 +100,10 @@ if (typeof window !== 'undefined') {
       if (
         reason.includes('AbortError') ||
         reason.includes('ResizeObserver') ||
-        reason.includes('chrome-extension')
+        reason.includes('chrome-extension') ||
+        reason.includes('Disconnecting idle stream') ||
+        reason.includes('Timed out waiting for new targets') ||
+        reason.includes('GrpcConnection')
       ) {
         return;
       }

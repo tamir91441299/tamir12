@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Silence verbose internal Firestore stream logs
+try {
+  setLogLevel('error');
+} catch {}
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

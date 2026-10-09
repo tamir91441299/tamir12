@@ -21,18 +21,18 @@ export function formatSagaOfTanyaDriveLink(driveIdOrUrl: string): string {
  * доорх объектод хуулж тавихад тоглуулагч шууд тухайн ангийг холбон тоглуулах болно.
  */
 export const SAGA_OF_TANYA_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://u.pcloud.link/publink/show?code=XZVxr4JZmd91ifa45qXME4rMOzt66p1Mbwl7',
-  2: 'https://drive.google.com/file/d/1tanya_evil_ep2/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1tanya_evil_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1tanya_evil_ep4/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1tanya_evil_ep5/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1tanya_evil_ep6/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1tanya_evil_ep7/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1tanya_evil_ep8/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1tanya_evil_ep9/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1tanya_evil_ep10/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1tanya_evil_ep11/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1tanya_evil_ep12/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZwL8YJZEEGACjkG2cY91JOeRBXNTm0WN7ak',
+  2: 'https://u.pcloud.link/publink/show?code=XZ6L8YJZjsBEpFbSwa7UnFad4AtOGb4M90Wk',
+  3: 'https://u.pcloud.link/publink/show?code=XZX48YJZkYtSKQRacJ8WAfChGDhMq513aeEX',
+  4: 'https://u.pcloud.link/publink/show?code=XZR48YJZdwiAEr53kikd0BwLNvsoCQ77GfMV',
+  5: 'https://u.pcloud.link/publink/show?code=XZm48YJZy8neKlyVhofuw1gNL9RdzfeMEBfX',
+  6: 'https://u.pcloud.link/publink/show?code=XZh48YJZW1Gy2GtHf8BCq3Olf6meympwp74V',
+  7: 'https://u.pcloud.link/publink/show?code=XZB48YJZhVJz8I4CYdXA8ExJ6bJptXyXckD7',
+  8: 'https://u.pcloud.link/publink/show?code=XZe48YJZ4SqGj9YGDPpVeRuP3FRrBmy6Xwoy',
+  9: 'https://u.pcloud.link/publink/show?code=XZx48YJZopyuYYar6WjzoEHJkMIpLmOFFEb7',
+  10: 'https://u.pcloud.link/publink/show?code=XZi48YJZbmNXLtggDDyT5FQ8AUG5uky5NnUk',
+  11: 'https://u.pcloud.link/publink/show?code=XZT88YJZdyMPzTT1jlyw23YYahrSq5v6ca57',
+  12: 'https://u.pcloud.link/publink/show?code=XZl88YJZ1hrhJITKFVQgk4HAS2JcsyoMznMk',
 };
 
 export const SAGA_OF_TANYA_EPISODES: Episode[] = [

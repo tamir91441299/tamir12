@@ -231,7 +231,7 @@ export const SPY_X_FAMILY: Movie = {
   titleMongolian: 'Тагнуулч х Гэр бүл (Spy x Family)',
   type: 'anime',
   poster: 'https://i.pinimg.com/736x/37/b7/db/37b7dbaa0f00af4b3888d9782615ee9c.jpg',
-  backdrop: 'https://images3.alphacoders.com/123/1230103.jpg',
+  backdrop: 'https://tse2.mm.bing.net/th/id/OIP.gEokELtCkSfbdyXZJQp0MAHaLH?r=0&rs=1&pid=ImgDetMain&o=7&rm=3',
   year: 2022,
   duration: '25 анги',
   rating: 9.8,

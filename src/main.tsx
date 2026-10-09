@@ -12,7 +12,11 @@ if (typeof window !== 'undefined') {
       s.includes('failed to connect') ||
       s.includes('closed without opened') ||
       s.includes('vite') ||
-      s.includes('unhandled rejection')
+      s.includes('unhandled rejection') ||
+      s.includes('disconnecting idle stream') ||
+      s.includes('grpcconnection') ||
+      s.includes('idle stream') ||
+      s.includes('timed out waiting for new targets')
     );
   };
 
