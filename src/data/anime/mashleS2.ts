@@ -21,18 +21,18 @@ export function formatMashleS2DriveLink(driveIdOrUrl: string): string {
  * энд шууд тохируулж болно.
  */
 export const MASHLE_S2_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://u.pcloud.link/publink/show?code=XZYxr4JZ1Y6CjTSits509s6iSi2AR89QXaWk',
-  2: 'https://drive.google.com/file/d/1mashle_s2_ep2/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1mashle_s2_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1mashle_s2_ep4/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1mashle_s2_ep5/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1mashle_s2_ep6/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1mashle_s2_ep7/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1mashle_s2_ep8/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1mashle_s2_ep9/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1mashle_s2_ep10/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1mashle_s2_ep11/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1mashle_s2_ep12/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZ2D3YJZ8SfWkJlhEOyoQ29HtK8D1h0Mj46y',
+  2: 'https://u.pcloud.link/publink/show?code=XZgD3YJZXO5yQyWFFWLTnWRwByJXizbCAfC7',
+  3: 'https://u.pcloud.link/publink/show?code=XZPD3YJZoJGwU3X8no5A8iq0bV8dCuK5ugj7',
+  4: 'https://u.pcloud.link/publink/show?code=XZxD3YJZ8HxWOWf7pOp9yAkCYgFLNp2OA9Ry',
+  5: 'https://u.pcloud.link/publink/show?code=XZKD3YJZLxXFOXvCAhhYSTrfM2C9FHfLPILX',
+  6: 'https://u.pcloud.link/publink/show?code=XZdD3YJZpjsfa9K5RFXUCyX2jRVWUjbUFlN7',
+  7: 'https://u.pcloud.link/publink/show?code=XZF13YJZoAgxW53asNHORFltYaiFCVDE0PXy',
+  8: 'https://u.pcloud.link/publink/show?code=XZ813YJZOUeOHi5zQBkNsmDDgi6PG7Nwlj67',
+  9: 'https://u.pcloud.link/publink/show?code=XZQ13YJZdTNK1ArYeeuixeTsJUUEHSgMNxa7',
+  10: 'https://u.pcloud.link/publink/show?code=XZj13YJZgV0sotXoSEjaLl1vC1H05LJOKN5y',
+  11: 'https://u.pcloud.link/publink/show?code=XZu13YJZa1WTMOVWNXhG9W1NhhCcwkVxQjIk',
+  12: 'https://u.pcloud.link/publink/show?code=XZW13YJZlsaimTHnRLXtfTJJrLdfOLajNt2V',
 };
 
 export const MASHLE_S2_EPISODES: Episode[] = [
