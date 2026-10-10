@@ -11,14 +11,14 @@ export function isAdminUser(user: UserAccount | null | undefined): boolean {
   const email = (user.email || '').trim().toLowerCase();
   const role = (user as any).role;
 
-  // Explicitly check for master admin: batorgiltamir9@gmail.com
-  if (email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
-    return true;
-  }
-
-  // tamir91441299@gmail.com is explicitly NOT admin
+  // Explicitly: tamir91441299@gmail.com is NOT an admin
   if (email === 'tamir91441299@gmail.com') {
     return false;
+  }
+
+  // Master admins: batorgiltamir9@gmail.com, admin@ioio.mn
+  if (email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
+    return true;
   }
 
   if (role === 'admin') {

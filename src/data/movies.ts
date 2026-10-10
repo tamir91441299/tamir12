@@ -14,6 +14,9 @@ import { SAGA_OF_TANYA } from './anime/sagaOfTanya';
 import { MASHLE } from './anime/mashle';
 import { MASHLE_S2 } from './anime/mashleS2';
 import { HAIKYU } from './anime/haikyu';
+import { HAIKYU_S2 } from './anime/haikyuS2';
+import { HAIKYU_S3 } from './anime/haikyuS3';
+import { HAIKYU_S4 } from './anime/haikyuS4';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -211,6 +214,9 @@ export const SAMPLE_MOVIES: Movie[] = [
   MASHLE,
   MASHLE_S2,
   HAIKYU,
+  HAIKYU_S2,
+  HAIKYU_S3,
+  HAIKYU_S4,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
@@ -227,6 +233,9 @@ export {
   MASHLE,
   MASHLE_S2,
   HAIKYU,
+  HAIKYU_S2,
+  HAIKYU_S3,
+  HAIKYU_S4,
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,

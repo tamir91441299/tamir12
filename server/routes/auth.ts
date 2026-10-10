@@ -275,7 +275,7 @@ router.post('/api/auth/github/quick-auth', async (req: Request, res: Response) =
     const generatedCustomId = (customIdSuffix + random2).slice(0, 5).padEnd(5, '0');
 
     // Determine admin role
-    const isAdmin = cleanEmail === 'tamir91441299@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com';
+    const isAdmin = cleanEmail === 'batorgiltamir9@gmail.com';
     const role = isAdmin ? 'admin' : 'user';
 
     // Check if user already exists in storage

@@ -8,3 +8,6 @@ export * from './sagaOfTanya';
 export * from './mashle';
 export * from './mashleS2';
 export * from './haikyu';
+export * from './haikyuS2';
+export * from './haikyuS3';
+export * from './haikyuS4';

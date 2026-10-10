@@ -199,6 +199,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const isHunterXHunter = movie.id === 'm_hunter_x_hunter' || movie.title.toLowerCase().includes('hunter') || movie.titleMongolian.toLowerCase().includes('хантэр');
   const isSpyXFamily = movie.id === 'm_spy_x_family' || movie.title.toLowerCase().includes('spy x family') || movie.titleMongolian.toLowerCase().includes('тагнуулч х гэр бүл');
 
+  const isHaikyuS4 = movie.id === 'm_haikyu_s4' || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('4') || movie.titleMongolian.includes('4') || movie.title.toLowerCase().includes('top')));
+  const isHaikyuS3 = (movie.id === 'm_haikyu_s3' || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('3') || movie.titleMongolian.includes('3')))) && !isHaikyuS4;
+  const isHaikyuS2 = (movie.id === 'm_haikyu_s2' || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) && !isHaikyuS3 && !isHaikyuS4;
+  const isHaikyuS1 = (movie.id === 'm_haikyu' || movie.title.toLowerCase().includes('haikyu') || movie.titleMongolian.toLowerCase().includes('хайкью')) && !isHaikyuS2 && !isHaikyuS3 && !isHaikyuS4;
+  const isHaikyuSeries = isHaikyuS1 || isHaikyuS2 || isHaikyuS3 || isHaikyuS4;
+
   // Access rule:
   // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
   // 2. Анимэ үзэх эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх анги ТҮГЖЭЭТЭЙ)
@@ -1033,6 +1039,144 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       isMashleS2 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-amber-400'
                     }`}>
                       12 анги
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Season Switcher for Haikyu!! (Season 1, Season 2, Season 3, Season 4) */}
+            {isHaikyuSeries && (
+              <div className="pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-orange-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-orange-400" />
+                    Бүлгүүд (Haikyuu Seasons):
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-medium">Нийт 4 бүлэг, 85 анги</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* S1 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isHaikyuS1 && onSelectMovie && allMovies) {
+                        const s1 = allMovies.find((m) => m.id === 'm_haikyu');
+                        if (s1) onSelectMovie(s1);
+                      }
+                    }}
+                    className={`flex flex-col p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isHaikyuS1
+                        ? 'bg-orange-500 text-black border-orange-400 font-black shadow-lg shadow-orange-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="flex items-center gap-1">
+                        <span>🏐</span>
+                        <span>1-р Бүлэг</span>
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isHaikyuS1 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-zinc-400'
+                      }`}>
+                        25 анги
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-normal truncate ${isHaikyuS1 ? 'text-black/80' : 'text-zinc-500'}`}>
+                      Карасуно сэргэн мандалт
+                    </span>
+                  </button>
+
+                  {/* S2 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isHaikyuS2 && onSelectMovie && allMovies) {
+                        const s2 = allMovies.find((m) => m.id === 'm_haikyu_s2');
+                        if (s2) onSelectMovie(s2);
+                      }
+                    }}
+                    className={`flex flex-col p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isHaikyuS2
+                        ? 'bg-gradient-to-r from-orange-400 to-amber-500 text-black border-orange-400 font-black shadow-lg shadow-orange-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="flex items-center gap-1">
+                        <span>🔥</span>
+                        <span>2-р Бүлэг</span>
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isHaikyuS2 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-orange-400'
+                      }`}>
+                        25 анги
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-normal truncate ${isHaikyuS2 ? 'text-black/80' : 'text-zinc-500'}`}>
+                      Токио бэлтгэл & Хавар
+                    </span>
+                  </button>
+
+                  {/* S3 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isHaikyuS3 && onSelectMovie && allMovies) {
+                        const s3 = allMovies.find((m) => m.id === 'm_haikyu_s3');
+                        if (s3) onSelectMovie(s3);
+                      }
+                    }}
+                    className={`flex flex-col p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isHaikyuS3
+                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white border-red-400 font-black shadow-lg shadow-red-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="flex items-center gap-1">
+                        <span>🦅</span>
+                        <span>3-р Бүлэг</span>
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isHaikyuS3 ? 'bg-black/30 text-white font-black' : 'bg-zinc-800 text-orange-400'
+                      }`}>
+                        10 анги
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-normal truncate ${isHaikyuS3 ? 'text-white/90' : 'text-zinc-500'}`}>
+                      Карасуно vs Шираторизава
+                    </span>
+                  </button>
+
+                  {/* S4 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isHaikyuS4 && onSelectMovie && allMovies) {
+                        const s4 = allMovies.find((m) => m.id === 'm_haikyu_s4');
+                        if (s4) onSelectMovie(s4);
+                      }
+                    }}
+                    className={`flex flex-col p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isHaikyuS4
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-black border-amber-400 font-black shadow-lg shadow-yellow-500/20'
+                        : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="flex items-center gap-1">
+                        <span>⚡</span>
+                        <span>4-р Бүлэг</span>
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        isHaikyuS4 ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-yellow-400'
+                      }`}>
+                        25 анги
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-normal truncate ${isHaikyuS4 ? 'text-black/80' : 'text-zinc-500'}`}>
+                      Оргил Өөд (To the Top)
                     </span>
                   </button>
                 </div>

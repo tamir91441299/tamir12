@@ -72,6 +72,13 @@ export function writeStoredUsers(users: any[]): void {
   }
 }
 
+// Helper to strip sensitive secrets (passwords, PINs, card info) before sending to client
+export function sanitizeUserForClient(u: any): any {
+  if (!u) return null;
+  const { password, pin, confirmPassword, cardNumber, cardExpiry, cardCvc, cardPin, ...safe } = u;
+  return safe;
+}
+
 // Helper to save or update a registered user
 export function saveRegisteredUser(userObj: any): any {
   if (!userObj) return null;
@@ -242,10 +249,11 @@ router.get('/', async (req: Request, res: Response) => {
     // Update local cache
     writeStoredUsers(merged);
 
-    return res.json({ success: true, users: merged, count: merged.length });
+    const safeUsers = merged.map(sanitizeUserForClient);
+    return res.json({ success: true, users: safeUsers, count: safeUsers.length });
   } catch (err: any) {
     console.error('Error fetching users:', err);
-    const fallback = readStoredUsers();
+    const fallback = readStoredUsers().map(sanitizeUserForClient);
     return res.json({ success: true, users: fallback, count: fallback.length });
   }
 });
@@ -341,7 +349,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      user: userObj,
+      user: sanitizeUserForClient(userObj),
       isNew: existingIndex < 0,
       message: `Хэрэглэгч ${userObj.name} амжилттай бүртгэгдлээ.`,
     });
@@ -420,7 +428,7 @@ router.post('/update', async (req: Request, res: Response) => {
       }
     }
 
-    return res.json({ success: true, user: updatedUser, message: 'Хэрэглэгчийн мэдээлэл шинэчлэгдлээ.' });
+    return res.json({ success: true, user: sanitizeUserForClient(updatedUser), message: 'Хэрэглэгчийн мэдээлэл шинэчлэгдлээ.' });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Update failed' });
   }

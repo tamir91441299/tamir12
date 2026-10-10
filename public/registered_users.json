@@ -258,7 +258,7 @@
     "watchedCount": 0,
     "phone": "89352429",
     "isMockUser": false,
-    "role": "admin",
+    "role": "user",
     "name": "Tek",
     "purchasedMovies": [],
     "lastTopUpAmount": -2500,
@@ -373,7 +373,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-10T09:53:47.504Z"
+    "updatedAt": "2026-10-10T13:07:53.579Z"
   },
   {
     "id": "user_phone_99159996",
@@ -431,7 +431,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-10T09:53:47.504Z"
+    "updatedAt": "2026-10-10T13:07:53.580Z"
   },
   {
     "id": "user_phone_85199193",
@@ -489,7 +489,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-10T09:53:47.504Z"
+    "updatedAt": "2026-10-10T13:07:53.580Z"
   },
   {
     "id": "user_phone_94362457",
@@ -685,7 +685,7 @@
     "lastLogin": "8/14/2026, 11:39:07 AM",
     "registeredAt": "8/14/2026",
     "email": "tamir91441299@gmail.com",
-    "role": "admin",
+    "role": "user",
     "status": "active",
     "registeredTimestamp": 1768003200000,
     "customId": ""
@@ -697,7 +697,7 @@
     "phone": "91097071",
     "name": "Tuya",
     "status": "active",
-    "role": "admin",
+    "role": "user",
     "id": "user_1790410888332",
     "walletBalance": 7500,
     "registeredAt": "8/14/2026",

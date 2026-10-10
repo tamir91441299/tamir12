@@ -64,7 +64,8 @@ import {
   deleteUserFromFirestoreAndServer,
   cleanupAllBotUsers,
   getUserMemberCode,
-  findUserByIdOrCode
+  findUserByIdOrCode,
+  extendUserPackageInSystem
 } from '../lib/userService';
 import {
   PromoCode,
@@ -85,7 +86,12 @@ import {
   parseRechargeTime,
   RechargeRequest
 } from '../lib/rechargeService';
-import { isAdminUser } from '../lib/permissionService';
+import {
+  isAdminUser,
+  isPackageExpired,
+  getAnimeExpiryDetails,
+  calculateExtendedExpiryDate
+} from '../lib/permissionService';
 import { isVideoCreationAllowed, setVideoCreationAllowed } from '../lib/securityGuard';
 
 const maskPhoneNumber = (phone?: string, email?: string): string => {
@@ -153,7 +159,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (currentUser && !isBotOrMockUser(currentUser)) {
       rawList.unshift({
         ...currentUser,
-        role: currentUser.email === 'batorgiltamir9@gmail.com' ? 'admin' : (currentUser.role || 'user'),
+        role: (currentUser.email === 'batorgiltamir9@gmail.com' || (currentUser.role === 'admin' && currentUser.email !== 'tamir91441299@gmail.com')) ? 'admin' : 'user',
         status: 'active',
         packageType: currentUser.packageType || 'free',
         packageExpiry: currentUser.packageExpiry || '-',
@@ -176,7 +182,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const [search, setSearch] = useState('');
   const [filterPackage, setFilterPackage] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all'); // 'all' | 'new' | 'active' | 'expired' | 'free' | 'blocked'
+  const [filterExpiry, setFilterExpiry] = useState<string>('all'); // 'all' | 'expiring_3d' | 'expiring_7d' | 'expiring_month' | 'expired' | 'permanent'
+  const [filterPayment, setFilterPayment] = useState<string>('all'); // 'all' | 'with_points' | 'zero_points'
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+
+  // Dedicated Extension Modal state
+  const [extensionModalUser, setExtensionModalUser] = useState<UserDetail | null>(null);
+  const [extensionPkgType, setExtensionPkgType] = useState<'anime' | 'full_vip' | 'movie' | 'free'>('anime');
+  const [extensionDays, setExtensionDays] = useState<number>(30);
+  const [extensionCustomDate, setExtensionCustomDate] = useState<string>('');
+  const [extensionLoading, setExtensionLoading] = useState<boolean>(false);
 
   // Points & Balance Management state
   const [pointsModalUser, setPointsModalUser] = useState<UserDetail | null>(null);
@@ -613,7 +630,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const isUserNew = (u: UserDetail): boolean => {
     if (u.isMockUser) return false;
-    if (u.email === 'batorgiltamir9@gmail.com' || u.role === 'admin') return false;
+    if (u.email === 'batorgiltamir9@gmail.com' || (u.role === 'admin' && u.email !== 'tamir91441299@gmail.com')) return false;
     // Any real registered user is recognized as a new registration
     return !u.isMockUser;
   };
@@ -769,6 +786,45 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (selectedUser && selectedUser.id === id) {
       const updatedUser = updated.find((u) => u.id === id);
       if (updatedUser) setSelectedUser(updatedUser);
+    }
+  };
+
+  const handleOpenExtensionModal = (user: UserDetail) => {
+    setExtensionModalUser(user);
+    setExtensionPkgType(user.packageType === 'free' ? 'anime' : (user.packageType || 'anime'));
+    setExtensionDays(30);
+    setExtensionCustomDate('');
+  };
+
+  const handleConfirmExtension = async () => {
+    if (!extensionModalUser) return;
+    setExtensionLoading(true);
+    try {
+      const res = await extendUserPackageInSystem(
+        extensionModalUser.id,
+        extensionPkgType,
+        extensionDays,
+        extensionCustomDate
+      );
+
+      if (res.success && res.user) {
+        const updatedList = users.map((u) => (u.id === extensionModalUser.id ? res.user! : u));
+        saveUsersState(updatedList);
+        if (selectedUser && selectedUser.id === extensionModalUser.id) {
+          setSelectedUser(res.user);
+        }
+        if (idSearchResult && idSearchResult.id === extensionModalUser.id) {
+          setIdSearchResult(res.user);
+        }
+        alert(res.message);
+        setExtensionModalUser(null);
+      } else {
+        alert(res.message || 'Эрх сунгахад алдаа гарлаа.');
+      }
+    } catch (e: any) {
+      alert('Алдаа гарлаа: ' + (e?.message || ''));
+    } finally {
+      setExtensionLoading(false);
     }
   };
 
@@ -1089,23 +1145,64 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const q = search.trim().toLowerCase().replace(/^#/, '');
     const memberCode = getUserMemberCode(u).toLowerCase();
     const customId = String((u as any).customId || '').toLowerCase();
+    const cleanId = String(u.id || '').toLowerCase();
+    const cleanName = String(u.name || '').toLowerCase();
+    const cleanEmail = String(u.email || '').toLowerCase();
+    const cleanPhone = String(u.phone || '').toLowerCase();
+
+    // 1. Search by ID, Name, Email, Phone
     const matchesSearch =
       !q ||
-      (u.name || '').toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.phone || '').includes(q) ||
-      (u.id || '').toLowerCase().includes(q) ||
+      cleanName.includes(q) ||
+      cleanEmail.includes(q) ||
+      cleanPhone.includes(q) ||
+      cleanId.includes(q) ||
       memberCode.includes(q) ||
       customId.includes(q);
 
-    let matchesPkg = true;
-    if (filterPackage === 'new') {
-      matchesPkg = isUserNew(u);
-    } else if (filterPackage !== 'all') {
-      matchesPkg = u.packageType === filterPackage;
+    if (!matchesSearch) return false;
+
+    // 2. Filter by Package Type
+    if (filterPackage !== 'all') {
+      if (filterPackage === 'new') {
+        if (!isUserNew(u)) return false;
+      } else if (u.packageType !== filterPackage) {
+        return false;
+      }
     }
 
-    return matchesSearch && matchesPkg;
+    // 3. Filter by Permission Status (Эрхийн төлөв)
+    const expiryDetails = getAnimeExpiryDetails(u);
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'new' && !isUserNew(u)) return false;
+      if (filterStatus === 'active' && !expiryDetails.hasAccess) return false;
+      if (filterStatus === 'expired' && (!expiryDetails.isExpired || u.packageType === 'free')) return false;
+      if (filterStatus === 'free' && u.packageType !== 'free') return false;
+      if (filterStatus === 'blocked' && u.status !== 'blocked') return false;
+    }
+
+    // 4. Filter by Expiration Date (Дуусах огноогоор)
+    if (filterExpiry !== 'all') {
+      if (filterExpiry === 'expiring_3d') {
+        if (!expiryDetails.hasAccess || expiryDetails.daysRemaining > 3 || expiryDetails.daysRemaining === 0) return false;
+      } else if (filterExpiry === 'expiring_7d') {
+        if (!expiryDetails.hasAccess || expiryDetails.daysRemaining > 7 || expiryDetails.daysRemaining === 0) return false;
+      } else if (filterExpiry === 'expiring_month') {
+        if (!expiryDetails.hasAccess || expiryDetails.daysRemaining > 31 || expiryDetails.daysRemaining === 0) return false;
+      } else if (filterExpiry === 'expired') {
+        if (!expiryDetails.isExpired || u.packageType === 'free') return false;
+      } else if (filterExpiry === 'permanent') {
+        if (u.role !== 'admin' && expiryDetails.daysRemaining < 365) return false;
+      }
+    }
+
+    // 5. Filter by Payment / Wallet Balance (Төлбөрийн төлөв)
+    if (filterPayment !== 'all') {
+      if (filterPayment === 'with_points' && (u.walletBalance || 0) <= 0) return false;
+      if (filterPayment === 'zero_points' && (u.walletBalance || 0) > 0) return false;
+    }
+
+    return true;
   });
 
   const getPackageBadge = (pkg: string) => {
@@ -1438,19 +1535,100 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <span>Бот цэвэрлэх</span>
                 </button>
 
-                <div className="flex items-center gap-1.5">
-                  <Filter className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <select
-                    value={filterPackage}
-                    onChange={(e) => setFilterPackage(e.target.value)}
-                    className="bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 py-1.5 px-2.5 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
-                  >
-                    <option value="all">Бүх хэрэглэгч ({users.length})</option>
-                    <option value="new">🌟 Шинэ бүртгүүлсэн ({newUsersCount})</option>
-                    <option value="anime">🌸 Анимэ Багц ({animeUsersCount})</option>
-                    <option value="full_vip">👑 FULL VIP ({vipUsersCount})</option>
-                    <option value="free">Үнэгүй ({freeUsersCount})</option>
-                  </select>
+                {/* Filter Controls Row */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* 1. Эрхийн төлөв шүүлтүүр */}
+                  <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-xl px-2 py-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase">Төлөв:</span>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer font-bold"
+                    >
+                      <option value="all">Бүх төлөв</option>
+                      <option value="active">🟢 Идэвхтэй эрхтэй</option>
+                      <option value="expired">🔴 Хугацаа дууссан</option>
+                      <option value="free">⚪ Үнэгүй (Эрх аваагүй)</option>
+                      <option value="new">🌟 Шинэ бүртгэлтэй</option>
+                      <option value="blocked">⛔ Блоклогдсон</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Дуусах огноогоор шүүлтүүр */}
+                  <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-xl px-2 py-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase">Хугацаа:</span>
+                    <select
+                      value={filterExpiry}
+                      onChange={(e) => setFilterExpiry(e.target.value)}
+                      className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer font-bold"
+                    >
+                      <option value="all">Бүх хугацаа</option>
+                      <option value="expiring_3d">⏱️ 3 хоногт дуусах</option>
+                      <option value="expiring_7d">📅 7 хоногт дуусах</option>
+                      <option value="expiring_month">🗓️ Энэ сард дуусах</option>
+                      <option value="expired">⚠️ Дууссан</option>
+                      <option value="permanent">👑 Хязгааргүй / Админ</option>
+                    </select>
+                  </div>
+
+                  {/* 3. Багцын төрөл шүүлтүүр */}
+                  <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-xl px-2 py-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase">Багц:</span>
+                    <select
+                      value={filterPackage}
+                      onChange={(e) => setFilterPackage(e.target.value)}
+                      className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer font-bold"
+                    >
+                      <option value="all">Бүх багц ({users.length})</option>
+                      <option value="anime">🌸 Анимэ Багц ({animeUsersCount})</option>
+                      <option value="full_vip">👑 FULL VIP ({vipUsersCount})</option>
+                      <option value="movie">🎬 Кино Багц</option>
+                      <option value="free">Үнэгүй ({freeUsersCount})</option>
+                      <option value="new">🌟 Шинэ бүртгүүлсэн ({newUsersCount})</option>
+                    </select>
+                  </div>
+
+                  {/* 4. Төлбөрийн үлдэгдэл шүүлтүүр */}
+                  <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-xl px-2 py-1">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase">Төлбөр:</span>
+                    <select
+                      value={filterPayment}
+                      onChange={(e) => setFilterPayment(e.target.value)}
+                      className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer font-bold"
+                    >
+                      <option value="all">Бүх үлдэгдэл</option>
+                      <option value="with_points">💰 Оноотой (&gt;0₮)</option>
+                      <option value="zero_points">0₮ Оноогүй</option>
+                    </select>
+                  </div>
+
+                  {/* View Mode Switcher */}
+                  <div className="flex items-center bg-zinc-950 border border-zinc-800 p-0.5 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        viewMode === 'table'
+                          ? 'bg-cyan-500 text-black font-black shadow'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="Хүснэгт харагдац"
+                    >
+                      Хүснэгт
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('cards')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        viewMode === 'cards'
+                          ? 'bg-cyan-500 text-black font-black shadow'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title="Карт харагдац"
+                    >
+                      Картууд
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -1708,7 +1886,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-end">
+                        <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-end flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenExtensionModal(idSearchResult)}
+                            className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95"
+                            title="Хэрэглэгчийн эрх сунгах цонх нээх (15 хоног, 1 сар, хугацаа сонгох)"
+                          >
+                            <Clock className="w-3.5 h-3.5 text-black" />
+                            <span>Эрх сунгах</span>
+                          </button>
+
                           <button
                             type="button"
                             disabled={idTopUpLoading}
@@ -1880,267 +2068,420 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
               )}
               {filteredUsers.length === 0 ? (
-            <div className="text-center py-12 text-zinc-500 text-xs">
-              Хайлтад тохирох хэрэглэгч олдсонгүй.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {filteredUsers.map((u, idx) => {
-                const isNew = isUserNew(u);
-                return (
-                <div
-                  key={`user_row_${u.id}_${idx}`}
-                  className={`bg-zinc-900/90 hover:bg-zinc-800/80 border rounded-2xl p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
-                    u.status === 'blocked'
-                      ? 'border-rose-900/50 opacity-60'
-                      : isNew
-                      ? 'border-emerald-500/50 bg-emerald-950/15 ring-1 ring-emerald-500/20 shadow-md'
-                      : u.role === 'admin'
-                      ? 'border-cyan-500/40 bg-cyan-950/10'
-                      : 'border-zinc-800'
-                  }`}
-                >
-                  {/* Left: User info */}
-                  <div className="flex items-center gap-3 min-w-[240px]">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-md shrink-0 uppercase relative ${
-                        u.role === 'admin'
-                          ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-black'
-                          : isNew
-                          ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-black ring-2 ring-emerald-400/40'
-                          : u.packageType === 'full_vip'
-                          ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-black'
-                          : 'bg-zinc-800 text-cyan-400 border border-zinc-700'
-                      }`}
-                    >
-                      {u.name.charAt(0)}
-                      {isNew && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#141417]" />
-                      )}
-                    </div>
+                <div className="text-center py-16 bg-zinc-950/60 rounded-2xl border border-zinc-800/80 space-y-2">
+                  <Users className="w-10 h-10 text-zinc-600 mx-auto" />
+                  <p className="text-sm font-bold text-zinc-400">Хайлтад тохирох хэрэглэгч олдсонгүй</p>
+                  <p className="text-xs text-zinc-600">
+                    Шүүлтүүрийн утгыг өөрчлөх эсвэл хайлтын үгээ шалгана уу.
+                  </p>
+                </div>
+              ) : viewMode === 'table' ? (
+                /* 📋 ДЭЛГЭРЭНГҮЙ ХҮСНЭГТ ХАРАГДАЦ (TABLE VIEW) */
+                <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950/80 shadow-2xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-zinc-900/90 text-zinc-400 uppercase text-[10px] font-black tracking-wider border-b border-zinc-800">
+                      <tr>
+                        <th className="py-3 px-3.5">Хэрэглэгч / Нэр</th>
+                        <th className="py-3 px-3">Хэрэглэгчийн ID</th>
+                        <th className="py-3 px-3">Бүртгэлтэй Имэйл</th>
+                        <th className="py-3 px-3">Бүртгүүлсэн Огноо</th>
+                        <th className="py-3 px-3">Эрхийн Төрөл</th>
+                        <th className="py-3 px-3">Эрх Дуусах Огноо</th>
+                        <th className="py-3 px-3">Төлбөрийн Төлөв</th>
+                        <th className="py-3 px-3.5 text-right">Үйлдэл</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/60">
+                      {filteredUsers.map((u, idx) => {
+                        const isNew = isUserNew(u);
+                        const expiryInfo = getAnimeExpiryDetails(u);
+                        return (
+                          <tr
+                            key={`tr_${u.id}_${idx}`}
+                            className={`hover:bg-zinc-900/60 transition-colors ${
+                              u.status === 'blocked'
+                                ? 'opacity-60 bg-rose-950/10'
+                                : isNew
+                                ? 'bg-emerald-950/20'
+                                : ''
+                            }`}
+                          >
+                            {/* 1. Нэр */}
+                            <td className="py-3 px-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 text-cyan-300 font-black text-xs flex items-center justify-center uppercase shrink-0">
+                                  {u.name.charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-extrabold text-white truncate max-w-[140px] flex items-center gap-1">
+                                    <span>{u.name}</span>
+                                    {isNew && (
+                                      <span className="text-[9px] bg-emerald-500 text-black px-1 rounded font-black">
+                                        ШИНЭ
+                                      </span>
+                                    )}
+                                  </div>
+                                  {u.phone && (
+                                    <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
+                                      <Phone className="w-2.5 h-2.5 text-cyan-400" />
+                                      {maskPhoneNumber(u.phone, u.email)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
 
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-extrabold text-sm text-white">{u.name}</span>
-                        <span className="font-mono text-[11px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded" title="5 оронтой Хэрэглэгчийн ID">
-                          #{getUserMemberCode(u)}
-                        </span>
-                        {isNew && (
-                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
-                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-                            ШИНЭ
-                          </span>
-                        )}
-                        {u.role === 'admin' && (
-                          <span className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-[9px] font-black px-1.5 py-0.2 rounded">
-                            АДМИН
-                          </span>
-                        )}
-                        {getPackageBadge(u.packageType)}
-                      </div>
+                            {/* 2. Хэрэглэгчийн ID */}
+                            <td className="py-3 px-3">
+                              <span className="inline-flex items-center gap-1 font-mono font-black text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                                #{getUserMemberCode(u)}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(getUserMemberCode(u));
+                                    setCopiedIdCode(true);
+                                    setTimeout(() => setCopiedIdCode(false), 2000);
+                                  }}
+                                  className="hover:text-white cursor-pointer"
+                                  title="ID хуулах"
+                                >
+                                  <Copy className="w-2.5 h-2.5 text-zinc-500" />
+                                </button>
+                              </span>
+                            </td>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-zinc-400">
-                        {u.phone && (
+                            {/* 3. Бүртгэлтэй Имэйл */}
+                            <td className="py-3 px-3 text-zinc-300">
+                              <span className="truncate max-w-[160px] block font-mono text-[11px]" title={u.email}>
+                                {u.email || '-'}
+                              </span>
+                            </td>
+
+                            {/* 4. Бүртгүүлсэн Огноо */}
+                            <td className="py-3 px-3">
+                              <div className="space-y-0.5">
+                                <span className="text-zinc-200 font-medium block text-[11px] whitespace-nowrap">
+                                  {u.registeredAt || '-'}
+                                </span>
+                                <span className="text-[9px] text-zinc-500 font-mono block">
+                                  {getRegisteredTimeLabel(u)}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* 5. Эрхийн Төрөл */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              {getPackageBadge(u.packageType)}
+                            </td>
+
+                            {/* 6. Эрх Дуусах Огноо */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <div className="space-y-0.5">
+                                <span className="font-mono font-bold text-amber-300 block text-xs">
+                                  {u.packageExpiry || '-'}
+                                </span>
+                                {expiryInfo.hasAccess ? (
+                                  <span className="inline-block text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 rounded font-black">
+                                    {expiryInfo.countdownText}
+                                  </span>
+                                ) : u.packageType !== 'free' ? (
+                                  <span className="inline-block text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 rounded font-bold">
+                                    Дууссан
+                                  </span>
+                                ) : (
+                                  <span className="inline-block text-[9px] text-zinc-500">
+                                    Үнэгүй
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 7. Төлбөрийн Төлөв / Үлдэгдэл */}
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <div className="space-y-0.5">
+                                <span className={`font-mono font-black text-xs block ${u.walletBalance > 0 ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                                  {u.walletBalance.toLocaleString()} ₮
+                                </span>
+                                <span className={`inline-block text-[9px] px-1.5 rounded font-bold ${
+                                  u.walletBalance > 0
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-zinc-800 text-zinc-500'
+                                }`}>
+                                  {u.walletBalance > 0 ? '✓ Оноотой' : 'Оноогүй (0₮)'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* 8. Үйлдэл */}
+                            <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Эрх сунгах товч */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenExtensionModal(u)}
+                                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md active:scale-95"
+                                  title="Эрх сунгах"
+                                >
+                                  <Clock className="w-3.5 h-3.5 text-black" />
+                                  <span>Эрх сунгах</span>
+                                </button>
+
+                                {/* +/- Оноо */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenPointsModal(u, 'add', 2500)}
+                                  className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-2 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                  title="+/- Оноо"
+                                >
+                                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                                </button>
+
+                                {/* Харах */}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedUser(u)}
+                                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-1.5 rounded-xl text-xs transition-all cursor-pointer"
+                                  title="Дэлгэрэнгүй харах"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                                </button>
+
+                                {/* Статус */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(u.id)}
+                                  className={`p-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                    u.status === 'active'
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                                      : 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
+                                  }`}
+                                  title={u.status === 'active' ? 'Идэвхтэй (Блоклох)' : 'Блоклогдсон (Нээх)'}
+                                >
+                                  {u.status === 'active' ? (
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <UserX className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                {/* Устгах */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  className="p-1.5 bg-zinc-900 hover:bg-rose-950 text-zinc-500 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
+                                  title="Устгах"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                /* 🗂️ КАРТ ХАРАГДАЦ (CARDS VIEW) */
+                <div className="grid grid-cols-1 gap-3">
+                  {filteredUsers.map((u, idx) => {
+                    const isNew = isUserNew(u);
+                    const expiryInfo = getAnimeExpiryDetails(u);
+                    return (
+                      <div
+                        key={`user_card_${u.id}_${idx}`}
+                        className={`bg-zinc-900/90 hover:bg-zinc-800/80 border rounded-2xl p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                          u.status === 'blocked'
+                            ? 'border-rose-900/50 opacity-60'
+                            : isNew
+                            ? 'border-emerald-500/50 bg-emerald-950/15 ring-1 ring-emerald-500/20 shadow-md'
+                            : u.role === 'admin'
+                            ? 'border-cyan-500/40 bg-cyan-950/10'
+                            : 'border-zinc-800'
+                        }`}
+                      >
+                        {/* Left: User identity */}
+                        <div className="flex items-center gap-3 min-w-[240px]">
+                          <div
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg shadow-md shrink-0 uppercase relative ${
+                              u.role === 'admin'
+                                ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-black'
+                                : isNew
+                                ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-black ring-2 ring-emerald-400/40'
+                                : u.packageType === 'full_vip'
+                                ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-black'
+                                : 'bg-zinc-800 text-cyan-400 border border-zinc-700'
+                            }`}
+                          >
+                            {u.name.charAt(0)}
+                            {isNew && (
+                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#141417]" />
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-extrabold text-sm text-white">{u.name}</span>
+                              <span className="font-mono text-[11px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded" title="5 оронтой Хэрэглэгчийн ID">
+                                #{getUserMemberCode(u)}
+                              </span>
+                              {isNew && (
+                                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                                  <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                                  ШИНЭ
+                                </span>
+                              )}
+                              {u.role === 'admin' && (
+                                <span className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 text-[9px] font-black px-1.5 py-0.2 rounded">
+                                  АДМИН
+                                </span>
+                              )}
+                              {getPackageBadge(u.packageType)}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-zinc-400">
+                              {u.phone && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(u.phone);
+                                    setCopiedPhoneUserId(u.id);
+                                    setTimeout(() => setCopiedPhoneUserId(null), 2000);
+                                  }}
+                                  className="flex items-center gap-1 hover:text-cyan-300 transition-colors cursor-pointer"
+                                  title="Утасны дугаар хуулах"
+                                >
+                                  <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
+                                  <span className="font-mono font-bold text-white">{maskPhoneNumber(u.phone, u.email)}</span>
+                                  {copiedPhoneUserId === u.id ? (
+                                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <Copy className="w-2.5 h-2.5 text-zinc-500 shrink-0" />
+                                  )}
+                                </button>
+                              )}
+                              {u.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3 text-zinc-500 shrink-0" />
+                                  <span className="truncate max-w-[170px]">{u.email}</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-2 pt-0.5">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
+                                <span>Бүртгүүлсэн: <strong className="text-zinc-200">{u.registeredAt}</strong></span>
+                              </span>
+                              <span>•</span>
+                              <span>Сүүлд: {u.lastLogin}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle: Wallet & Stats */}
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 text-xs w-full md:w-auto justify-between md:justify-start">
+                          <div>
+                            <span className="text-[10px] text-zinc-400 block uppercase font-bold flex items-center gap-1">
+                              <CreditCard className="w-3 h-3 text-emerald-400" />
+                              Хэтэвч / Оноо:
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-black text-sm ${u.walletBalance > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {u.walletBalance.toLocaleString()} ₮
+                              </span>
+                              {u.walletBalance <= 0 && (
+                                <span className="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1 py-0.2 rounded font-black">
+                                  Оноогүй
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="hidden sm:block h-6 w-px bg-zinc-800" />
+
+                          <div>
+                            <span className="text-[10px] text-zinc-400 block uppercase font-bold">
+                              Эрх Дуусах:
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold text-amber-300">{u.packageExpiry}</span>
+                              {expiryInfo.hasAccess && (
+                                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1 rounded font-black">
+                                  {expiryInfo.countdownText}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Actions */}
+                        <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                          {/* 🌟 Dedicated Эрх сунгах Button */}
                           <button
                             type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(u.phone);
-                              setCopiedPhoneUserId(u.id);
-                              setTimeout(() => setCopiedPhoneUserId(null), 2000);
-                            }}
-                            className="flex items-center gap-1 hover:text-cyan-300 transition-colors cursor-pointer"
-                            title="Утасны дугаар хуулах"
+                            onClick={() => handleOpenExtensionModal(u)}
+                            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
+                            title="Хэрэглэгчийн эрх сунгах"
                           >
-                            <Phone className="w-3 h-3 text-cyan-400 shrink-0" />
-                            <span className="font-mono font-bold text-white">{maskPhoneNumber(u.phone, u.email)}</span>
-                            {copiedPhoneUserId === u.id ? (
-                              <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Эрх сунгах</span>
+                          </button>
+
+                          {/* Manage Points (+ / -) Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPointsModal(u, 'add', 2500)}
+                            className="bg-gradient-to-r from-emerald-950 to-cyan-950 hover:from-emerald-900 hover:to-cyan-900 text-emerald-300 border border-emerald-600/70 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="Оноо Нэмэх / Хасах"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-amber-400" />
+                            <span>+/- Оноо</span>
+                          </button>
+
+                          {/* View User Detail Button */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedUser(u)}
+                            className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 p-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Мэдээлэл харах"
+                          >
+                            <Eye className="w-4 h-4 text-cyan-400" />
+                          </button>
+
+                          {/* Toggle Status */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(u.id)}
+                            className={`p-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                              u.status === 'active'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                                : 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
+                            }`}
+                            title={u.status === 'active' ? 'Идэвхтэй (Блоклох)' : 'Блоклогдсон (Нээх)'}
+                          >
+                            {u.status === 'active' ? (
+                              <UserCheck className="w-4 h-4" />
                             ) : (
-                              <Copy className="w-2.5 h-2.5 text-zinc-500 shrink-0" />
+                              <UserX className="w-4 h-4" />
                             )}
                           </button>
-                        )}
-                        {u.email && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-zinc-500 shrink-0" />
-                            <span className="truncate max-w-[170px]">{u.email}</span>
-                          </span>
-                        )}
+
+                          {/* Delete User */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="p-1.5 bg-zinc-800 hover:bg-rose-950/80 text-zinc-400 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
+                            title="Устгах"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-
-                      <div className="text-[10px] text-zinc-400 flex flex-wrap items-center gap-2 pt-0.5">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
-                          <span>Бүртгүүлсэн: <strong className="text-zinc-200">{u.registeredAt}</strong></span>
-                        </span>
-                        <span>•</span>
-                        <span>Сүүлд: {u.lastLogin}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Middle: Wallet & Stats */}
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80 text-xs w-full md:w-auto justify-between md:justify-start">
-                    <div>
-                      <span className="text-[10px] text-zinc-400 block uppercase font-bold flex items-center gap-1">
-                        <CreditCard className="w-3 h-3 text-emerald-400" />
-                        Хэтэвч / Оноо:
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`font-black text-sm ${u.walletBalance > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {u.walletBalance.toLocaleString()} ₮
-                        </span>
-                        {u.walletBalance <= 0 && (
-                          <span className="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1 py-0.2 rounded font-black">
-                            Оноогүй
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Fast +/- Presets right in the table */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 2500)}
-                        className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+2,500₮ (15 хоногийн эрх)"
-                      >
-                        +2.5k
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 5000)}
-                        className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+5,000₮ (1 сарын эрх)"
-                      >
-                        +5k
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickPointsChange(u.id, 8500)}
-                        className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-700/60 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="+8,500₮ (2 сарын эрх - 8.5k)"
-                      >
-                        +8.5k
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickPointsChange(u.id, -2500)}
-                        disabled={u.walletBalance < 2500}
-                        className="bg-rose-950/90 hover:bg-rose-900 text-rose-300 border border-rose-700/60 disabled:opacity-30 px-1.5 py-1 rounded text-[10px] font-black transition-all cursor-pointer shadow-sm"
-                        title="-2,500₮ (Эрхийн оноо хасах)"
-                      >
-                        -2.5k
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenPointsModal(u, 'add', 2500)}
-                        className="bg-cyan-950/90 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 px-2 py-1 rounded text-[10px] font-extrabold flex items-center gap-0.5 transition-all cursor-pointer"
-                        title="Оноо нэмэх / хасах дэлгэрэнгүй цонх"
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                        <Minus className="w-2.5 h-2.5" />
-                        <span>Оноо</span>
-                      </button>
-                    </div>
-
-                    <div className="hidden sm:block h-6 w-px bg-zinc-800" />
-
-                    <div>
-                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">
-                        Үзсэн:
-                      </span>
-                      <span className="font-bold text-zinc-200">{u.watchedCount} кино</span>
-                    </div>
-
-                    <div className="hidden sm:block h-6 w-px bg-zinc-800" />
-
-                    <div>
-                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">
-                        Дуусах:
-                      </span>
-                      <span className="font-semibold text-amber-300">{u.packageExpiry}</span>
-                    </div>
-                  </div>
-
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
-                    {/* View User Detail Button */}
-                    <button
-                      onClick={() => setSelectedUser(u)}
-                      className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 p-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                      title="Мэдээлэл харах"
-                    >
-                      <Eye className="w-4 h-4 text-cyan-400" />
-                    </button>
-
-                    {/* Manage Points (+ / -) Button */}
-                    <button
-                      onClick={() => handleOpenPointsModal(u, 'add', 4000)}
-                      className="bg-gradient-to-r from-emerald-950 to-cyan-950 hover:from-emerald-900 hover:to-cyan-900 text-emerald-300 border border-emerald-600/70 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                      title="Оноо Нэмэх / Хасах"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>+/- Оноо</span>
-                    </button>
-
-                    {/* Change Package Dropdown */}
-                    <select
-                      value={u.packageType}
-                      onChange={(e) => handleChangePackage(u.id, e.target.value as any)}
-                      className="bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 py-1.5 px-2 rounded-xl focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
-                    >
-                      <option value="full_vip">FULL VIP</option>
-                      <option value="movie">Кино Багц</option>
-                      <option value="anime">Анимэ Багц</option>
-                      <option value="free">Үнэгүй</option>
-                    </select>
-
-                    {/* Toggle Admin Role Button */}
-                    <button
-                      onClick={() => handleToggleAdminRole(u.id)}
-                      className={`p-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                        u.role === 'admin'
-                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/30'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-amber-300 hover:border-amber-500/40'
-                      }`}
-                      title={u.role === 'admin' ? 'Админ эрхтэй (Эрх цуцлах)' : 'Админ эрх олгох'}
-                    >
-                      <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    </button>
-
-                    {/* Toggle Status */}
-                    <button
-                      onClick={() => handleToggleStatus(u.id)}
-                      className={`p-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                        u.status === 'active'
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                          : 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
-                      }`}
-                      title={u.status === 'active' ? 'Идэвхтэй (Блокпох)' : 'Блоклогдсон (Идэвхжүүлэх)'}
-                    >
-                      {u.status === 'active' ? (
-                        <UserCheck className="w-4 h-4" />
-                      ) : (
-                        <UserX className="w-4 h-4" />
-                      )}
-                    </button>
-
-                    {/* Delete User */}
-                    <button
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="p-1.5 bg-zinc-800 hover:bg-rose-950/80 text-zinc-400 hover:text-rose-400 rounded-xl transition-colors cursor-pointer"
-                      title="Устгах"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-            </div>
-          )}
+              )}
         </div>
 
         {/* Modal footer summary */}
@@ -3487,6 +3828,224 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               >
                 <Check className="w-4 h-4 text-black" />
                 <span>Хадгалах & Баталгаажуулах</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 Dedicated Extension Modal */}
+      {extensionModalUser && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#16161a] border border-amber-500/50 rounded-2xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl relative text-zinc-100 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-black font-black flex items-center justify-center shadow-lg">
+                  <Clock className="w-5 h-5 text-black" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                    <span>Хэрэглэгчийн Эрх Сунгах</span>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black">
+                      Админ
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    <span className="text-amber-400 font-bold">{extensionModalUser.name}</span>
+                    <span className="font-mono text-zinc-300 ml-1.5 font-bold">#{getUserMemberCode(extensionModalUser)}</span>
+                    {extensionModalUser.email && <span className="ml-1 text-zinc-400">({extensionModalUser.email})</span>}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExtensionModalUser(null)}
+                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current State Info */}
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">Одоогийн эрх:</span>
+                <div className="mt-0.5">{getPackageBadge(extensionModalUser.packageType)}</div>
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-500 uppercase font-bold block">Одоогийн дуусах огноо:</span>
+                <span className="font-mono font-bold text-amber-300 block mt-0.5 text-sm">
+                  {extensionModalUser.packageExpiry || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Select Package Type */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-zinc-300 uppercase font-bold block">
+                1. Эрхийн төрөл сонгох:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'anime', label: '🌸 Анимэ Багц' },
+                  { id: 'full_vip', label: '👑 FULL VIP' },
+                  { id: 'movie', label: '🎬 Кино Багц' },
+                  { id: 'free', label: '⚪ Үнэгүй (Цуцлах)' },
+                ].map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => {
+                      setExtensionPkgType(pkg.id as any);
+                      if (pkg.id === 'free') {
+                        setExtensionDays(0);
+                        setExtensionCustomDate('');
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer text-center ${
+                      extensionPkgType === pkg.id
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 ring-2 ring-amber-500/40 shadow-md'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span>{pkg.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Select Extension Duration (Days) */}
+            {extensionPkgType !== 'free' && (
+              <div className="space-y-2">
+                <label className="text-[11px] text-zinc-300 uppercase font-bold flex items-center justify-between">
+                  <span>2. Сунгах хугацаа сонгох:</span>
+                  <span className="text-[10px] text-amber-400 font-mono">
+                    {extensionCustomDate ? 'Тодорхой огноо сонгосон' : `+${extensionDays} хоног сонгогдсон`}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[
+                    { days: 15, label: '+15 хоног' },
+                    { days: 30, label: '+1 сар' },
+                    { days: 60, label: '+2 сар' },
+                    { days: 90, label: '+3 сар' },
+                    { days: 180, label: '+6 сар' },
+                    { days: 365, label: '+1 жил' },
+                  ].map((p) => (
+                    <button
+                      key={p.days}
+                      type="button"
+                      onClick={() => {
+                        setExtensionDays(p.days);
+                        setExtensionCustomDate('');
+                      }}
+                      className={`p-2 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center ${
+                        extensionDays === p.days && !extensionCustomDate
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black border-amber-400 shadow-md'
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Date Input */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] text-zinc-400 font-medium block">
+                    Эсвэл дуусах тодорхой огноог гараар сонгох:
+                  </label>
+                  <input
+                    type="date"
+                    value={extensionCustomDate}
+                    onChange={(e) => {
+                      setExtensionCustomDate(e.target.value);
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-400 rounded-xl py-2 px-3 text-xs text-amber-300 font-mono font-bold focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Live Expiry Preview */}
+            {(() => {
+              let previewExpiry = '-';
+              if (extensionPkgType === 'free') {
+                previewExpiry = 'Үнэгүй (Эрх цуцлагдана)';
+              } else if (extensionCustomDate && extensionCustomDate.trim()) {
+                previewExpiry = extensionCustomDate.trim();
+              } else {
+                let base = new Date();
+                if (
+                  extensionModalUser.packageExpiry &&
+                  extensionModalUser.packageExpiry !== '-' &&
+                  extensionModalUser.packageExpiry !== 'Идэвхгүй' &&
+                  !isNaN(new Date(extensionModalUser.packageExpiry).getTime())
+                ) {
+                  const currentExp = new Date(extensionModalUser.packageExpiry);
+                  if (currentExp.getTime() > Date.now()) {
+                    base = currentExp;
+                  }
+                }
+                base.setDate(base.getDate() + extensionDays);
+                const y = base.getFullYear();
+                const m = String(base.getMonth() + 1).padStart(2, '0');
+                const d = String(base.getDate()).padStart(2, '0');
+                previewExpiry = `${y}-${m}-${d}`;
+              }
+
+              return (
+                <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">Шинэ дуусах огноо:</span>
+                    <span className="font-mono font-black text-amber-300 text-sm">
+                      {previewExpiry}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">Эрхийн төлөв:</span>
+                    <span className="font-bold text-emerald-400">
+                      {extensionPkgType === 'free' ? 'Энгийн үнэгүй' : '🟢 Идэвхтэй хандах эрхтэй'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Notice: Security assurance (no passwords, no card data shown) */}
+            <div className="text-[10px] text-zinc-500 flex items-center gap-1.5 px-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Зөвхөн эрх бүхий админ харах ба нууц үг, картын нууц мэдээлэл харагдахгүй аюулгүй.</span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                disabled={extensionLoading}
+                onClick={() => setExtensionModalUser(null)}
+                className="w-1/3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              >
+                Болих
+              </button>
+              <button
+                type="button"
+                disabled={extensionLoading}
+                onClick={handleConfirmExtension}
+                className="w-2/3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {extensionLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                    <span>Хадгалж байна...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 text-black" />
+                    <span>Баталгаажуулах & Эрх Сунгах</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

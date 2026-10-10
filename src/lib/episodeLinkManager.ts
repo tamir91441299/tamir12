@@ -73,6 +73,24 @@ import {
   setHaikyuEpisodeLink,
   batchSetHaikyuEpisodeLinks,
 } from '../data/anime/haikyu';
+import {
+  HAIKYU_S2,
+  HAIKYU_S2_EPISODE_LINKS,
+  setHaikyuS2EpisodeLink,
+  batchSetHaikyuS2EpisodeLinks,
+} from '../data/anime/haikyuS2';
+import {
+  HAIKYU_S3,
+  HAIKYU_S3_EPISODE_LINKS,
+  setHaikyuS3EpisodeLink,
+  batchSetHaikyuS3EpisodeLinks,
+} from '../data/anime/haikyuS3';
+import {
+  HAIKYU_S4,
+  HAIKYU_S4_EPISODE_LINKS,
+  setHaikyuS4EpisodeLink,
+  batchSetHaikyuS4EpisodeLinks,
+} from '../data/anime/haikyuS4';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -202,6 +220,12 @@ export function batchConnectEpisodes(
     batchSetMashleS2EpisodeLinks(linksMap);
   } else if (movie.id === MASHLE.id || movie.title.toLowerCase().includes('mashle') || movie.titleMongolian.toLowerCase().includes('машл')) {
     batchSetMashleEpisodeLinks(linksMap);
+  } else if (movie.id === HAIKYU_S4.id || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('4') || movie.titleMongolian.includes('4')))) {
+    batchSetHaikyuS4EpisodeLinks(linksMap);
+  } else if (movie.id === HAIKYU_S3.id || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('3') || movie.titleMongolian.includes('3')))) {
+    batchSetHaikyuS3EpisodeLinks(linksMap);
+  } else if (movie.id === HAIKYU_S2.id || (movie.title.toLowerCase().includes('haikyu') && (movie.title.includes('2') || movie.titleMongolian.includes('2')))) {
+    batchSetHaikyuS2EpisodeLinks(linksMap);
   } else if (movie.id === HAIKYU.id || movie.title.toLowerCase().includes('haikyu') || movie.titleMongolian.toLowerCase().includes('хайкью')) {
     batchSetHaikyuEpisodeLinks(linksMap);
   }
@@ -286,12 +310,54 @@ export function connectHaikyuEpisode(episodeNumber: number, videoUrl: string): E
   return HAIKYU.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
 }
 
+export function connectHaikyuS2Episode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setHaikyuS2EpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[HAIKYU_S2.id] = HAIKYU_S2.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Haikyu S2 episode link:', e);
+  }
+  return HAIKYU_S2.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+export function connectHaikyuS3Episode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setHaikyuS3EpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[HAIKYU_S3.id] = HAIKYU_S3.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Haikyu S3 episode link:', e);
+  }
+  return HAIKYU_S3.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
+export function connectHaikyuS4Episode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setHaikyuS4EpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[HAIKYU_S4.id] = HAIKYU_S4.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Haikyu S4 episode link:', e);
+  }
+  return HAIKYU_S4.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
 /**
  * 📋 Код үүсгэгч (Code Generator)
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4' | 'SagaOfTanya' | 'Mashle' | 'Haikyu',
+  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4' | 'SagaOfTanya' | 'Mashle' | 'Haikyu' | 'HaikyuS2' | 'HaikyuS3' | 'HaikyuS4',
   links: Record<number, string>
 ): string {
   const varName = seriesName === 'DeathNote'
@@ -314,6 +380,12 @@ export function generateEpisodeLinksCode(
     ? 'MASHLE_EPISODE_LINKS'
     : seriesName === 'Haikyu'
     ? 'HAIKYU_EPISODE_LINKS'
+    : seriesName === 'HaikyuS2'
+    ? 'HAIKYU_S2_EPISODE_LINKS'
+    : seriesName === 'HaikyuS3'
+    ? 'HAIKYU_S3_EPISODE_LINKS'
+    : seriesName === 'HaikyuS4'
+    ? 'HAIKYU_S4_EPISODE_LINKS'
     : 'LEGEND_OF_KORRA_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))

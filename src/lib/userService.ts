@@ -88,6 +88,16 @@ export interface AppNotification {
 // Initial anime announcements for all users
 export const INITIAL_ANIME_NOTIFICATIONS: AppNotification[] = [
   {
+    id: 'notif_init_haikyu_s2_s4',
+    type: 'NEW_ANIME',
+    title: 'Хайкью!! 2, 3, 4-р бүлэг бүрэн нэмэгдлээ! 🏐⚡',
+    message: '«Хайкью!! (Haikyuu!!)» цувралын 2-р бүлэг (25 анги), 3-р бүлэг: Шираторизава (10 анги), болон 4-р бүлэг: Оргил өөд (25 анги) бүгд амжилттай нэмэгдлээ!',
+    movieId: 'm_haikyu_s2',
+    movieTitle: 'Хайкью!! 2-р бүлэг',
+    poster: 'https://wallpapersok.com/images/thumbnail/haikyuu-team-karasuno-volleyball-players-8ix45j4iv3nji2sl.jpg',
+    createdAt: 'Дөнгөж сая',
+  },
+  {
     id: 'notif_init_haikyu',
     type: 'NEW_ANIME',
     title: 'Шинэ Анимэ Нэмэгдлээ! 🏐',
@@ -1111,6 +1121,169 @@ export async function grantAnimeAccessToUser(
     };
   } catch (err: any) {
     console.error('Error granting anime access:', err);
+    return {
+      success: false,
+      expiryDate: '',
+      message: '⚠️ Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'),
+    };
+  }
+}
+
+/**
+ * Authoritative admin action to extend or change any package access (anime, full_vip, movie)
+ * Computes new expiry date, persists to Server REST API and Firestore, updates local storage, and dispatches events.
+ */
+export async function extendUserPackageInSystem(
+  userId: string,
+  packageType: 'anime' | 'full_vip' | 'movie' | 'free',
+  daysToAdd: number,
+  customExpiryDate?: string,
+  adminNote?: string
+): Promise<{ success: boolean; expiryDate: string; user?: UserDetail; message: string }> {
+  try {
+    let expiryStr: string;
+
+    if (packageType === 'free') {
+      expiryStr = '-';
+    } else if (customExpiryDate && customExpiryDate.trim() && customExpiryDate !== '-') {
+      expiryStr = customExpiryDate.trim();
+    } else {
+      let baseDate = new Date();
+      // Try to read current package expiry if already active to extend seamlessly
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      if (savedListStr) {
+        try {
+          const list: UserDetail[] = JSON.parse(savedListStr);
+          const current = list.find((u) => u.id === userId || (u as any).customId === userId || u.phone === userId);
+          if (
+            current?.packageExpiry &&
+            current.packageExpiry !== '-' &&
+            current.packageExpiry !== 'Идэвхгүй' &&
+            !isNaN(new Date(current.packageExpiry.replace(/\./g, '-').replace(/\//g, '-')).getTime())
+          ) {
+            const exp = new Date(current.packageExpiry.replace(/\./g, '-').replace(/\//g, '-'));
+            if (exp.getTime() > Date.now()) {
+              baseDate = exp;
+            }
+          }
+        } catch {}
+      }
+
+      baseDate.setDate(baseDate.getDate() + daysToAdd);
+      const year = baseDate.getFullYear();
+      const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+      const day = String(baseDate.getDate()).padStart(2, '0');
+      expiryStr = `${year}-${month}-${day}`;
+    }
+
+    const roleUpdate = packageType === 'full_vip' ? 'vip' : undefined;
+
+    // 1. Update Server REST API
+    try {
+      await fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          updates: {
+            packageType,
+            packageExpiry: expiryStr,
+            status: 'active',
+            ...(roleUpdate ? { role: roleUpdate } : {}),
+            lastExtendedAt: new Date().toISOString(),
+            lastExtensionDays: daysToAdd,
+            note: adminNote,
+          },
+        }),
+      });
+    } catch (e) {
+      console.warn('Notice server update:', e);
+    }
+
+    // 2. Update Firestore document
+    const docRef = doc(db, 'users', userId);
+    await safeFirestoreWrite(() =>
+      setDoc(
+        docRef,
+        {
+          packageType,
+          packageExpiry: expiryStr,
+          status: 'active',
+          ...(roleUpdate ? { role: roleUpdate } : {}),
+          lastExtendedAt: new Date().toISOString(),
+          lastExtensionDays: daysToAdd,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+    );
+
+    // 3. Update local storage users list
+    let updatedUser: UserDetail | undefined;
+    try {
+      const savedListStr = localStorage.getItem('ioio_registered_users_list');
+      let list: UserDetail[] = savedListStr ? JSON.parse(savedListStr) : [];
+      if (Array.isArray(list)) {
+        list = list.map((u) => {
+          if (u.id === userId || (u as any).customId === userId || u.phone === userId) {
+            updatedUser = {
+              ...u,
+              packageType,
+              packageExpiry: expiryStr,
+              status: 'active',
+              ...(roleUpdate ? { role: roleUpdate } : {}),
+            };
+            return updatedUser;
+          }
+          return u;
+        });
+        localStorage.setItem('ioio_registered_users_list', JSON.stringify(list));
+        window.dispatchEvent(new CustomEvent('ioio_users_updated', { detail: list }));
+      }
+    } catch {}
+
+    // 4. Update session if it's the active user
+    try {
+      const activeStr = localStorage.getItem('ioio_user');
+      if (activeStr) {
+        const activeU = JSON.parse(activeStr);
+        if (activeU.id === userId || activeU.customId === userId || activeU.phone === userId) {
+          activeU.packageType = packageType;
+          activeU.packageExpiry = expiryStr;
+          activeU.status = 'active';
+          if (roleUpdate) activeU.role = roleUpdate;
+          persistActiveSession(activeU, true);
+        }
+      }
+    } catch {}
+
+    const pkgName =
+      packageType === 'anime'
+        ? 'Анимэ багц'
+        : packageType === 'full_vip'
+        ? 'FULL VIP багц'
+        : packageType === 'movie'
+        ? 'Кино багц'
+        : 'Үнэгүй багц';
+
+    // 5. Send admin notification
+    await sendAdminNotification({
+      type: 'PACKAGE_PURCHASE',
+      title: '⏱️ Хэрэглэгчийн эрх амжилттай сунгагдлаа',
+      message: `${updatedUser?.name || 'Хэрэглэгч'} (#${updatedUser?.customId || updatedUser?.id || ''})-д ${pkgName} (${daysToAdd > 0 ? `+${daysToAdd} хоног` : 'огноогоор'}) сунгагдлаа. Дуусах огноо: ${expiryStr}.`,
+      userName: updatedUser?.name,
+      userEmail: updatedUser?.email,
+      userPhone: updatedUser?.phone,
+    });
+
+    return {
+      success: true,
+      expiryDate: expiryStr,
+      user: updatedUser,
+      message: `✓ ${updatedUser?.name || 'Хэрэглэгч'}-ийн ${pkgName} амжилттай сунгагдлаа! (Дуусах хугацаа: ${expiryStr})`,
+    };
+  } catch (err: any) {
+    console.error('Error extending user package:', err);
     return {
       success: false,
       expiryDate: '',
