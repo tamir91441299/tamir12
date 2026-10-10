@@ -93,6 +93,7 @@ import {
   calculateExtendedExpiryDate
 } from '../lib/permissionService';
 import { isVideoCreationAllowed, setVideoCreationAllowed } from '../lib/securityGuard';
+import { isFirestoreQuotaExceeded, FIRESTORE_UPGRADE_URL, resetFirestoreQuotaFlag } from '../lib/quotaService';
 
 const maskPhoneNumber = (phone?: string, email?: string): string => {
   if (!phone) return '';
@@ -467,8 +468,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         }
       } catch {}
 
-      // 2. Fetch Users from Firestore
-      const firestoreUsers = await fetchUsersFromFirestore();
+      // 2. Fetch Users from Firestore (skip if quota exceeded)
+      const firestoreUsers = isFirestoreQuotaExceeded() ? [] : await fetchUsersFromFirestore();
       const combinedUsers = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
       setUsers(combinedUsers);
       localStorage.setItem('ioio_registered_users_list', JSON.stringify(combinedUsers));
@@ -485,8 +486,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         }
       } catch {}
 
-      // 4. Fetch Recharges from Firestore
-      const firestoreRecharges = await fetchRechargesFromFirestore();
+      // 4. Fetch Recharges from Firestore (skip if quota exceeded)
+      const firestoreRecharges = isFirestoreQuotaExceeded() ? [] : await fetchRechargesFromFirestore();
       const recMap = new Map<string, RechargeRequest>();
       serverRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
       firestoreRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
@@ -504,8 +505,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   useEffect(() => {
-    // Automatically purge all bot accounts so management is 100% bot-free
-    cleanupAllBotUsers().catch(() => {});
+    // Automatically purge all bot accounts only if quota is healthy
+    if (!isFirestoreQuotaExceeded()) {
+      cleanupAllBotUsers().catch(() => {});
+    }
     handleManualSyncUsers();
 
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
@@ -1422,6 +1425,44 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             )}
           </button>
         </div>
+
+        {/* Firestore Quota Notice Banner in Admin Dashboard */}
+        {isFirestoreQuotaExceeded() && (
+          <div className="mx-4 mt-3 mb-1 p-3 rounded-xl bg-amber-950/70 border border-amber-500/40 text-xs text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md shrink-0">
+            <div className="flex items-start gap-2.5">
+              <span className="text-base leading-none">⚡</span>
+              <div>
+                <div className="font-bold text-amber-300 flex items-center gap-2">
+                  <span>Firebase Firestore өдрийн үнэгүй лимит (50,000 уншилт) дүүрсэн байна</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">Spark Free Tier</span>
+                </div>
+                <p className="text-[11px] text-zinc-300 mt-0.5">
+                  Систем Local & Express Server REST сангаас 100% найдвартай ажиллаж байна. Хэрэглэгчид, эрх сунгалт, оноо хэвийн хадгалагдана. Маргааш үнэгүй лимит автоматаар сэргэнэ.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  resetFirestoreQuotaFlag();
+                  handleManualSyncUsers();
+                }}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/10 hover:bg-white/15 text-zinc-200 border border-white/20 transition-colors cursor-pointer"
+              >
+                Шалгах
+              </button>
+              <a
+                href={FIRESTORE_UPGRADE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors inline-flex items-center gap-1"
+              >
+                Лимит ↗
+              </a>
+            </div>
+          </div>
+        )}
 
         {activeAdminTab === 'users' ? (
           <>

@@ -240,15 +240,17 @@ export function subscribeAnimeWatchers(
       (error) => {
         if (isQuotaError(error)) {
           markFirestoreQuotaExceeded();
+        } else {
+          console.warn('Anime viewers subscription fallback active:', error);
         }
-        console.warn('Anime viewers subscription fallback active:', error);
       }
     );
   } catch (err) {
     if (isQuotaError(err)) {
       markFirestoreQuotaExceeded();
+    } else {
+      console.warn('Could not establish Firestore subscription for anime views:', err);
     }
-    console.warn('Could not establish Firestore subscription for anime views:', err);
     return () => {};
   }
 }

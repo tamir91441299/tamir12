@@ -6,29 +6,41 @@
 
 const QUOTA_STORAGE_KEY = 'ioio_firestore_quota_exceeded_timestamp';
 
-// Clear any stale local quota flag immediately on load
-try {
-  localStorage.removeItem(QUOTA_STORAGE_KEY);
-} catch {}
-
 let inMemoryQuotaExceeded = false;
 let quotaExceededUntil = 0;
+
+// Initialize quota state from localStorage without wiping it on load
+try {
+  const savedUntil = localStorage.getItem(QUOTA_STORAGE_KEY);
+  if (savedUntil) {
+    const val = Number(savedUntil);
+    if (!isNaN(val) && Date.now() < val) {
+      inMemoryQuotaExceeded = true;
+      quotaExceededUntil = val;
+    } else if (!isNaN(val) && Date.now() >= val) {
+      localStorage.removeItem(QUOTA_STORAGE_KEY);
+    }
+  }
+} catch {}
 
 export function isFirestoreQuotaExceeded(): boolean {
   if (!inMemoryQuotaExceeded) return false;
   if (Date.now() > quotaExceededUntil) {
     inMemoryQuotaExceeded = false;
+    try {
+      localStorage.removeItem(QUOTA_STORAGE_KEY);
+    } catch {}
     return false;
   }
   return true;
 }
 
-export function markFirestoreQuotaExceeded(cooldownMs: number = 300000): void {
+export function markFirestoreQuotaExceeded(cooldownMs: number = 3600000): void {
   inMemoryQuotaExceeded = true;
   quotaExceededUntil = Date.now() + cooldownMs;
   try {
     localStorage.setItem(QUOTA_STORAGE_KEY, String(quotaExceededUntil));
-    window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: true } }));
+    window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: true, until: quotaExceededUntil } }));
   } catch {}
 }
 
@@ -37,13 +49,13 @@ export function resetFirestoreQuotaFlag(): void {
   quotaExceededUntil = 0;
   try {
     localStorage.removeItem(QUOTA_STORAGE_KEY);
-    window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: false } }));
+    window.dispatchEvent(new CustomEvent('ioio_quota_exceeded', { detail: { exceeded: false, until: 0 } }));
   } catch {}
 }
 
 export function isQuotaError(err: any): boolean {
   if (!err) return false;
-  const msg = typeof err === 'string' ? err : (err?.message || err?.code || '');
+  const msg = typeof err === 'string' ? err : (err?.message || err?.code || String(err));
   return (
     err?.code === 'resource-exhausted' ||
     msg.includes('Quota limit exceeded') ||
@@ -51,7 +63,10 @@ export function isQuotaError(err: any): boolean {
     msg.includes('quota metric') ||
     msg.includes('Free daily read units') ||
     msg.includes('Free daily write units') ||
-    msg.includes('Quota exceeded')
+    msg.includes('Quota exceeded') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('exceeded free quota limits') ||
+    msg.includes('firestore.googleapis.com')
   );
 }
 

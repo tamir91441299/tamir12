@@ -162,8 +162,9 @@ export function subscribePromoCodesFromFirestore(callback: (codes: PromoCode[]) 
   } catch (err) {
     if (isQuotaError(err)) {
       markFirestoreQuotaExceeded();
+    } else {
+      console.warn('Failed to subscribe promo codes, using local codes:', err);
     }
-    console.warn('Failed to subscribe promo codes, using local codes:', err);
     callback(getAllPromoCodes());
     return () => {};
   }

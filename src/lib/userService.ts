@@ -1603,29 +1603,44 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     // Initial emit from local
     emitMerged([], []);
 
-    const usersCol = collection(db, 'users');
-    const unsubFirestore = onSnapshot(
-      usersCol,
-      (snapshot) => {
-        const list: UserDetail[] = [];
-        snapshot.forEach((docSnap) => {
-          const d = docSnap.data() as UserDetail;
-          if (d && !isBotOrMockUser(d) && !isBotOrMockUser({ id: docSnap.id })) {
-            list.push({
-              ...d,
-              id: docSnap.id || d.id,
-              isMockUser: false,
+    let unsubFirestore = () => {};
+    if (!isFirestoreQuotaExceeded()) {
+      try {
+        const usersCol = collection(db, 'users');
+        unsubFirestore = onSnapshot(
+          usersCol,
+          (snapshot) => {
+            const list: UserDetail[] = [];
+            snapshot.forEach((docSnap) => {
+              const d = docSnap.data() as UserDetail;
+              if (d && !isBotOrMockUser(d) && !isBotOrMockUser({ id: docSnap.id })) {
+                list.push({
+                  ...d,
+                  id: docSnap.id || d.id,
+                  isMockUser: false,
+                });
+              }
             });
+            latestFirestoreList = list;
+            emitMerged(latestFirestoreList, latestServerList);
+          },
+          (err) => {
+            if (isQuotaError(err)) {
+              markFirestoreQuotaExceeded();
+            } else {
+              console.warn('Firestore users subscription notice:', err?.message || err);
+            }
+            emitMerged([], latestServerList);
           }
-        });
-        latestFirestoreList = list;
-        emitMerged(latestFirestoreList, latestServerList);
-      },
-      (err) => {
-        console.warn('Firestore users subscription notice:', err?.message || err);
-        emitMerged([], latestServerList);
+        );
+      } catch (err) {
+        if (isQuotaError(err)) {
+          markFirestoreQuotaExceeded();
+        } else {
+          console.warn('Firestore users subscription setup fallback:', err);
+        }
       }
-    );
+    }
 
     return () => {
       isUnsubscribed = true;
@@ -1662,6 +1677,10 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
     return sortUsersByNewest(deduplicateUserList(rawList));
   };
 
+  if (isFirestoreQuotaExceeded()) {
+    return getLocalUsers();
+  }
+
   try {
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
@@ -1691,8 +1710,12 @@ export async function fetchUsersFromFirestore(): Promise<UserDetail[]> {
     } catch {}
 
     return sortUsersByNewest(deduplicateUserList(rawList));
-  } catch (err) {
-    console.warn('Firestore users fetch warning, using local list:', err);
+  } catch (err: any) {
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    } else {
+      console.warn('Firestore users fetch warning, using local list:', err);
+    }
     return getLocalUsers();
   }
 }
@@ -1749,21 +1772,27 @@ export async function deleteUserFromFirestoreAndServer(userId: string): Promise<
 export async function cleanupAllBotUsers(): Promise<{ deletedCount: number; message: string }> {
   let deletedCount = 0;
 
-  // 1. Scan and delete all bot docs from Firestore
-  try {
-    const usersCol = collection(db, 'users');
-    const snap = await getDocs(usersCol);
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data() as UserDetail;
-      if (isBotOrMockUser(data) || isBotOrMockUser({ id: docSnap.id })) {
-        try {
-          await deleteDoc(doc(db, 'users', docSnap.id));
-          deletedCount++;
-        } catch (e) {}
+  // 1. Scan and delete all bot docs from Firestore only if quota not exceeded
+  if (!isFirestoreQuotaExceeded()) {
+    try {
+      const usersCol = collection(db, 'users');
+      const snap = await getDocs(usersCol);
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data() as UserDetail;
+        if (isBotOrMockUser(data) || isBotOrMockUser({ id: docSnap.id })) {
+          try {
+            await deleteDoc(doc(db, 'users', docSnap.id));
+            deletedCount++;
+          } catch (e) {}
+        }
+      }
+    } catch (err: any) {
+      if (isQuotaError(err)) {
+        markFirestoreQuotaExceeded();
+      } else {
+        console.warn('Firestore bot cleanup warning:', err);
       }
     }
-  } catch (err) {
-    console.warn('Firestore bot cleanup warning:', err);
   }
 
   // 2. Delete bot records on server
@@ -2227,6 +2256,11 @@ export function subscribeUserAccount(
     }
   };
 
+  // If quota already exceeded, avoid unnecessary Firestore listeners
+  if (isFirestoreQuotaExceeded()) {
+    return () => {};
+  }
+
   // 1. If targetId exists, attach direct document listener only to prevent listener duplication
   if (targetId) {
     try {
@@ -2239,15 +2273,20 @@ export function subscribeUserAccount(
           }
         },
         (err) => {
-          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+          if (isQuotaError(err)) {
             markFirestoreQuotaExceeded();
+          } else {
+            console.warn('Doc subscription warning:', err);
           }
-          console.warn('Doc subscription warning:', err);
         }
       );
       unsubscribes.push(unsub);
     } catch (e) {
-      console.warn('Failed to listen to doc by ID:', e);
+      if (isQuotaError(e)) {
+        markFirestoreQuotaExceeded();
+      } else {
+        console.warn('Failed to listen to doc by ID:', e);
+      }
     }
   } else if (cleanPhone && cleanPhone !== '99110000') {
     // 2. Real-time phone query listener only if targetId not available
@@ -2263,15 +2302,20 @@ export function subscribeUserAccount(
           });
         },
         (err) => {
-          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+          if (isQuotaError(err)) {
             markFirestoreQuotaExceeded();
+          } else {
+            console.warn('Phone query subscription warning:', err);
           }
-          console.warn('Phone query subscription warning:', err);
         }
       );
       unsubscribes.push(unsub);
     } catch (e) {
-      console.warn('Failed to listen to phone query:', e);
+      if (isQuotaError(e)) {
+        markFirestoreQuotaExceeded();
+      } else {
+        console.warn('Failed to listen to phone query:', e);
+      }
     }
   } else if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.endsWith('@flicknime.mn')) {
     // 3. Real-time email query listener only if ID and phone not available
@@ -2287,15 +2331,20 @@ export function subscribeUserAccount(
           });
         },
         (err) => {
-          if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+          if (isQuotaError(err)) {
             markFirestoreQuotaExceeded();
+          } else {
+            console.warn('Email query subscription warning:', err);
           }
-          console.warn('Email query subscription warning:', err);
         }
       );
       unsubscribes.push(unsub);
     } catch (e) {
-      console.warn('Failed to listen to email query:', e);
+      if (isQuotaError(e)) {
+        markFirestoreQuotaExceeded();
+      } else {
+        console.warn('Failed to listen to email query:', e);
+      }
     }
   }
 

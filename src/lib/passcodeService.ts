@@ -128,16 +128,18 @@ export function subscribePasscodeFromFirestore(callback: (code: string) => void)
       (err) => {
         if (isQuotaError(err)) {
           markFirestoreQuotaExceeded();
+        } else {
+          console.warn('Passcode subscription fallback active:', err);
         }
-        console.warn('Passcode subscription fallback active:', err);
         callback(getProtectedWindowPasscode());
       }
     );
   } catch (err) {
     if (isQuotaError(err)) {
       markFirestoreQuotaExceeded();
+    } else {
+      console.warn('Passcode subscription setup fallback:', err);
     }
-    console.warn('Passcode subscription setup fallback:', err);
     callback(getProtectedWindowPasscode());
     return () => {};
   }

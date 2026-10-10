@@ -1,7 +1,7 @@
 import { collection, doc, setDoc, getDocs, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { sendAdminNotification, topUpUserBalanceInFirestore } from './userService';
-import { safeFirestoreWrite, isQuotaError, markFirestoreQuotaExceeded } from './quotaService';
+import { safeFirestoreWrite, isQuotaError, markFirestoreQuotaExceeded, isFirestoreQuotaExceeded } from './quotaService';
 
 export type PlanDurationKey = '15d' | '1m' | '2m' | '3m' | '6m' | '1y';
 
@@ -150,6 +150,9 @@ export function getUserLatestRechargeRequest(user?: { id?: string; phone?: strin
  * One-time fetch of all recharge requests from Firestore
  */
 export async function fetchRechargesFromFirestore(): Promise<RechargeRequest[]> {
+  if (isFirestoreQuotaExceeded()) {
+    return [];
+  }
   try {
     const colRef = collection(db, 'recharge_requests');
     const snap = await getDocs(colRef);
@@ -165,8 +168,12 @@ export async function fetchRechargesFromFirestore(): Promise<RechargeRequest[]> 
       }
     });
     return list;
-  } catch (err) {
-    console.warn('fetchRechargesFromFirestore error:', err);
+  } catch (err: any) {
+    if (isQuotaError(err)) {
+      markFirestoreQuotaExceeded();
+    } else {
+      console.warn('fetchRechargesFromFirestore error:', err);
+    }
     return [];
   }
 }
@@ -407,34 +414,44 @@ export function subscribeRechargeRequests(callback: (requests: RechargeRequest[]
   };
   window.addEventListener('ioio_recharges_updated', handleCustomUpdated);
 
-  // Firestore real-time listener
+  // Firestore real-time listener (skip if daily quota is exceeded)
   let unsubFirestore = () => {};
-  try {
-    const colRef = collection(db, 'recharge_requests');
-    unsubFirestore = onSnapshot(
-      colRef,
-      (snapshot) => {
-        const list: RechargeRequest[] = [];
-        snapshot.forEach((d) => {
-          const item = d.data() as RechargeRequest;
-          if (item && item.id) {
-            list.push({
-              ...item,
-              id: d.id,
-              createdAt: item.createdAt || (item.timestamp?.seconds ? new Date(item.timestamp.seconds * 1000).toISOString() : new Date().toISOString()),
-            });
+  if (!isFirestoreQuotaExceeded()) {
+    try {
+      const colRef = collection(db, 'recharge_requests');
+      unsubFirestore = onSnapshot(
+        colRef,
+        (snapshot) => {
+          const list: RechargeRequest[] = [];
+          snapshot.forEach((d) => {
+            const item = d.data() as RechargeRequest;
+            if (item && item.id) {
+              list.push({
+                ...item,
+                id: d.id,
+                createdAt: item.createdAt || (item.timestamp?.seconds ? new Date(item.timestamp.seconds * 1000).toISOString() : new Date().toISOString()),
+              });
+            }
+          });
+          latestFirestoreList = list;
+          emitMerged();
+        },
+        (err) => {
+          if (isQuotaError(err)) {
+            markFirestoreQuotaExceeded();
+          } else {
+            console.warn('subscribeRechargeRequests onSnapshot notice:', err?.message || err);
           }
-        });
-        latestFirestoreList = list;
-        emitMerged();
-      },
-      (err) => {
-        console.warn('subscribeRechargeRequests onSnapshot notice:', err?.message || err);
-        emitMerged();
+          emitMerged();
+        }
+      );
+    } catch (e) {
+      if (isQuotaError(e)) {
+        markFirestoreQuotaExceeded();
+      } else {
+        console.warn('subscribeRechargeRequests setup fallback:', e);
       }
-    );
-  } catch (e) {
-    console.warn('subscribeRechargeRequests setup fallback:', e);
+    }
   }
 
   return () => {
