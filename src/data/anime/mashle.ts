@@ -21,18 +21,18 @@ export function formatMashleDriveLink(driveIdOrUrl: string): string {
  * доорх объектод хуулж тавихад тоглуулагч шууд тухайн ангийг холбон тоглуулах болно.
  */
 export const MASHLE_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://u.pcloud.link/publink/show?code=XZYxr4JZ1Y6CjTSits509s6iSi2AR89QXaWk',
-  2: 'https://drive.google.com/file/d/1mashle_magic_ep2/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1mashle_magic_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1mashle_magic_ep4/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1mashle_magic_ep5/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1mashle_magic_ep6/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1mashle_magic_ep7/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1mashle_magic_ep8/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1mashle_magic_ep9/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1mashle_magic_ep10/view?usp=drivesdk',
-  11: 'https://drive.google.com/file/d/1mashle_magic_ep11/view?usp=drivesdk',
-  12: 'https://drive.google.com/file/d/1mashle_magic_ep12/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZVf3YJZIDNA1OfUYdVUCMghwiprnptip6sk',
+  2: 'https://u.pcloud.link/publink/show?code=XZ5f3YJZTWhkW51DOibqUIf23s0HEhiPwSs7',
+  3: 'https://u.pcloud.link/publink/show?code=XZ8f3YJZqYgTL49TCX8VxDToc86gH8FYoRDX',
+  4: 'https://u.pcloud.link/publink/show?code=XZYf3YJZLJEi9hhqDabQ08y5kKzeAHQQznYk',
+  5: 'https://u.pcloud.link/publink/show?code=XZ9f3YJZPCcBCU8yT7uEcq278UDLO7eysjHV',
+  6: 'https://u.pcloud.link/publink/show?code=XZTf3YJZO6g9zVJdNc0jgzn37IWCTYfT1oWV',
+  7: 'https://u.pcloud.link/publink/show?code=XZCf3YJZp5gafT5pmPhyB8vyPMpdAXf1YhDV',
+  8: 'https://u.pcloud.link/publink/show?code=XZxf3YJZKOxE1L8pUMY5e9K7hBVES5gdC5oX',
+  9: 'https://u.pcloud.link/publink/show?code=XZwf3YJZ7FhIQQApbk0mHabIE8W9SLxqYRkX',
+  10: 'https://u.pcloud.link/publink/show?code=XZKf3YJZ6y6djkXbV2R8GovRgUhPFFFLPAYy',
+  11: 'https://u.pcloud.link/publink/show?code=XZdf3YJZ0PBrrk4X8CubsF8RzedurpSHKLzV',
+  12: 'https://u.pcloud.link/publink/show?code=XZqf3YJZoAtsPOdRLHXLHbGaYw1pJSe9BXVV',
 };
 
 export const MASHLE_EPISODES: Episode[] = [
