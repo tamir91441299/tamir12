@@ -72,6 +72,40 @@ export function writeStoredUsers(users: any[]): void {
   }
 }
 
+// Helper to save or update a registered user
+export function saveRegisteredUser(userObj: any): any {
+  if (!userObj) return null;
+  const users = readStoredUsers();
+  const cleanId = String(userObj.id || '').trim();
+  const cleanCustomId = String(userObj.customId || '').trim();
+  const cleanPhone = String(userObj.phone || '').trim().replace(/\s+/g, '');
+  const cleanEmail = String(userObj.email || '').trim().toLowerCase();
+
+  const existingIndex = users.findIndex((u) => {
+    if (!u) return false;
+    const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+    const uEmail = (u.email || '').trim().toLowerCase();
+    const uCustomId = String(u.customId || '').trim();
+    const uId = String(u.id || '').trim();
+    return (
+      (cleanCustomId && (uCustomId === cleanCustomId || uId === cleanCustomId)) ||
+      (cleanId && (uId === cleanId || uCustomId === cleanId)) ||
+      (cleanPhone && cleanPhone.length >= 8 && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
+      (cleanEmail && cleanEmail.includes('@') && uEmail === cleanEmail)
+    );
+  });
+
+  const merged = existingIndex >= 0 ? { ...users[existingIndex], ...userObj } : { ...userObj };
+  if (existingIndex >= 0) {
+    users[existingIndex] = merged;
+  } else {
+    users.unshift(merged);
+  }
+
+  writeStoredUsers(users);
+  return merged;
+}
+
 // Parse registration timestamp
 function getUserTimestamp(u: any): number {
   if (!u) return 0;
