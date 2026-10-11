@@ -797,7 +797,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                         }
                         return;
                       }
-                      console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian, 'videoUrl:', movie.videoUrl);
+                      console.log('🎬 [MovieDetailModal] onPlay clicked for:', movie.titleMongolian);
                       onPlay(movie, 1);
                     }}
                     className={

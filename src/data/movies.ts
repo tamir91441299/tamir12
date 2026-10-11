@@ -17,6 +17,7 @@ import { HAIKYU } from './anime/haikyu';
 import { HAIKYU_S2 } from './anime/haikyuS2';
 import { HAIKYU_S3 } from './anime/haikyuS3';
 import { HAIKYU_S4 } from './anime/haikyuS4';
+import { SLOVO_PATSANA } from './anime/slovoPatsana';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -97,6 +98,7 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
 };
 
 export const SAMPLE_MOVIES: Movie[] = [
+  SLOVO_PATSANA,
   {
     id: 'm_91_days',
     title: '91 Days',
@@ -239,7 +241,8 @@ export {
   LEGEND_OF_KORRA,
   LEGEND_OF_KORRA_S2,
   LEGEND_OF_KORRA_S3,
-  LEGEND_OF_KORRA_S4
+  LEGEND_OF_KORRA_S4,
+  SLOVO_PATSANA
 };
 
 export const GENRE_COUNTS: { name: string; count: number }[] = [

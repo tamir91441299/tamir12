@@ -11,3 +11,4 @@ export * from './haikyu';
 export * from './haikyuS2';
 export * from './haikyuS3';
 export * from './haikyuS4';
+export * from './slovoPatsana';

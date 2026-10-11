@@ -203,7 +203,7 @@ export const HAIKYU_S2: Movie = {
   title: 'Haikyu!! Season 2',
   titleMongolian: 'Хайкью!! 2-р бүлэг (Haikyuu!! Season 2)',
   type: 'anime',
-  poster: 'https://wallpapersok.com/images/thumbnail/haikyuu-team-karasuno-volleyball-players-8ix45j4iv3nji2sl.jpg',
+  poster: 'https://images.justwatch.com/poster/199385874/s718/season-2.jpg',
   backdrop: 'https://wallpapercave.com/wp/wp2422870.jpg',
   year: 2016,
   duration: '25 анги (2-р бүлэг)',

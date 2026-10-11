@@ -194,11 +194,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   }>({});
 
   const appendDebugLog = useCallback((msg: string) => {
+    if (!isAdmin) return;
     const timestamp = new Date().toLocaleTimeString();
     const formatted = `[${timestamp}] ${msg}`;
     console.log(`🎬 [FlickNime Debug]`, msg);
     setDebugLogs((prev) => [formatted, ...prev.slice(0, 49)]);
-  }, []);
+  }, [isAdmin]);
 
   const isEmbed = serverMode === 'embed';
   const iframeUrl = getEmbedUrl(rawVideoSrc, 'standard');
@@ -211,8 +212,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const activeQualityOption =
     QUALITY_OPTIONS.find((q) => q.key === selectedQualityKey) || QUALITY_OPTIONS[0];
 
-  // Debug initial loading
+  // Debug initial loading (Admin only)
   useEffect(() => {
+    if (!isAdmin) return;
     appendDebugLog(`Ачаалласан кино: "${movie?.titleMongolian}" (${movie?.type})`);
     appendDebugLog(`Сонгосон анги: ${currentEpisode ? currentEpisode.title : 'Кино (1-р анги)'}`);
     appendDebugLog(`Эх холбоос (Raw URL): ${rawVideoSrc}`);
@@ -236,7 +238,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     } else {
       appendDebugLog(`Direct Video Stream URL: ${videoSrcToPlay}`);
     }
-  }, [movie, currentEpisodeIndex, serverMode, selectedQualityKey, rawVideoSrc, iframeUrl, videoSrcToPlay, activeQualityOption, appendDebugLog]);
+  }, [isAdmin, movie, currentEpisodeIndex, serverMode, selectedQualityKey, rawVideoSrc, iframeUrl, videoSrcToPlay, activeQualityOption, appendDebugLog]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -1485,10 +1487,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <iframe
                   ref={iframeRef}
                   src={iframeUrl}
-                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${iframeUrl}`)}
-                  onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа: ${iframeUrl}`)}
+                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${isAdmin ? iframeUrl : '***'}`)}
+                  onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа`)}
                   className="w-full h-full border-0 bg-black pointer-events-auto"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allow={
+                    isAdmin
+                      ? "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                      : "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  }
+                  sandbox={
+                    isAdmin
+                      ? "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+                      : "allow-scripts allow-same-origin allow-forms"
+                  }
                   referrerPolicy="no-referrer"
                   allowFullScreen
                   title={movie.titleMongolian}
@@ -1512,13 +1523,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <Zap className="w-3 h-3 text-amber-400" />
                     <span>Шууд HD</span>
                   </button>
-                  {rawVideoSrc.includes('pcloud') && (
+                  {isAdmin && rawVideoSrc.includes('pcloud') && (
                     <a
                       href={rawVideoSrc}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-2.5 py-0.5 bg-blue-600/40 hover:bg-blue-600/60 text-blue-200 hover:text-white font-bold text-[10px] rounded-lg border border-blue-500/40 transition-all flex items-center gap-1 cursor-pointer ml-1"
-                      title="pCloud эх линкээр шинэ цонхонд үзэх"
+                      title="pCloud эх линкээр шинэ цонхонд үзэх (Зөвхөн админ)"
                     >
                       <ExternalLink className="w-3 h-3 text-blue-300" />
                       <span>pCloud ↗</span>
@@ -1526,8 +1537,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   )}
                 </div>
 
-                {/* 🛡️ Drive Popout Blocker: Invisible 56x56px shield covering Drive's iframe popout button in the corner without any UI overlap */}
-                {isGoogleDrive && (
+                {/* 🛡️ Strict Link Protection Barrier: For non-admins, completely blocks clicking/interacting with Drive's header bar, pop-out icon, and file title */}
+                {!isAdmin && (isGoogleDrive || isExternalEmbed || isYouTube) && (
+                  <div 
+                    className="absolute top-0 inset-x-0 h-16 sm:h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onContextMenu={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    title=""
+                  />
+                )}
+                {isAdmin && isGoogleDrive && (
                   <div 
                     className="absolute top-0 right-0 w-14 h-14 z-20 pointer-events-auto bg-transparent select-none"
                     onClick={(e) => {

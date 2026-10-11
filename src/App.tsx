@@ -801,14 +801,14 @@ export default function App() {
         }
       }
 
-      if (activeTab === 'series' && movie.type !== 'series') return false;
+      if (activeTab === 'series' && movie.type !== 'series' && !(movie.episodes && movie.episodes.length > 1)) return false;
       if (activeTab === 'favorites' && !favorites.includes(movie.id)) return false;
       if (activeTab === 'purchased' && !purchasedMovies.includes(movie.id)) return false;
 
       // Sidebar type filter
       if (selectedType !== 'all') {
         if (selectedType === 'movie' && movie.type !== 'movie') return false;
-        if (selectedType === 'series' && movie.type !== 'series') return false;
+        if (selectedType === 'series' && movie.type !== 'series' && !(movie.episodes && movie.episodes.length > 1)) return false;
         if (selectedType === 'anime' && movie.type !== 'anime') return false;
       }
 
@@ -833,7 +833,9 @@ export default function App() {
 
   // Featured Movies for Hero Carousel
   const featuredMovies = useMemo(() => {
-    return moviesList.filter((m) => m.featured);
+    return moviesList
+      .filter((m) => m.featured)
+      .sort((a, b) => (a.featuredRank || 99) - (b.featuredRank || 99));
   }, [moviesList]);
 
   // Section categories for Anime

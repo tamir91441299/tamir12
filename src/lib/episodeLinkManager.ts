@@ -91,6 +91,12 @@ import {
   setHaikyuS4EpisodeLink,
   batchSetHaikyuS4EpisodeLinks,
 } from '../data/anime/haikyuS4';
+import {
+  SLOVO_PATSANA,
+  SLOVO_PATSANA_EPISODE_LINKS,
+  setSlovoPatsanaEpisodeLink,
+  batchSetSlovoPatsanaEpisodeLinks,
+} from '../data/anime/slovoPatsana';
 
 /**
  * 🔗 Аливаа видео холбоосыг тоглуулагчид тааруулан цэвэрлэж, Google Drive эсвэл шууд линк болгон хөрвүүлнэ.
@@ -352,12 +358,26 @@ export function connectHaikyuS4Episode(episodeNumber: number, videoUrl: string):
   return HAIKYU_S4.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
 }
 
+export function connectSlovoPatsanaEpisode(episodeNumber: number, videoUrl: string): Episode | null {
+  const formatted = formatEpisodeVideoUrl(videoUrl);
+  setSlovoPatsanaEpisodeLink(episodeNumber, formatted);
+  try {
+    const saved = localStorage.getItem('ioio_custom_episodes') || '{}';
+    const epMap = JSON.parse(saved);
+    epMap[SLOVO_PATSANA.id] = SLOVO_PATSANA.episodes;
+    localStorage.setItem('ioio_custom_episodes', JSON.stringify(epMap));
+  } catch (e) {
+    console.error('Failed to persist Slovo Patsana episode link:', e);
+  }
+  return SLOVO_PATSANA.episodes?.find((e) => e.episodeNumber === episodeNumber) || null;
+}
+
 /**
  * 📋 Код үүсгэгч (Code Generator)
  * Хэрэглэгч өөрийн линкүүдээ оруулсны дараа шууд эх файлд хуулж тавих бэлэн TypeScript кодыг гаргана.
  */
 export function generateEpisodeLinksCode(
-  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4' | 'SagaOfTanya' | 'Mashle' | 'Haikyu' | 'HaikyuS2' | 'HaikyuS3' | 'HaikyuS4',
+  seriesName: 'DeathNote' | 'MyHeroAcademia' | 'HunterXHunter' | 'SpyXFamily' | 'LegendOfKorra' | 'LegendOfKorraS2' | 'LegendOfKorraS3' | 'LegendOfKorraS4' | 'SagaOfTanya' | 'Mashle' | 'Haikyu' | 'HaikyuS2' | 'HaikyuS3' | 'HaikyuS4' | 'SlovoPatsana',
   links: Record<number, string>
 ): string {
   const varName = seriesName === 'DeathNote'
@@ -386,6 +406,8 @@ export function generateEpisodeLinksCode(
     ? 'HAIKYU_S3_EPISODE_LINKS'
     : seriesName === 'HaikyuS4'
     ? 'HAIKYU_S4_EPISODE_LINKS'
+    : seriesName === 'SlovoPatsana'
+    ? 'SLOVO_PATSANA_EPISODE_LINKS'
     : 'LEGEND_OF_KORRA_EPISODE_LINKS';
   const entries = Object.entries(links)
     .sort(([a], [b]) => Number(a) - Number(b))
