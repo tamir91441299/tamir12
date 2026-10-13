@@ -42,7 +42,8 @@ import {
   Lock,
   CheckCircle,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  Send
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { GitHubConnectModal } from './GitHubConnectModal';
@@ -248,6 +249,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     shareText: string;
   } | null>(null);
   const [copiedShareMessage, setCopiedShareMessage] = useState<boolean>(false);
+
+  // Quick Single-User Code Modal (from Recharge Request or User Profile)
+  const [quickTargetCodeReq, setQuickTargetCodeReq] = useState<{
+    user: UserDetail;
+    req?: RechargeRequest;
+    amount: number;
+  } | null>(null);
+  const [quickCodeInput, setQuickCodeInput] = useState<string>('');
+  const [quickCodeDesc, setQuickCodeDesc] = useState<string>('');
+  const [quickCodeMarkApproved, setQuickCodeMarkApproved] = useState<boolean>(true);
+  const [quickCodeCreatedResult, setQuickCodeCreatedResult] = useState<{
+    code: string;
+    userName: string;
+    amount: number;
+    shareText: string;
+  } | null>(null);
+  const [copiedQuickCode, setCopiedQuickCode] = useState<boolean>(false);
+  const [copiedQuickShare, setCopiedQuickShare] = useState<boolean>(false);
 
   // New Window Security Passcode state
   const [currentPasscode, setCurrentPasscode] = useState<string>(() => getProtectedWindowPasscode());
@@ -531,6 +550,180 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
     setTargetCodeInput('');
     setTargetCodeDescription('');
+  };
+
+  const findUserByRechargeRequest = (req: RechargeRequest): UserDetail => {
+    const cleanPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (req.userEmail || '').trim().toLowerCase();
+    const userId = (req.userId || '').trim();
+
+    const matched = users.find((u) => {
+      const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uId = (u.id || '').trim();
+      const uCustom = (u.customId || '').trim();
+      return (
+        (userId && (uId === userId || uCustom === userId)) ||
+        (cleanPhone && cleanPhone.length >= 8 && uPhone === cleanPhone) ||
+        (cleanEmail && uEmail === cleanEmail)
+      );
+    });
+
+    if (matched) return matched;
+
+    return {
+      id: req.userId || `user_${cleanPhone || Date.now()}`,
+      name: req.userName || 'Хэрэглэгч',
+      phone: req.userPhone || '',
+      email: req.userEmail || '',
+      role: 'user',
+      status: 'active',
+      packageType: 'free',
+      packageExpiry: '-',
+      walletBalance: 0,
+      lastLogin: 'Хүсэлт илгээсэн',
+      watchedCount: 0,
+      favoriteCount: 0,
+      registeredAt: req.createdAt ? new Date(req.createdAt).toLocaleDateString('mn-MN') : new Date().toLocaleDateString('mn-MN'),
+      customId: req.userId && req.userId.length === 5 ? req.userId : undefined,
+    };
+  };
+
+  const handleGoToUserRegistrationFromRecharge = (req: RechargeRequest) => {
+    const targetUser = findUserByRechargeRequest(req);
+    // Pre-fill search filter in users table
+    setSearch(targetUser.phone || targetUser.name || '');
+    // Open user's detailed registration modal immediately
+    setSelectedUser(targetUser);
+  };
+
+  const handleOpenTargetCodeForRechargeUser = (req: RechargeRequest) => {
+    const targetUser = findUserByRechargeRequest(req);
+    const amount = Number(req.amount) || 5000;
+    setTargetCodeUser(targetUser);
+    setTargetCodePointsAmount(amount);
+    setActiveAdminTab('target_codes');
+    setTargetCodeCreatedMessage(null);
+    const namePart = (targetUser.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const amountPart = amount >= 1000 ? `${Math.round(amount / 1000)}K` : `${amount}`;
+    setTargetCodeInput(`ONOO-${namePart}-${amountPart}-${randDigits}`);
+    setTargetCodeDescription(`Оноо авах хүсэлтийн дагуу ${targetUser.name}-д зориулсан +${amount.toLocaleString()}₮ хувийн код`);
+  };
+
+  const handleOpenQuickTargetCodeForRecharge = (req: RechargeRequest) => {
+    const targetUser = findUserByRechargeRequest(req);
+    const amount = Number(req.amount) || 5000;
+    const namePart = (targetUser.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const amountPart = amount >= 1000 ? `${Math.round(amount / 1000)}K` : `${amount}`;
+    const generatedCode = `ONOO-${namePart}-${amountPart}-${randDigits}`;
+
+    setQuickCodeInput(generatedCode);
+    setQuickCodeDesc(`Оноо авах хүсэлтийн дагуу ${targetUser.name}-д зориулсан +${amount.toLocaleString()}₮ хувийн код`);
+    setQuickCodeMarkApproved(req.status === 'pending');
+    setQuickCodeCreatedResult(null);
+    setCopiedQuickCode(false);
+    setCopiedQuickShare(false);
+    setQuickTargetCodeReq({
+      user: targetUser,
+      req,
+      amount,
+    });
+  };
+
+  const handleOpenQuickTargetCodeForUser = (user: UserDetail, defaultAmount: number = 5000) => {
+    const namePart = (user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const amountPart = defaultAmount >= 1000 ? `${Math.round(defaultAmount / 1000)}K` : `${defaultAmount}`;
+    const generatedCode = `ONOO-${namePart}-${amountPart}-${randDigits}`;
+
+    setQuickCodeInput(generatedCode);
+    setQuickCodeDesc(`Зөвхөн ${user.name}-д зориулсан +${defaultAmount.toLocaleString()}₮ хувийн онооны код`);
+    setQuickCodeMarkApproved(false);
+    setQuickCodeCreatedResult(null);
+    setCopiedQuickCode(false);
+    setCopiedQuickShare(false);
+    setQuickTargetCodeReq({
+      user,
+      amount: defaultAmount,
+    });
+  };
+
+  const handleRegenerateQuickCode = () => {
+    if (!quickTargetCodeReq) return;
+    const user = quickTargetCodeReq.user;
+    const amount = quickTargetCodeReq.amount;
+    const namePart = (user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const amountPart = amount >= 1000 ? `${Math.round(amount / 1000)}K` : `${amount}`;
+    setQuickCodeInput(`ONOO-${namePart}-${amountPart}-${randDigits}`);
+  };
+
+  const handleCreateQuickSingleUserCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTargetCodeReq) return;
+
+    const { user, req, amount } = quickTargetCodeReq;
+    let code = quickCodeInput.trim().toUpperCase();
+    if (!code) {
+      const namePart = (user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+      const randDigits = Math.floor(1000 + Math.random() * 9000);
+      code = `ONOO-${namePart}-${randDigits}`;
+      setQuickCodeInput(code);
+    }
+
+    const note = quickCodeDesc.trim() || `Зөвхөн ${user.name}-д зориулсан +${amount.toLocaleString()}₮ онооны хувийн код`;
+
+    const saved = await savePromoCode({
+      code,
+      type: 'points',
+      value: amount,
+      description: note,
+      isSingleUserOnly: true,
+      targetUserId: user.customId || user.id,
+      targetUserPhone: user.phone,
+      targetUserEmail: user.email,
+      targetUserName: user.name,
+      maxUses: 1,
+      isActive: true,
+      createdBy: currentUser?.name || 'Admin',
+    });
+
+    setPromoCodesList((prev) => [saved, ...prev.filter((c) => c.code !== saved.code)]);
+
+    // If linked to pending recharge request and auto-approve checked, mark as approved
+    if (req && quickCodeMarkApproved && req.status === 'pending') {
+      await updateRechargeRequestStatus(req.id, 'approved', `Admin (Хувийн кодоор: ${code})`);
+      setRechargeRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id
+            ? { ...r, status: 'approved', processedAt: new Date().toISOString(), processedBy: `Admin (Хувийн кодоор: ${code})` }
+            : r
+        )
+      );
+    }
+
+    const memberId = user.customId || getUserMemberCode(user) || user.id;
+    const shareText = `Сайн байна уу, ${user.name}? Танд FlickNime платформоос зөвхөн танд зориулсан +${amount.toLocaleString()}₮ онооны хувийн эрхийн код олгогдлоо.\n\n🔑 ТАНЫ ХУВИЙН КОД: ${code}\n\n⚠️ Энэ код нь зөвхөн таны бүртгэлд (ID: #${memberId}) ажиллана. Кино, анимэ үзэх цонхны 'Эрхийн код' хэсэгт оруулан оноогоо шууд авна уу!`;
+
+    setQuickCodeCreatedResult({
+      code,
+      userName: user.name,
+      amount,
+      shareText,
+    });
+
+    try {
+      sendAdminNotification({
+        type: 'TOP_UP_REQUEST',
+        title: `🎁 ${user.name}-д хувийн онооны код олгогдлоо`,
+        message: `Хүсэлтийн дагуу ${user.name} (#${memberId})-д +${amount.toLocaleString()}₮ хувийн код: ${code}`,
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+      });
+    } catch {}
   };
 
   const handleCopyCode = (code: string, id: string) => {
@@ -3682,6 +3875,87 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           {notif.userEmail && <span>📧 {notif.userEmail}</span>}
                           {notif.userPhone && <span>📞 {notif.userPhone}</span>}
                         </div>
+
+                        {(notif.userName || notif.userPhone || notif.userEmail) && (
+                          <div className="flex flex-wrap items-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cleanP = (notif.userPhone || '').trim().replace(/\s+/g, '');
+                                const cleanE = (notif.userEmail || '').trim().toLowerCase();
+                                const cleanN = (notif.userName || '').trim().toLowerCase();
+                                const matched = users.find((u) => {
+                                  const uP = (u.phone || '').trim().replace(/\s+/g, '');
+                                  const uE = (u.email || '').trim().toLowerCase();
+                                  const uN = (u.name || '').trim().toLowerCase();
+                                  return (
+                                    (cleanP && cleanP.length >= 8 && uP === cleanP) ||
+                                    (cleanE && uE === cleanE) ||
+                                    (cleanN && uN === cleanN)
+                                  );
+                                }) || {
+                                  id: `user_${cleanP || Date.now()}`,
+                                  name: notif.userName || 'Хэрэглэгч',
+                                  phone: notif.userPhone || '',
+                                  email: notif.userEmail || '',
+                                  role: 'user',
+                                  status: 'active',
+                                  packageType: 'free',
+                                  packageExpiry: '-',
+                                  walletBalance: 0,
+                                  lastLogin: 'Мэдэгдэл илгээсэн',
+                                  watchedCount: 0,
+                                  favoriteCount: 0,
+                                  registeredAt: new Date().toLocaleDateString('mn-MN'),
+                                };
+                                setSearch(matched.phone || matched.name || '');
+                                setSelectedUser(matched);
+                              }}
+                              className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-cyan-300 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            >
+                              <Eye className="w-3 h-3 text-cyan-400" />
+                              <span>👤 Бүртгэл рүү орох</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const cleanP = (notif.userPhone || '').trim().replace(/\s+/g, '');
+                                const cleanE = (notif.userEmail || '').trim().toLowerCase();
+                                const cleanN = (notif.userName || '').trim().toLowerCase();
+                                const matched = users.find((u) => {
+                                  const uP = (u.phone || '').trim().replace(/\s+/g, '');
+                                  const uE = (u.email || '').trim().toLowerCase();
+                                  const uN = (u.name || '').trim().toLowerCase();
+                                  return (
+                                    (cleanP && cleanP.length >= 8 && uP === cleanP) ||
+                                    (cleanE && uE === cleanE) ||
+                                    (cleanN && uN === cleanN)
+                                  );
+                                }) || {
+                                  id: `user_${cleanP || Date.now()}`,
+                                  name: notif.userName || 'Хэрэглэгч',
+                                  phone: notif.userPhone || '',
+                                  email: notif.userEmail || '',
+                                  role: 'user',
+                                  status: 'active',
+                                  packageType: 'free',
+                                  packageExpiry: '-',
+                                  walletBalance: 0,
+                                  lastLogin: 'Мэдэгдэл илгээсэн',
+                                  watchedCount: 0,
+                                  favoriteCount: 0,
+                                  registeredAt: new Date().toLocaleDateString('mn-MN'),
+                                };
+                                handleOpenQuickTargetCodeForUser(matched, 5000);
+                              }}
+                              className="px-2.5 py-1 bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            >
+                              <Gift className="w-3 h-3 text-amber-300" />
+                              <span>🎯 1 хүнд код хийх</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -4218,8 +4492,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     >
                       {/* Left: User Info & Request Details */}
                       <div className="space-y-1.5 min-w-[280px]">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-white">{req.userName}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleGoToUserRegistrationFromRecharge(req)}
+                            className="font-extrabold text-sm text-white hover:text-cyan-300 underline-offset-2 hover:underline cursor-pointer flex items-center gap-1 group text-left"
+                            title="Шууд энэ хэрэглэгчийн бүртгэл рүү орох"
+                          >
+                            <span>{req.userName}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
+                          </button>
                           <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
                             <Phone className="w-3 h-3 text-amber-400" />
                             {maskPhoneNumber(req.userPhone, req.userEmail)}
@@ -4272,7 +4554,29 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       </div>
 
                       {/* Right: Actions */}
-                      <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800">
+                        {/* 1. Шууд бүртгэл рүү орох товч */}
+                        <button
+                          type="button"
+                          onClick={() => handleGoToUserRegistrationFromRecharge(req)}
+                          className="px-3 py-2 bg-cyan-950/90 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/60 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                          title="Энэ хүсэлт явуулсан хүний шууд бүртгэл рүү нь орох"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>👤 Шууд бүртгэл рүү орох</span>
+                        </button>
+
+                        {/* 2. 1 хүнд зориулсан онооны код хийх товч */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQuickTargetCodeForRecharge(req)}
+                          className="px-3.5 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-purple-900/40 active:scale-95"
+                          title="Зөвхөн энэ хүсэлт илгээсэн хүнд ажиллах 1 хүний хувийн онооны код хийх"
+                        >
+                          <Gift className="w-3.5 h-3.5 text-amber-300" />
+                          <span>🎯 1 хүнд код хийх (+{req.amount.toLocaleString()}₮)</span>
+                        </button>
+
                         {req.status === 'pending' ? (
                           <>
                             <button
@@ -4289,13 +4593,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5"
                             >
                               <CheckCircle className="w-4 h-4" />
-                              <span>Шалгасан, +{req.amount.toLocaleString()}₮ Оноо & Анимэ Эрх Олгох</span>
+                              <span>Шалгасан, +{req.amount.toLocaleString()}₮ Дансанд шууд оруулах</span>
                             </button>
                           </>
                         ) : req.status === 'approved' ? (
                           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
                             <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            <span>+{req.amount.toLocaleString()}₮ Оноо & Анимэ эрх олгогдсон ✓</span>
+                            <span>+{req.amount.toLocaleString()}₮ Оноо олгогдсон ✓</span>
                           </div>
                         ) : (
                           <div className="text-xs text-zinc-500 italic">
@@ -5060,6 +5364,43 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </button>
             </div>
 
+            {/* 🎯 ЗӨВХӨН ЭНЭ ХЭРЭГЛЭГЧИД ЗОРИУЛСАН 1 ХҮНИЙ ХУВИЙН ОНООНЫ КОД ХИЙХ ХЭСЭГ */}
+            <div className="bg-gradient-to-r from-purple-950/70 via-zinc-900 to-indigo-950/70 border-2 border-purple-500/50 rounded-xl p-3.5 space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
+                  <Gift className="w-4 h-4 text-purple-400" />
+                  1 Хүнд Зориулсан Хувийн Код Хийх
+                </span>
+                <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded font-mono font-bold">
+                  Зөвхөн #{selectedUser.customId || getUserMemberCode(selectedUser)}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-300">
+                Зөвхөн <strong>{selectedUser.name}</strong> ашиглах боломжтой 1 удаагийн хувийн онооны код шууд хийх:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {[2500, 5000, 8500, 10000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => handleOpenQuickTargetCodeForUser(selectedUser, amt)}
+                    className="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900 border border-purple-600/60 text-purple-200 text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                  >
+                    <Plus className="w-3 h-3 text-amber-400" />
+                    <span>+{amt.toLocaleString()} ₮</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenQuickTargetCodeForUser(selectedUser, 5000)}
+                className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white p-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/40 transition-all cursor-pointer"
+              >
+                <Gift className="w-3.5 h-3.5 text-amber-300" />
+                <span>🎯 Зөвхөн энэ хүнд зориулсан хувийн код үүсгэх</span>
+              </button>
+            </div>
+
             {/* Admin Package Control Section */}
             <div className="bg-zinc-900/90 border border-amber-500/30 rounded-xl p-3.5 space-y-3">
               <div className="flex items-center justify-between">
@@ -5148,7 +5489,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -5156,14 +5497,21 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   setSelectedUser(null);
                   handleOpenPointsModal(targetU, 'add', 2500);
                 }}
-                className="w-1/2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-md transition-all cursor-pointer"
+                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-md transition-all cursor-pointer"
               >
-                <Zap className="w-4 h-4" /> +/- Оноо Удирдах
+                <Zap className="w-4 h-4" /> +/- Оноо
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenQuickTargetCodeForUser(selectedUser, 5000)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-md transition-all cursor-pointer"
+              >
+                <Gift className="w-4 h-4 text-amber-300" /> Хувийн код
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedUser(null)}
-                className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Хаах
               </button>
@@ -5171,6 +5519,277 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
         </div>
       )}
+      {/* 🎯 Quick Single-User Code Modal for Recharge Requests and Users */}
+      {quickTargetCodeReq && (
+        <div className="fixed inset-0 z-70 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#181622] border-2 border-purple-500/60 rounded-2xl p-5 sm:p-6 max-w-lg w-full space-y-4 shadow-2xl relative text-zinc-100 animate-in fade-in zoom-in-95 duration-200 my-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black flex items-center justify-center shadow-lg shadow-purple-900/40 shrink-0">
+                  <Gift className="w-6 h-6 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white flex items-center gap-2 flex-wrap">
+                    <span>1 Хүнд Зориулсан Хувийн Код Хийх</span>
+                    <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-black">
+                      Зөвхөн 1 Хэрэглэгч
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Хүсэлт илгээсэн: <span className="text-purple-300 font-bold">{quickTargetCodeReq.user.name}</span>
+                    <span className="font-mono text-amber-300 font-bold ml-1.5">#{quickTargetCodeReq.user.customId || getUserMemberCode(quickTargetCodeReq.user)}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickTargetCodeReq(null)}
+                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target User Info & Request Note */}
+            <div className="bg-zinc-950/90 border border-purple-500/30 rounded-xl p-3.5 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white">{quickTargetCodeReq.user.name}</span>
+                  {quickTargetCodeReq.user.phone && (
+                    <span className="font-mono text-cyan-300 font-bold flex items-center gap-1">
+                      <Phone className="w-3 h-3" />
+                      {maskPhoneNumber(quickTargetCodeReq.user.phone, quickTargetCodeReq.user.email)}
+                    </span>
+                  )}
+                  {quickTargetCodeReq.user.email && (
+                    <span className="text-zinc-400 text-[11px] truncate max-w-[150px]">{quickTargetCodeReq.user.email}</span>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-500 uppercase font-bold block">Одоогийн оноо:</span>
+                  <span className="font-mono font-black text-emerald-400">
+                    {quickTargetCodeReq.user.walletBalance.toLocaleString()} ₮
+                  </span>
+                </div>
+              </div>
+
+              {quickTargetCodeReq.req && (
+                <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <span className="text-rose-300 font-bold bg-rose-950/60 border border-rose-500/30 px-2 py-0.5 rounded">
+                    📩 Хүсэлт: {quickTargetCodeReq.req.planLabel} ({quickTargetCodeReq.req.amount.toLocaleString()}₮)
+                  </span>
+                  {quickTargetCodeReq.req.note && (
+                    <span className="text-zinc-400 italic font-mono truncate max-w-[260px]">
+                      Утга: {quickTargetCodeReq.req.note}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* SUCCESS / CREATED STATE */}
+            {quickCodeCreatedResult ? (
+              <div className="bg-gradient-to-b from-purple-950/80 to-zinc-950 border-2 border-purple-500 rounded-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 text-center shadow-2xl">
+                <div className="flex items-center justify-center gap-2 text-emerald-400 font-black text-sm uppercase">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <span>ХУВИЙН КОД АМЖИЛТТАЙ ҮҮСЛЭЭ!</span>
+                </div>
+
+                <div className="bg-black/90 border-2 border-purple-400/60 p-4 rounded-xl space-y-2 shadow-inner">
+                  <span className="text-[10px] text-purple-300 uppercase font-mono tracking-wider block font-bold">
+                    Зөвхөн {quickCodeCreatedResult.userName}-д ажиллах код:
+                  </span>
+                  <div className="font-mono text-2xl sm:text-3xl font-black text-amber-300 tracking-wider break-all select-all">
+                    {quickCodeCreatedResult.code}
+                  </div>
+                  <div className="inline-block bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-black px-3 py-1 rounded-full font-mono">
+                    +{quickCodeCreatedResult.amount.toLocaleString()} ₮ ОНОО
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  🛡️ Энэхүү код нь зөвхөн <strong>{quickCodeCreatedResult.userName}</strong>-ийн бүртгэлд ажиллах бөгөөд өөр хэрэглэгч ашиглах боломжгүй хамгаалагдсан.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(quickCodeCreatedResult.code);
+                      setCopiedQuickCode(true);
+                      setTimeout(() => setCopiedQuickCode(false), 2000);
+                    }}
+                    className="p-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md"
+                  >
+                    {copiedQuickCode ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
+                    <span>{copiedQuickCode ? 'Код хуулагдлаа!' : 'Код Хуулах'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(quickCodeCreatedResult.shareText);
+                      setCopiedQuickShare(true);
+                      setTimeout(() => setCopiedQuickShare(false), 2000);
+                    }}
+                    className="p-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md"
+                  >
+                    {copiedQuickShare ? <Check className="w-4 h-4 text-white" /> : <Send className="w-4 h-4 text-white" />}
+                    <span>{copiedQuickShare ? 'Мессеж хуулагдлаа!' : 'Бэлэн Мессеж Хуулах'}</span>
+                  </button>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const u = quickTargetCodeReq.user;
+                      setQuickTargetCodeReq(null);
+                      setSelectedUser(u);
+                    }}
+                    className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-bold text-xs py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Eye className="w-4 h-4 text-cyan-400" />
+                    <span>👤 Хэрэглэгчийн бүртгэл харах</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTargetCodeReq(null)}
+                    className="w-1/2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2.5 rounded-xl cursor-pointer"
+                  >
+                    Хаах
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* FORM STATE */
+              <form onSubmit={handleCreateQuickSingleUserCode} className="space-y-4">
+                {/* 1. Select Amount */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>1. Олгох Онооны Дүн (1₮ = 1 Оноо):</span>
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                    {[2500, 5000, 8500, 10000, 20000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => {
+                          setQuickTargetCodeReq((prev) => (prev ? { ...prev, amount: amt } : null));
+                          if (quickTargetCodeReq) {
+                            const namePart = (quickTargetCodeReq.user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+                            const randDigits = Math.floor(1000 + Math.random() * 9000);
+                            const amountPart = amt >= 1000 ? `${Math.round(amt / 1000)}K` : `${amt}`;
+                            setQuickCodeInput(`ONOO-${namePart}-${amountPart}-${randDigits}`);
+                          }
+                        }}
+                        className={`py-2 px-1 text-xs font-black rounded-xl border transition-all cursor-pointer text-center ${
+                          quickTargetCodeReq.amount === amt
+                            ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-400 shadow-md ring-2 ring-purple-400/40'
+                            : 'bg-zinc-950 hover:bg-zinc-900 text-zinc-300 border-zinc-800'
+                        }`}
+                      >
+                        +{amt.toLocaleString()} ₮
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <span className="text-xs text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 font-bold">Дүн:</span>
+                    <input
+                      type="number"
+                      min={100}
+                      step={500}
+                      value={quickTargetCodeReq.amount || ''}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value));
+                        setQuickTargetCodeReq((prev) => (prev ? { ...prev, amount: val } : null));
+                      }}
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-400 rounded-xl py-2 pl-16 pr-12 text-sm font-mono font-black text-amber-300 focus:outline-none"
+                    />
+                    <span className="text-xs text-zinc-400 font-bold absolute right-3 top-1/2 -translate-y-1/2">Оноо</span>
+                  </div>
+                </div>
+
+                {/* 2. Code String */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                      <span>2. Зөвхөн энэ хүнд ажиллах Код:</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRegenerateQuickCode}
+                      className="text-[10px] text-purple-300 hover:text-white font-bold flex items-center gap-1 bg-purple-950/70 hover:bg-purple-900 border border-purple-700/60 px-2 py-0.5 rounded-lg cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>🎲 Шинээр зохиох</span>
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={quickCodeInput}
+                    onChange={(e) => setQuickCodeInput(e.target.value.toUpperCase())}
+                    placeholder="ONOO-NAME-5K-1234"
+                    className="w-full bg-zinc-950 border border-purple-500/40 focus:border-purple-400 rounded-xl p-3 font-mono text-base font-black text-amber-300 uppercase tracking-wider focus:outline-none shadow-inner"
+                  />
+                </div>
+
+                {/* 3. Description */}
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 font-bold uppercase block">
+                    Тайлбар:
+                  </label>
+                  <input
+                    type="text"
+                    value={quickCodeDesc}
+                    onChange={(e) => setQuickCodeDesc(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-400 rounded-xl p-2 text-xs text-zinc-200 focus:outline-none"
+                  />
+                </div>
+
+                {/* 4. Auto-approve toggle if from a pending recharge request */}
+                {quickTargetCodeReq.req && quickTargetCodeReq.req.status === 'pending' && (
+                  <label className="flex items-center gap-2.5 bg-purple-950/40 border border-purple-500/30 p-2.5 rounded-xl cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={quickCodeMarkApproved}
+                      onChange={(e) => setQuickCodeMarkApproved(e.target.checked)}
+                      className="w-4 h-4 accent-purple-500 rounded"
+                    />
+                    <span className="text-xs text-purple-200 font-bold">
+                      ✅ Код үүсгэсний дараа хүсэлтийг шууд баталгаажсан (кодоор олгосон) болгох
+                    </span>
+                  </label>
+                )}
+
+                {/* Submit & Cancel */}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuickTargetCodeReq(null)}
+                    className="w-1/3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Болих
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-2/3 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl text-xs font-black transition-all cursor-pointer shadow-lg shadow-purple-900/30 flex items-center justify-center gap-1.5"
+                  >
+                    <Gift className="w-4 h-4 text-amber-300" />
+                    <span>⚡ Хувийн Код Үүсгэж Олгох</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* GitHub Integration Modal for Admin */}
       <GitHubConnectModal
         isOpen={showGitHubModal}
