@@ -977,16 +977,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                               )}
 
                               {!isNewAnime && isAdmin && onOpenUserManagement && (
-                                <div className="mt-2">
+                                <div className="mt-2 flex items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setIsNotifDropdownOpen(false);
                                       onOpenUserManagement();
                                     }}
-                                    className="px-2 py-0.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-[10px] cursor-pointer"
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-black text-[10px] cursor-pointer flex items-center gap-1 transition-all"
                                   >
-                                    Хэрэглэгчийн удирдлага
+                                    <span>🎯 Хэрэглэгч рүү очих & Онооны код хийх</span>
                                   </button>
                                 </div>
                               )}

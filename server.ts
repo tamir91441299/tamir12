@@ -12,6 +12,8 @@ import streamRouter from "./server/routes/stream.js";
 import usersRouter from "./server/routes/users.js";
 import rechargesRouter from "./server/routes/recharges.js";
 import authRouter from "./server/routes/auth.js";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { getUsers, getOrCreateUser } from "./src/db/users.ts";
 
 dotenv.config();
 
@@ -37,6 +39,36 @@ app.use("/api/users", usersRouter);
 app.use("/api/recharges", rechargesRouter);
 app.use(authRouter);
 app.use(streamRouter);
+
+// Cloud SQL PostgreSQL user endpoints with Firebase Auth verification
+app.get("/api/db/users", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userList = await getUsers();
+    res.json(userList);
+  } catch (error: any) {
+    console.error("Failed to fetch users from Cloud SQL:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch users" });
+  }
+});
+
+app.post("/api/db/sync-user", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({ error: "Unauthorized: Missing user UID" });
+    }
+    const { displayName, photoUrl } = req.body || {};
+    const synced = await getOrCreateUser(
+      req.user.uid,
+      req.user.email || `${req.user.uid}@flicknime.internal`,
+      displayName || req.user.name,
+      photoUrl || req.user.picture
+    );
+    res.json({ success: true, user: synced });
+  } catch (error: any) {
+    console.error("Failed to sync user to Cloud SQL:", error);
+    res.status(500).json({ error: error.message || "Failed to sync user" });
+  }
+});
 
 // Static assets from public folder
 app.use(express.static(path.join(process.cwd(), "public")));

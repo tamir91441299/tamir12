@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, initializeFirestore, setLogLevel } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Silence verbose internal Firestore stream logs
@@ -26,5 +27,8 @@ try {
 }
 
 export const db = firestoreDb;
+export const auth = getAuth(app);
+export const googleAuthProvider = new GoogleAuthProvider();
 export default app;
+
 

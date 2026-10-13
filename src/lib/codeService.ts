@@ -21,6 +21,15 @@ export interface PromoCode {
   createdAt: string;
   createdBy?: string;
   isActive: boolean;
+  // Single-user targeted fields:
+  isSingleUserOnly?: boolean;
+  targetUserId?: string; // Target user's id or 5-digit custom ID
+  targetUserPhone?: string;
+  targetUserEmail?: string;
+  targetUserName?: string;
+  usedByUserId?: string;
+  usedByUserName?: string;
+  usedAt?: string;
 }
 
 export interface RedeemResult {
@@ -29,6 +38,7 @@ export interface RedeemResult {
   type?: 'full_vip' | 'anime' | 'movie' | 'points';
   pointsAdded?: number;
   durationDays?: number;
+  matchedCode?: PromoCode;
 }
 
 export const INITIAL_PRESET_CODES: PromoCode[] = [];
@@ -78,11 +88,19 @@ export async function savePromoCode(codeData: Omit<PromoCode, 'id' | 'createdAt'
     value: codeData.value || (codeData.type === 'points' ? 5000 : 0),
     durationDays: codeData.durationDays || 30,
     description: codeData.description || `${codeUpper} Эрхийн Код`,
-    maxUses: codeData.maxUses || 100,
+    maxUses: codeData.isSingleUserOnly ? 1 : (codeData.maxUses || 100),
     usedCount: 0,
     createdAt: new Date().toLocaleDateString('mn-MN'),
     createdBy: codeData.createdBy || 'Admin',
     isActive: codeData.isActive !== false,
+    isSingleUserOnly: !!codeData.isSingleUserOnly,
+    targetUserId: codeData.targetUserId?.trim() || undefined,
+    targetUserPhone: codeData.targetUserPhone?.trim() || undefined,
+    targetUserEmail: codeData.targetUserEmail?.trim().toLowerCase() || undefined,
+    targetUserName: codeData.targetUserName?.trim() || undefined,
+    usedByUserId: codeData.usedByUserId,
+    usedByUserName: codeData.usedByUserName,
+    usedAt: codeData.usedAt,
   };
 
   try {
@@ -171,9 +189,13 @@ export function subscribePromoCodesFromFirestore(callback: (codes: PromoCode[]) 
 }
 
 /**
- * Validate and Redeem any promo / activation / voucher code created by Admin
+ * Validate and Redeem any promo / activation / voucher code created by Admin.
+ * Supports targeting specific users (single-user exclusive code).
  */
-export function redeemCode(inputCode: string): RedeemResult {
+export function redeemCode(
+  inputCode: string,
+  currentUser?: { id?: string; customId?: string; phone?: string; email?: string; name?: string } | null
+): RedeemResult {
   if (!inputCode || !inputCode.trim()) {
     return { success: false, message: 'Эрхийн кодоо оруулна уу.' };
   }
@@ -188,10 +210,76 @@ export function redeemCode(inputCode: string): RedeemResult {
 
   if (matched) {
     if (!matched.isActive) {
-      return { success: false, message: '⚠️ Энэ код идэвхгүй болсон байна.' };
+      return { success: false, message: '⚠️ Энэ код ашиглагдсан эсвэл идэвхгүй болсон байна.' };
     }
+
+    // Check Single-User Targeting
+    if (matched.isSingleUserOnly || matched.targetUserId || matched.targetUserPhone || matched.targetUserEmail) {
+      if (!currentUser) {
+        return {
+          success: false,
+          message: '⚠️ Энэ нь тусгай хувийн онооны код тул эхлээд өөрийн бүртгэлээр нэвтэрч байж ашиглана уу!',
+        };
+      }
+
+      const cleanTargetId = (matched.targetUserId || '').trim().toLowerCase();
+      const cleanTargetPhone = (matched.targetUserPhone || '').trim().replace(/\s+/g, '');
+      const cleanTargetEmail = (matched.targetUserEmail || '').trim().toLowerCase();
+
+      const userCurrentId = String(currentUser.id || '').trim().toLowerCase();
+      const userCustomId = String(currentUser.customId || '').trim().toLowerCase();
+      const userPhone = String(currentUser.phone || '').trim().replace(/\s+/g, '');
+      const userEmail = String(currentUser.email || '').trim().toLowerCase();
+
+      const isTargetMatch =
+        (cleanTargetId && (userCurrentId === cleanTargetId || userCustomId === cleanTargetId)) ||
+        (cleanTargetPhone && cleanTargetPhone.length >= 8 && userPhone === cleanTargetPhone) ||
+        (cleanTargetEmail && cleanTargetEmail.includes('@') && userEmail === cleanTargetEmail);
+
+      if (!isTargetMatch) {
+        const ownerName = matched.targetUserName || (matched.targetUserPhone ? `дугаартай хэрэглэгч` : `тусгайлсан гишүүн`);
+        return {
+          success: false,
+          message: `⛔ Энэ онооны код нь зөвхөн «${ownerName}»-д зориулагдсан хувийн код тул өөр хэрэглэгч ашиглах боломжгүй!`,
+        };
+      }
+    }
+
     if (matched.maxUses && matched.usedCount >= matched.maxUses) {
       return { success: false, message: '⚠️ Энэ кодын ашиглах дээд хязгаар дууссан байна.' };
+    }
+
+    // Mark as used if single-user or single-use
+    const isSingleUse = matched.isSingleUserOnly || (matched.maxUses && matched.maxUses === 1);
+    if (isSingleUse) {
+      const updatedCode: PromoCode = {
+        ...matched,
+        usedCount: (matched.usedCount || 0) + 1,
+        isActive: false,
+        usedByUserId: currentUser?.id || currentUser?.customId || 'unknown',
+        usedByUserName: currentUser?.name || 'Хэрэглэгч',
+        usedAt: new Date().toLocaleString('mn-MN'),
+      };
+
+      // Persist update
+      try {
+        const all = getAllPromoCodes().map((c) => (c.id === matched.id ? updatedCode : c));
+        localStorage.setItem(LOCAL_STORAGE_CODES_KEY, JSON.stringify(all));
+        const docRef = doc(db, 'promo_codes', matched.id);
+        safeFirestoreWrite(() => setDoc(docRef, updatedCode, { merge: true })).catch(() => {});
+      } catch (e) {}
+    } else {
+      // Increment used count
+      const updatedCode: PromoCode = {
+        ...matched,
+        usedCount: (matched.usedCount || 0) + 1,
+      };
+      try {
+        const all = getAllPromoCodes().map((c) => (c.id === matched.id ? updatedCode : c));
+        localStorage.setItem(LOCAL_STORAGE_CODES_KEY, JSON.stringify(all));
+        const docRef = doc(db, 'promo_codes', matched.id);
+        safeFirestoreWrite(() => setDoc(docRef, updatedCode, { merge: true })).catch(() => {});
+      } catch (e) {}
     }
 
     if (matched.type === 'full_vip') {
@@ -200,6 +288,7 @@ export function redeemCode(inputCode: string): RedeemResult {
         type: 'full_vip',
         durationDays: matched.durationDays || 30,
         message: `👑 ${matched.description || 'VIP Бүтэн Багц'} амжилттай идэвхжлээ!`,
+        matchedCode: matched,
       };
     } else if (matched.type === 'anime') {
       return {
@@ -207,6 +296,7 @@ export function redeemCode(inputCode: string): RedeemResult {
         type: 'anime',
         durationDays: matched.durationDays || 30,
         message: `🎌 ${matched.description || 'Анимэ Багц'} амжилттай идэвхжлээ!`,
+        matchedCode: matched,
       };
     } else if (matched.type === 'movie') {
       return {
@@ -214,6 +304,7 @@ export function redeemCode(inputCode: string): RedeemResult {
         type: 'movie',
         durationDays: matched.durationDays || 30,
         message: `🎬 ${matched.description || 'Кино Багц'} амжилттай идэвхжлээ!`,
+        matchedCode: matched,
       };
     } else if (matched.type === 'points') {
       const pts = matched.value || 5000;
@@ -221,7 +312,10 @@ export function redeemCode(inputCode: string): RedeemResult {
         success: true,
         type: 'points',
         pointsAdded: pts,
-        message: `💰 +${pts.toLocaleString()} оноо таны хэтэвчинд нэмэгдлээ!`,
+        message: matched.isSingleUserOnly
+          ? `🎉 Амжилттай! Зөвхөн танд зориулсан +${pts.toLocaleString()}₮ хувийн оноо хэтэвчинд тань нэмэгдлээ!`
+          : `💰 +${pts.toLocaleString()} оноо таны хэтэвчинд амжилттай нэмэгдлээ!`,
+        matchedCode: matched,
       };
     }
   }

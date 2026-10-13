@@ -222,8 +222,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     walletBalance: 0,
   });
 
-  // Admin Mode Tabs: 'users' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'>('users');
+  // Admin Mode Tabs: 'users' | 'target_codes' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'target_codes' | 'episodes' | 'notifications' | 'codes' | 'security' | 'recharges'>('users');
   const [rechargeRequests, setRechargeRequests] = useState<RechargeRequest[]>([]);
   const [rechargeFilterStatus, setRechargeFilterStatus] = useState<string>('all');
   const [rechargeSearch, setRechargeSearch] = useState<string>('');
@@ -233,6 +233,21 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [animeGrantOpenUserId, setAnimeGrantOpenUserId] = useState<string | null>(null);
   const [copiedPhoneUserId, setCopiedPhoneUserId] = useState<string | null>(null);
   const [animeGrantLoading, setAnimeGrantLoading] = useState<boolean>(false);
+
+  // Dedicated Single-User Target Points Code Generator State
+  const [targetCodeUser, setTargetCodeUser] = useState<UserDetail | null>(null);
+  const [targetCodeUserSearch, setTargetCodeUserSearch] = useState<string>('');
+  const [targetCodePointsAmount, setTargetCodePointsAmount] = useState<number>(5000);
+  const [targetCodeInput, setTargetCodeInput] = useState<string>('');
+  const [targetCodeDescription, setTargetCodeDescription] = useState<string>('');
+  const [targetCodeFilterStatus, setTargetCodeFilterStatus] = useState<'all' | 'active' | 'used'>('all');
+  const [targetCodeCreatedMessage, setTargetCodeCreatedMessage] = useState<{
+    code: string;
+    userName: string;
+    amount: number;
+    shareText: string;
+  } | null>(null);
+  const [copiedShareMessage, setCopiedShareMessage] = useState<boolean>(false);
 
   // New Window Security Passcode state
   const [currentPasscode, setCurrentPasscode] = useState<string>(() => getProtectedWindowPasscode());
@@ -432,6 +447,90 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleDeleteCode = async (codeId: string) => {
     await deletePromoCode(codeId);
     setPromoCodesList((prev) => prev.filter((c) => c.id !== codeId && c.code !== codeId));
+  };
+
+  const handleOpenTargetCodeForUser = (user: UserDetail) => {
+    setTargetCodeUser(user);
+    setActiveAdminTab('target_codes');
+    setTargetCodeCreatedMessage(null);
+    const namePart = (user.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    setTargetCodeInput(`VIP-${namePart}-${randDigits}`);
+    setTargetCodeDescription(`Зөвхөн ${user.name}-д зориулсан 5,000₮ хувийн онооны код`);
+  };
+
+  const handleGenerateTargetCodeRandom = (user?: UserDetail | null) => {
+    const target = user || targetCodeUser;
+    const namePart = (target?.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const amountPart = targetCodePointsAmount >= 1000 ? `${Math.round(targetCodePointsAmount / 1000)}K` : `${targetCodePointsAmount}`;
+    setTargetCodeInput(`ONOO-${namePart}-${amountPart}-${randDigits}`);
+  };
+
+  const handleCreateSingleUserCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetCodeUser) {
+      alert('⚠️ Эхлээд оноо олгох хэрэглэгчээ сонгоно уу!');
+      return;
+    }
+
+    const amount = Number(targetCodePointsAmount) || 5000;
+    if (amount <= 0) {
+      alert('⚠️ 0-ээс их онооны дүн оруулна уу!');
+      return;
+    }
+
+    let code = targetCodeInput.trim().toUpperCase();
+    if (!code) {
+      const namePart = (targetCodeUser.name || 'USER').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 5) || 'ONOO';
+      const randDigits = Math.floor(1000 + Math.random() * 9000);
+      code = `ONOO-${namePart}-${randDigits}`;
+      setTargetCodeInput(code);
+    }
+
+    const note = targetCodeDescription.trim() || `Зөвхөн ${targetCodeUser.name}-д зориулсан +${amount.toLocaleString()}₮ онооны хувийн эрхийн код`;
+
+    const saved = await savePromoCode({
+      code,
+      type: 'points',
+      value: amount,
+      description: note,
+      isSingleUserOnly: true,
+      targetUserId: targetCodeUser.customId || targetCodeUser.id,
+      targetUserPhone: targetCodeUser.phone,
+      targetUserEmail: targetCodeUser.email,
+      targetUserName: targetCodeUser.name,
+      maxUses: 1,
+      isActive: true,
+      createdBy: currentUser?.name || 'Admin',
+    });
+
+    setPromoCodesList((prev) => [saved, ...prev.filter((c) => c.code !== saved.code)]);
+
+    const targetIdDisplay = targetCodeUser.customId || getUserMemberCode(targetCodeUser) || targetCodeUser.id;
+    const shareText = `Сайн байна уу, ${targetCodeUser.name}? Танд FlickNime платформоос зөвхөн танд зориулсан +${amount.toLocaleString()}₮ онооны тусгай эрхийн код бэлэглэлээ.\n🔑 Таны хувийн код: ${code}\n⚠️ Энэ код нь зөвхөн таны бүртгэлд (ID: #${targetIdDisplay}) ажиллана. Кино, анимэ үзэх цонхны 'Эрхийн код' хэсэгт оруулан оноогоо шууд аваарай!`;
+
+    setTargetCodeCreatedMessage({
+      code,
+      userName: targetCodeUser.name,
+      amount,
+      shareText,
+    });
+
+    // Also trigger in-app notification in Firestore
+    try {
+      sendAdminNotification({
+        type: 'TOP_UP_REQUEST',
+        title: `🎁 ${targetCodeUser.name}-д хувийн онооны код үүслээ`,
+        message: `Зөвхөн ${targetCodeUser.name} (#${targetIdDisplay})-д зориулсан +${amount.toLocaleString()}₮ хувийн код: ${code}`,
+        userName: targetCodeUser.name,
+        userEmail: targetCodeUser.email,
+        userPhone: targetCodeUser.phone,
+      });
+    } catch {}
+
+    setTargetCodeInput('');
+    setTargetCodeDescription('');
   };
 
   const handleCopyCode = (code: string, id: string) => {
@@ -1367,6 +1466,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             )}
           </button>
 
+          {/* 🎯 ШИНЭ ХЭСЭГ: Зөвхөн 1 хэрэглэгчид зориулсан онооны кодын тусгай цонх */}
+          <button
+            id="admin-tab-target-codes"
+            onClick={() => setActiveAdminTab('target_codes')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeAdminTab === 'target_codes'
+                ? 'bg-zinc-800 text-purple-400 border-purple-400 shadow'
+                : 'text-zinc-400 hover:text-white border-transparent hover:bg-zinc-800/50'
+            }`}
+          >
+            <Gift className="w-4 h-4 text-purple-400" />
+            <span>🎯 1 Хэрэглэгчийн Онооны Код</span>
+            <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+              {promoCodesList.filter((c) => c.isSingleUserOnly || c.targetUserId).length}
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveAdminTab('episodes')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl font-bold text-xs transition-all cursor-pointer border-b-2 ${
@@ -2117,6 +2233,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             <Plus className="w-3 h-3 text-cyan-400 shrink-0" />
                             <span>5k Оноо</span>
                           </button>
+
+                          {/* 🎯 Зөвхөн энэ хэрэглэгчид зориулсан онооны код хийх Шууд товч */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenTargetCodeForUser(nu)}
+                            className="col-span-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:brightness-110 text-white font-extrabold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/30 transition-transform active:scale-95 cursor-pointer mt-0.5"
+                            title="Зөвхөн энэ хэрэглэгчид зориулсан хувийн онооны код хийх"
+                          >
+                            <Gift className="w-3.5 h-3.5 text-amber-300" />
+                            <span>🎯 Зөвхөн энэ хэрэглэгчид хувийн код хийх</span>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -2290,6 +2417,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                   title="+/- Оноо"
                                 >
                                   <Zap className="w-3.5 h-3.5 text-amber-400" />
+                                </button>
+
+                                {/* 🎯 Хувийн код хийх товч */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenTargetCodeForUser(u)}
+                                  className="bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-600/70 px-2 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                                  title="Зөвхөн энэ хэрэглэгчид зориулсан хувийн онооны код хийх"
+                                >
+                                  <Gift className="w-3.5 h-3.5 text-purple-300" />
+                                  <span className="hidden xl:inline">Хувийн код</span>
                                 </button>
 
                                 {/* Харах */}
@@ -2495,6 +2633,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             <span>+/- Оноо</span>
                           </button>
 
+                          {/* 🎯 Хувийн код хийх товч */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenTargetCodeForUser(u)}
+                            className="bg-gradient-to-r from-purple-950 to-indigo-950 hover:from-purple-900 hover:to-indigo-900 text-purple-200 border border-purple-600/70 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="Зөвхөн энэ хэрэглэгчид зориулсан хувийн онооны код хийх"
+                          >
+                            <Gift className="w-3.5 h-3.5 text-purple-300" />
+                            <span>Хувийн код</span>
+                          </button>
+
                           {/* View User Detail Button */}
                           <button
                             type="button"
@@ -2562,6 +2711,562 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </button>
         </div>
           </>
+        ) : activeAdminTab === 'target_codes' ? (
+          /* 🎯 ШИНЭ ХЭСЭГ: ЗӨВХӨН 1 ХЭРЭГЛЭГЧИД ЗОРИУЛСАН ОНООНЫ КОД ҮҮСГЭХ & УДИРДАХ */
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-purple-950/80 via-zinc-900 to-indigo-950/80 border-2 border-purple-500/40 p-4 sm:p-5 rounded-2xl gap-3 shadow-xl">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/40 shadow-inner">
+                  <Gift className="w-7 h-7 text-purple-400 animate-bounce" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base sm:text-lg text-white flex items-center gap-2 flex-wrap">
+                    <span>🎯 ЗӨВХӨН 1 ХЭРЭГЛЭГЧИЙН ХУВИЙН ОНООНЫ КОД</span>
+                    <span className="bg-purple-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                      Тусгай Эрх
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-300 mt-1 max-w-2xl leading-relaxed">
+                    Админ зөвхөн сонгосон ганц хэрэглэгчдэд зориулсан хувийн онооны код үүсгэнэ. Уг кодыг <strong>зөвхөн зааж өгсөн хэрэглэгч</strong> өөрийн аккаунтаар нэвтэрч байж ашиглаж чадах бөгөөд өөр хэрэглэгч оруулбал автоматаар хориглоно.
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats badges */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <div className="bg-black/60 border border-purple-500/30 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Нийт Хувийн Код</span>
+                  <span className="text-sm font-black text-purple-300">
+                    {promoCodesList.filter((c) => c.isSingleUserOnly || c.targetUserId).length}
+                  </span>
+                </div>
+                <div className="bg-black/60 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Ашиглаагүй</span>
+                  <span className="text-sm font-black text-emerald-400">
+                    {promoCodesList.filter((c) => (c.isSingleUserOnly || c.targetUserId) && c.isActive && (c.usedCount || 0) === 0).length}
+                  </span>
+                </div>
+                <div className="bg-black/60 border border-zinc-700 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[10px] text-zinc-400 block">Ашиглагдсан</span>
+                  <span className="text-sm font-black text-amber-400">
+                    {promoCodesList.filter((c) => (c.isSingleUserOnly || c.targetUserId) && (!c.isActive || (c.usedCount || 0) > 0)).length}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Generator Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Left Column: Generator Form (7 cols) */}
+              <div className="lg:col-span-7 bg-zinc-900/90 border border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span>Алхам 1: Оноо Бэлэглэх Хэрэглэгч Сонгох</span>
+                  </h4>
+                  {targetCodeUser && (
+                    <button
+                      type="button"
+                      onClick={() => setTargetCodeUser(null)}
+                      className="text-[11px] text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                    >
+                      Өөр хэрэглэгч сонгох
+                    </button>
+                  )}
+                </div>
+
+                {/* Target User Selector */}
+                {targetCodeUser ? (
+                  <div className="bg-gradient-to-r from-purple-950/60 via-zinc-950 to-indigo-950/60 border-2 border-purple-500/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-lg flex items-center justify-center uppercase shadow ring-2 ring-purple-400/50">
+                        {targetCodeUser.name.charAt(0)}
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-base text-white">{targetCodeUser.name}</span>
+                          <span className="font-mono text-xs font-black text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                            #{targetCodeUser.customId || getUserMemberCode(targetCodeUser)}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300">
+                          {targetCodeUser.phone && (
+                            <span className="font-mono flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-cyan-400" />
+                              {maskPhoneNumber(targetCodeUser.phone, targetCodeUser.email)}
+                            </span>
+                          )}
+                          {targetCodeUser.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-zinc-500" />
+                              {targetCodeUser.email}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-black/60 border border-zinc-800 p-2.5 rounded-xl text-right self-stretch sm:self-auto flex sm:flex-col justify-between sm:justify-center items-center sm:items-end">
+                      <span className="text-[10px] text-zinc-400 block uppercase font-bold">Одоогийн оноо:</span>
+                      <span className="text-sm font-black text-emerald-400 font-mono">
+                        {targetCodeUser.walletBalance.toLocaleString()} ₮
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={targetCodeUserSearch}
+                        onChange={(e) => setTargetCodeUserSearch(e.target.value)}
+                        placeholder="Хэрэглэгчийн нэр, 5 оронтой ID, утас, имэйлээр хайх..."
+                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-400 rounded-xl py-2.5 pl-9 pr-3 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 border border-zinc-800/80 rounded-xl p-2 bg-zinc-950/60 no-scrollbar">
+                      {users
+                        .filter((u) => {
+                          const q = targetCodeUserSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          const code = getUserMemberCode(u).toLowerCase();
+                          const custom = String(u.customId || '').toLowerCase();
+                          return (
+                            u.name.toLowerCase().includes(q) ||
+                            (u.phone && u.phone.includes(q)) ||
+                            (u.email && u.email.toLowerCase().includes(q)) ||
+                            code.includes(q) ||
+                            custom.includes(q)
+                          );
+                        })
+                        .slice(0, 15)
+                        .map((u) => (
+                          <div
+                            key={`target_pick_${u.id}`}
+                            onClick={() => {
+                              setTargetCodeUser(u);
+                              handleGenerateTargetCodeRandom(u);
+                            }}
+                            className="p-2.5 rounded-xl bg-zinc-900/80 hover:bg-purple-950/40 border border-zinc-800 hover:border-purple-500/50 flex items-center justify-between gap-2 cursor-pointer transition-all"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-zinc-800 text-purple-300 font-black text-xs flex items-center justify-center uppercase shrink-0">
+                                {u.name.charAt(0)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                                  <span>{u.name}</span>
+                                  <span className="font-mono text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded">
+                                    #{getUserMemberCode(u)}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 font-mono truncate">
+                                  {maskPhoneNumber(u.phone, u.email)} {u.email && !u.email.endsWith('@flicknime.mn') ? `• ${u.email}` : ''}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-mono font-bold text-emerald-400">
+                                {u.walletBalance.toLocaleString()}₮
+                              </span>
+                              <span className="text-[10px] font-black bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg">
+                                Сонгох
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Form to Create Code */}
+                <form onSubmit={handleCreateSingleUserCode} className="space-y-4 pt-2 border-t border-zinc-800">
+                  {/* Step 2: Points Amount */}
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-2 mb-2">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Алхам 2: Олгох Онооны Дүн (1₮ = 1 Оноо)</span>
+                    </label>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 mb-2.5">
+                      {[1000, 2500, 5000, 8500, 10000, 20000, 40000, 50000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => {
+                            setTargetCodePointsAmount(amt);
+                            if (targetCodeUser) handleGenerateTargetCodeRandom();
+                          }}
+                          className={`py-2 px-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                            targetCodePointsAmount === amt
+                              ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-purple-400 shadow-md scale-[1.02]'
+                              : 'bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border-zinc-800'
+                          }`}
+                        >
+                          +{amt.toLocaleString()} ₮
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative">
+                      <span className="text-xs text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 font-bold">Дурын дүн:</span>
+                      <input
+                        type="number"
+                        min={100}
+                        step={100}
+                        value={targetCodePointsAmount || ''}
+                        onChange={(e) => setTargetCodePointsAmount(Number(e.target.value))}
+                        placeholder="Онооны дүн бичих (₮)..."
+                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-400 rounded-xl py-2 pl-24 pr-12 text-sm font-mono font-black text-amber-300 focus:outline-none"
+                      />
+                      <span className="text-xs text-zinc-400 font-bold absolute right-3 top-1/2 -translate-y-1/2">Оноо</span>
+                    </div>
+                  </div>
+
+                  {/* Step 3: Promo Code String */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Алхам 3: Тусгай Код Зохиох</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateTargetCodeRandom()}
+                        className="text-[11px] text-purple-300 hover:text-white font-bold flex items-center gap-1 bg-purple-950/70 hover:bg-purple-900 border border-purple-700/60 px-2 py-0.5 rounded-lg cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>🎲 Санамсаргүй зохиох</span>
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      required
+                      value={targetCodeInput}
+                      onChange={(e) => setTargetCodeInput(e.target.value.toUpperCase())}
+                      placeholder="Жишээ нь: VIP-TAMIR-5000 эсвэл ONOO-74892"
+                      className="w-full bg-zinc-950 border border-purple-500/40 focus:border-purple-400 rounded-xl p-3 font-mono text-base font-black text-amber-300 uppercase tracking-wider focus:outline-none shadow-inner"
+                    />
+                  </div>
+
+                  {/* Step 4: Description */}
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 block mb-1">
+                      Тайлбар / Зориулалт (Заавал биш):
+                    </label>
+                    <input
+                      type="text"
+                      value={targetCodeDescription}
+                      onChange={(e) => setTargetCodeDescription(e.target.value)}
+                      placeholder="Жишээ: Шинэ хэрэглэгчийн урамшуулал 5,000₮"
+                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-400 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={!targetCodeUser}
+                    className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm py-3.5 rounded-xl transition-all cursor-pointer shadow-lg shadow-purple-900/30 active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Gift className="w-5 h-5 text-amber-300" />
+                    <span>⚡ ЗӨВХӨН ЭНЭ ХЭРЭГЛЭГЧИД ЗОРИУЛСАН КОД ҮҮСГЭХ</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Right Column: Generated Code Display & Share Box (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                {targetCodeCreatedMessage ? (
+                  <div className="bg-gradient-to-b from-[#1c142e] to-[#12101a] border-2 border-purple-500 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+                    <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wider">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <span>АМЖИЛТТАЙ ҮҮСЛЭЭ!</span>
+                    </div>
+
+                    <div className="bg-black/80 border-2 border-purple-500/50 p-4 rounded-2xl text-center space-y-2 shadow-inner">
+                      <span className="text-[10px] text-zinc-400 uppercase font-mono tracking-widest block">
+                        Зөвхөн {targetCodeCreatedMessage.userName}-д ажиллах код:
+                      </span>
+                      <div className="font-mono text-2xl sm:text-3xl font-black text-amber-300 tracking-wider break-all select-all">
+                        {targetCodeCreatedMessage.code}
+                      </div>
+                      <div className="inline-block bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-black px-3 py-1 rounded-full font-mono">
+                        +{targetCodeCreatedMessage.amount.toLocaleString()} ₮ ОНОО
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(targetCodeCreatedMessage.code);
+                          setCopiedCodeId(targetCodeCreatedMessage.code);
+                          setTimeout(() => setCopiedCodeId(null), 2000);
+                        }}
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                      >
+                        {copiedCodeId === targetCodeCreatedMessage.code ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Код Хуулагдлаа!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>Код Хуулах</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Pre-written SMS/Chat text for user */}
+                    <div className="space-y-1.5 pt-2 border-t border-zinc-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-zinc-300">
+                          📋 Хэрэглэгч рүү илгээх бэлэн мессеж:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(targetCodeCreatedMessage.shareText);
+                            setCopiedShareMessage(true);
+                            setTimeout(() => setCopiedShareMessage(false), 2000);
+                          }}
+                          className="text-[10px] font-bold text-cyan-300 hover:text-white bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-700/60 px-2 py-0.5 rounded cursor-pointer flex items-center gap-1"
+                        >
+                          {copiedShareMessage ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedShareMessage ? 'Хуулагдлаа!' : 'Текст хуулах'}</span>
+                        </button>
+                      </div>
+
+                      <div className="bg-black/60 border border-zinc-800 p-3 rounded-xl text-xs text-zinc-300 font-mono leading-relaxed whitespace-pre-wrap select-all">
+                        {targetCodeCreatedMessage.shareText}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-2xl space-y-4">
+                    <div className="flex items-center gap-2.5 text-purple-400 font-black text-xs uppercase tracking-wider border-b border-zinc-800 pb-2">
+                      <Lock className="w-4 h-4" />
+                      <span>🔒 Хувийн кодын хамгаалалт хэрхэн ажилладаг вэ?</span>
+                    </div>
+
+                    <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                        <p>
+                          Та код үүсгэхэд код нь <strong>зөвхөн сонгосон 1 хэрэглэгчийн бүртгэлд</strong> (ID болон утас) түгжигдэнэ.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                        <p>
+                          Хэрэглэгч платформ дээр өөрийн хаягаар нэвтрээд &quot;Эрхийн код&quot; хэсэгт кодоо оруулбал дансанд нь оноо шууд орно.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                        <p>
+                          Хэрэв өөр хүн уг кодыг ашиглах гэж оролдвол <strong>&quot;⛔ Энэ код нь зөвхөн [Нэр]-д зориулагдсан тул өөр хэрэглэгч ашиглах боломжгүй!&quot;</strong> гэж автоматаар хориглоно.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+                        <p>
+                          Зорилтот хэрэглэгч 1 удаа ашигласны дараа уг код автоматаар хаагдаж, хэзээ хэн ашигласан түүх админд бүртгэгдэнэ.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Section: Table of Created Single-User Codes */}
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-purple-400" />
+                  <h4 className="text-sm font-black text-white">
+                    Үүсгэсэн Хувийн Онооны Кодуудын Түүх & Хяналт
+                  </h4>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 bg-black/60 border border-zinc-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setTargetCodeFilterStatus('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      targetCodeFilterStatus === 'all'
+                        ? 'bg-purple-600 text-white font-black'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    Бүгд ({promoCodesList.filter((c) => c.isSingleUserOnly || c.targetUserId).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetCodeFilterStatus('active')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      targetCodeFilterStatus === 'active'
+                        ? 'bg-emerald-600 text-white font-black'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    🟢 Ашиглаагүй ({promoCodesList.filter((c) => (c.isSingleUserOnly || c.targetUserId) && c.isActive && (c.usedCount || 0) === 0).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetCodeFilterStatus('used')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      targetCodeFilterStatus === 'used'
+                        ? 'bg-zinc-700 text-white font-black'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    🔒 Ашиглагдсан ({promoCodesList.filter((c) => (c.isSingleUserOnly || c.targetUserId) && (!c.isActive || (c.usedCount || 0) > 0)).length})
+                  </button>
+                </div>
+              </div>
+
+              {promoCodesList.filter((c) => c.isSingleUserOnly || c.targetUserId).length === 0 ? (
+                <div className="text-center py-12 bg-black/40 rounded-xl border border-zinc-800 text-xs text-zinc-400 space-y-2">
+                  <Gift className="w-8 h-8 text-zinc-600 mx-auto" />
+                  <p className="font-bold text-zinc-300">Одоогоор 1 хэрэглэгчид зориулсан хувийн код үүсгээгүй байна.</p>
+                  <p className="text-zinc-500">Дээрх маягтаар хэрэглэгчээ сонгоод тусгай хувийн онооны код үүсгээрэй.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-black/40">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-zinc-950 text-zinc-400 uppercase text-[10px] font-black border-b border-zinc-800">
+                      <tr>
+                        <th className="py-2.5 px-3">Эрхийн Код</th>
+                        <th className="py-2.5 px-3">Зорилтот Хэрэглэгч</th>
+                        <th className="py-2.5 px-3">Онооны Дүн</th>
+                        <th className="py-2.5 px-3">Үүсгэсэн Огноо</th>
+                        <th className="py-2.5 px-3">Төлөв</th>
+                        <th className="py-2.5 px-3 text-right">Үйлдэл</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/60">
+                      {promoCodesList
+                        .filter((c) => {
+                          if (!c.isSingleUserOnly && !c.targetUserId) return false;
+                          const isUsed = !c.isActive || (c.usedCount || 0) > 0;
+                          if (targetCodeFilterStatus === 'active') return !isUsed;
+                          if (targetCodeFilterStatus === 'used') return isUsed;
+                          return true;
+                        })
+                        .map((c) => {
+                          const isUsed = !c.isActive || (c.usedCount || 0) > 0;
+                          return (
+                            <tr key={c.id} className="hover:bg-zinc-900/40 transition-colors">
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-1.5 font-mono font-black text-amber-300 text-sm">
+                                  <span>{c.code}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyCode(c.code, c.id)}
+                                    className="p-1 hover:text-white cursor-pointer"
+                                    title="Код хуулах"
+                                  >
+                                    {copiedCodeId === c.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-zinc-500" />}
+                                  </button>
+                                </div>
+                                <span className="text-[10px] text-zinc-500 block truncate max-w-[200px]">{c.description}</span>
+                              </td>
+
+                              <td className="py-3 px-3">
+                                <div className="space-y-0.5">
+                                  <div className="font-extrabold text-white flex items-center gap-1">
+                                    <span>{c.targetUserName || 'Хэрэглэгч'}</span>
+                                    {c.targetUserId && (
+                                      <span className="font-mono text-[10px] text-amber-400 bg-amber-500/10 px-1 py-0.2 rounded">
+                                        #{c.targetUserId}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-zinc-400 font-mono">
+                                    {c.targetUserPhone ? maskPhoneNumber(c.targetUserPhone, c.targetUserEmail) : c.targetUserEmail || '-'}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-mono font-black text-emerald-400 text-xs">
+                                  +{(c.value || 0).toLocaleString()} ₮
+                                </span>
+                              </td>
+
+                              <td className="py-3 px-3 whitespace-nowrap text-zinc-400 font-mono text-[11px]">
+                                {c.createdAt}
+                              </td>
+
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {isUsed ? (
+                                  <div className="space-y-0.5">
+                                    <span className="inline-flex items-center gap-1 bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                                      <Lock className="w-3 h-3 text-zinc-500" />
+                                      АШИГЛАСАН
+                                    </span>
+                                    {c.usedAt && (
+                                      <span className="text-[9px] text-zinc-500 block font-mono">
+                                        {c.usedAt}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded text-[10px] font-black">
+                                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                                    Ашиглаагүй (Нээлттэй)
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="py-3 px-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const text = `Сайн байна уу, ${c.targetUserName || 'Хэрэглэгч'}? Танд FlickNime платформоос зөвхөн танд зориулсан +${(c.value || 0).toLocaleString()}₮ онооны тусгай эрхийн код үүслээ.\n🔑 Таны код: ${c.code}\n⚠️ Энэ код нь зөвхөн таны бүртгэлд (ID: #${c.targetUserId || '-'}) ажиллана. Кино, анимэ үзэх цонхны 'Эрхийн код' хэсэгт оруулан оноогоо шууд аваарай!`;
+                                      navigator.clipboard.writeText(text);
+                                      alert(`✓ ${c.targetUserName || 'Хэрэглэгч'}-д илгээх бэлэн мессежийг хууллаа!`);
+                                    }}
+                                    className="p-1.5 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 rounded-lg text-xs font-bold cursor-pointer"
+                                    title="Хэрэглэгч рүү илгээх мессеж хуулах"
+                                  >
+                                    📋 Текст
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCode(c.id)}
+                                    className="p-1.5 bg-zinc-800 hover:bg-rose-950/80 text-zinc-400 hover:text-rose-400 rounded-lg text-xs cursor-pointer transition-colors"
+                                    title="Код устгах"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         ) : activeAdminTab === 'episodes' ? (
           /* Episode & Content Management Tab View */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">

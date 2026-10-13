@@ -333,6 +333,8 @@ router.post('/register', async (req: Request, res: Response) => {
 
     writeStoredUsers(users);
 
+    const isNew = existingIndex < 0;
+
     // Persist to Firestore asynchronously
     const db = getServerDb();
     if (db && Date.now() > firestoreQuotaBlockedUntil) {
@@ -345,12 +347,28 @@ router.post('/register', async (req: Request, res: Response) => {
       if (cleanPhone && cleanPhone !== '99110000' && userObj.id !== `user_phone_${cleanPhone}`) {
         setDoc(doc(db, 'users', `user_phone_${cleanPhone}`), userObj, { merge: true }).catch(() => {});
       }
+
+      // If it's a new registration, trigger admin notification in Firestore
+      if (isNew) {
+        const notifId = 'notif_reg_' + Date.now();
+        const notifPayload = {
+          id: notifId,
+          type: 'NEW_USER',
+          title: `🎉 Шинэ хэрэглэгч бүртгэгдлээ: ${userObj.name}`,
+          message: `5 оронтой ID: #${userObj.customId || userObj.id} | Утас: ${userObj.phone || '-'} | И-мэйл: ${userObj.email || '-'} системд шинээр бүртгэгдлээ.`,
+          userName: userObj.name,
+          userPhone: userObj.phone,
+          userEmail: userObj.email,
+          createdAt: new Date().toLocaleString('mn-MN'),
+        };
+        setDoc(doc(db, 'notifications', notifId), notifPayload).catch(() => {});
+      }
     }
 
     return res.json({
       success: true,
       user: sanitizeUserForClient(userObj),
-      isNew: existingIndex < 0,
+      isNew,
       message: `Хэрэглэгч ${userObj.name} амжилттай бүртгэгдлээ.`,
     });
   } catch (err: any) {

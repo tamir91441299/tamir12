@@ -278,16 +278,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     setTimeout(() => {
       setIsVerifying(false);
-      const res = redeemCode(targetCode);
+      const res = redeemCode(targetCode, currentUser);
 
       if (res.success) {
         setIsSuccess(true);
         setSuccessMsgText(res.message);
 
         setTimeout(() => {
-          onSubscribePackage('anime', 0, res.durationDays ? Math.round(res.durationDays / 30) : 1, res.durationDays, true);
           if (res.type === 'points' && res.pointsAdded) {
             onTopUpBalance(res.pointsAdded);
+          } else {
+            onSubscribePackage('anime', 0, res.durationDays ? Math.round(res.durationDays / 30) : 1, res.durationDays, true);
           }
         }, 1200);
       } else {
