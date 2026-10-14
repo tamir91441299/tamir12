@@ -1,5 +1,90 @@
 [
   {
+    "id": "user_phone_91774421",
+    "updatedAt": "2026-10-06T13:27:22.899Z",
+    "packageType": "anime",
+    "lastTopUpAt": "2026-10-03T04:10:32.368Z",
+    "favoriteCount": 0,
+    "packageExpiry": "2026-11-15",
+    "walletBalance": 0,
+    "registeredAt": "2026.10.14 19:02",
+    "email": "tamir91441299@gmail.com",
+    "role": "user",
+    "lastLogin": "2026.10.14 19:02:14",
+    "purchasedMovies": [],
+    "phone": "91774421",
+    "watchedCount": 0,
+    "lastTopUpAmount": 5000,
+    "isMockUser": false,
+    "status": "active",
+    "name": "henbe",
+    "registeredTimestamp": 1791975734216,
+    "customId": "38885"
+  },
+  {
+    "lastLogin": "2026.10.14 19:02:14",
+    "password": "tamir73828",
+    "phone": "91774421",
+    "name": "henbe",
+    "id": "38885",
+    "customId": "38885",
+    "email": "tamir91441299@gmail.com",
+    "role": "user",
+    "watchedCount": 0,
+    "walletBalance": 0,
+    "purchasedMovies": [],
+    "registeredAt": "2026.10.14 19:02",
+    "isMockUser": false,
+    "packageExpiry": "2026-11-15",
+    "registeredTimestamp": 1791975734216,
+    "packageType": "anime",
+    "favoriteCount": 0,
+    "status": "active"
+  },
+  {
+    "id": "user_phone_91441299",
+    "lastLogin": "2026.10.14 19:00:44",
+    "phone": "91441299",
+    "packageExpiry": "2026-11-15",
+    "role": "user",
+    "favoriteCount": 0,
+    "registeredAt": "2026.10.14 19:00",
+    "updatedAt": "2026-10-06T13:27:22.882Z",
+    "walletBalance": 0,
+    "isMockUser": false,
+    "name": "goodboy",
+    "status": "active",
+    "purchasedMovies": [],
+    "password": "tamir73828",
+    "registeredTimestamp": 1791975643622,
+    "watchedCount": 0,
+    "packageType": "anime",
+    "lastTopUpAt": "2026-09-30T05:33:33.210Z",
+    "lastTopUpAmount": 0,
+    "email": "tamir91441299@gmail.com",
+    "customId": "63798"
+  },
+  {
+    "password": "tamir73828",
+    "phone": "91441299",
+    "name": "goodboy",
+    "id": "63798",
+    "customId": "63798",
+    "email": "tamir91441299@gmail.com",
+    "lastLogin": "2026.10.14 19:00:44",
+    "role": "user",
+    "watchedCount": 0,
+    "walletBalance": 0,
+    "purchasedMovies": [],
+    "registeredAt": "2026.10.14 19:00",
+    "isMockUser": false,
+    "packageExpiry": "2026-11-15",
+    "registeredTimestamp": 1791975643622,
+    "packageType": "anime",
+    "favoriteCount": 0,
+    "status": "active"
+  },
+  {
     "password": "12345678",
     "phone": "",
     "name": "Номин",
@@ -98,29 +183,6 @@
     "status": "active"
   },
   {
-    "id": "user_phone_91441299",
-    "lastLogin": "2026.10.13 19:05:08",
-    "phone": "91441299",
-    "packageExpiry": "2030-01-01",
-    "role": "admin",
-    "favoriteCount": 0,
-    "registeredAt": "2026.10.13 19:05",
-    "updatedAt": "2026-10-06T13:27:22.882Z",
-    "walletBalance": 0,
-    "isMockUser": false,
-    "name": "mrbean",
-    "status": "active",
-    "purchasedMovies": [],
-    "password": "tamir73828",
-    "registeredTimestamp": 1791889508081,
-    "watchedCount": 0,
-    "packageType": "full_vip",
-    "lastTopUpAt": "2026-09-30T05:33:33.210Z",
-    "lastTopUpAmount": 0,
-    "email": "tamir73828@gmail.com",
-    "customId": "54453"
-  },
-  {
     "lastLogin": "2026.10.13 19:05:08",
     "password": "tamir73828",
     "phone": "91441299",
@@ -154,11 +216,12 @@
     "purchasedMovies": [],
     "registeredAt": "2026.10.13 18:54",
     "isMockUser": false,
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "registeredTimestamp": 1791888876590,
     "packageType": "anime",
     "favoriteCount": 0,
-    "status": "active"
+    "status": "active",
+    "updatedAt": "2026-10-14T11:07:22.716Z"
   },
   {
     "password": "90662799",
@@ -315,28 +378,6 @@
     "email": "munkhuchral.0501@gmail.com",
     "favoriteCount": 0,
     "status": "active"
-  },
-  {
-    "id": "user_phone_91774421",
-    "updatedAt": "2026-10-06T13:27:22.899Z",
-    "packageType": "full_vip",
-    "lastTopUpAt": "2026-10-03T04:10:32.368Z",
-    "favoriteCount": 1,
-    "packageExpiry": "2030-01-01",
-    "walletBalance": 0,
-    "registeredAt": "2026.10.10 21:46",
-    "email": "batorgiltamir9@gmail.com",
-    "role": "admin",
-    "lastLogin": "2026.10.10 21:46:12",
-    "purchasedMovies": [],
-    "phone": "91774421",
-    "watchedCount": 4,
-    "lastTopUpAmount": 5000,
-    "isMockUser": false,
-    "status": "active",
-    "name": "henbe",
-    "registeredTimestamp": 1791639971660,
-    "customId": "57280"
   },
   {
     "password": "tamir73828",
@@ -543,7 +584,7 @@
     "status": "active",
     "favoriteCount": 1,
     "isMockUser": false,
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "email": "tamir91441299@gmail.com",
     "watchedCount": 4,
     "packageType": "anime",
@@ -558,7 +599,7 @@
     "phone": "91774421",
     "purchasedMovies": [],
     "lastLogin": "2026.10.08 10:38:18",
-    "updatedAt": "2026-10-08T02:38:20.550Z",
+    "updatedAt": "2026-10-14T11:07:23.303Z",
     "lastTopUpAmount": 5000,
     "lastTopUpAt": "2026-10-08T02:38:20.550Z"
   },
@@ -575,9 +616,9 @@
     "lastLogin": "2026.10.06 21:42:18",
     "watchedCount": 0,
     "walletBalance": 2500,
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "email": "tamir91441299@gmail.com",
-    "updatedAt": "2026-10-06T13:27:22.823Z",
+    "updatedAt": "2026-10-14T11:07:24.149Z",
     "favoriteCount": 0,
     "customId": "TEKIM",
     "lastTopUpAt": "2026-10-06T13:17:41.682Z",
@@ -602,10 +643,10 @@
     "lastLogin": "2026.10.06 21:42:18",
     "registeredAt": "2026.10.06 21:41",
     "password": "Tergel0429",
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "customId": "TEKIM",
     "favoriteCount": 0,
-    "updatedAt": "2026-10-06T13:42:19.489Z"
+    "updatedAt": "2026-10-14T11:07:23.550Z"
   },
   {
     "packageType": "full_vip",
@@ -688,7 +729,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-14T10:34:16.826Z"
+    "updatedAt": "2026-10-14T11:10:55.177Z"
   },
   {
     "id": "user_phone_99159996",
@@ -746,7 +787,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-14T10:34:16.826Z"
+    "updatedAt": "2026-10-14T11:10:55.178Z"
   },
   {
     "id": "user_phone_85199193",
@@ -804,7 +845,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-14T10:34:16.827Z"
+    "updatedAt": "2026-10-14T11:10:55.178Z"
   },
   {
     "id": "user_phone_94362457",
@@ -986,14 +1027,14 @@
   },
   {
     "id": "user_phone_91097071",
-    "updatedAt": "2026-10-06T13:27:22.905Z",
+    "updatedAt": "2026-10-14T11:07:24.404Z",
     "walletBalance": 7500,
     "phone": "91097071",
     "isMockUser": false,
     "lastTopUpAt": "2026-09-30T05:29:32.356Z",
     "packageType": "anime",
     "lastTopUpAmount": 2500,
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "watchedCount": 4,
     "name": "Tuya",
     "favoriteCount": 1,
@@ -1006,7 +1047,7 @@
     "customId": ""
   },
   {
-    "packageExpiry": "2026-10-29",
+    "packageExpiry": "2026-11-15",
     "isMockUser": false,
     "favoriteCount": 0,
     "phone": "91097071",
@@ -1021,6 +1062,17 @@
     "customId": "",
     "lastLogin": "8/14/2026, 11:39:07 AM",
     "packageType": "anime",
-    "watchedCount": 0
+    "watchedCount": 0,
+    "updatedAt": "2026-10-14T11:07:24.992Z"
+  },
+  {
+    "role": "user",
+    "packageExpiry": "2026-11-15",
+    "packageType": "anime",
+    "email": "tamir91441299@gmail.com",
+    "status": "active",
+    "updatedAt": "2026-10-14T11:07:25.281Z",
+    "id": "tamir91441299_gmail_com",
+    "isMockUser": false
   }
 ]

@@ -381,7 +381,7 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       name: resolvedName,
       walletBalance: resolvedBalance,
       packageType: (isTamir73828Admin ? 'full_vip' : (isTamir9144User ? 'anime' : (resolvedPackage as any))),
-      packageExpiry: isTamir73828Admin ? '2030-01-01' : (isTamir9144User ? '2026-10-29' : resolvedExpiry),
+      packageExpiry: isTamir73828Admin ? '2030-01-01' : (isTamir9144User ? (resolvedExpiry && resolvedExpiry > '2026-11-15' ? resolvedExpiry : '2026-11-15') : resolvedExpiry),
       role: isTamir73828Admin ? 'admin' : (isTamir9144User ? 'user' : (u.role || baseObj?.role || 'user')),
       status: u.status || baseObj?.status || 'active',
       registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
@@ -1410,8 +1410,8 @@ export async function saveUserToFirestore(
       registeredTimestamp: (user as UserDetail).registeredTimestamp || existingRecord?.registeredTimestamp || nowTimestamp,
       role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : ((user as UserDetail).role || existingRecord?.role || 'user')),
       status: (user as UserDetail).status || existingRecord?.status || 'active',
-      packageType: resolvedPackage,
-      packageExpiry: resolvedExpiry,
+      packageType: cleanEmail === 'tamir91441299@gmail.com' ? 'anime' : resolvedPackage,
+      packageExpiry: cleanEmail === 'tamir91441299@gmail.com' ? (resolvedExpiry && resolvedExpiry > '2026-11-15' ? resolvedExpiry : '2026-11-15') : resolvedExpiry,
       walletBalance: resolvedBalance,
       lastLogin: (user as UserDetail).lastLogin || new Date().toLocaleString('mn-MN'),
       watchedCount: Math.max((user as UserDetail).watchedCount ?? 0, existingRecord?.watchedCount ?? 0),
@@ -2022,8 +2022,8 @@ export async function authenticateUserCredentials(
         registeredAt: matchedDoc.registeredAt || new Date().toLocaleDateString('mn-MN'),
         role: matchedDoc.role || 'user',
         status: matchedDoc.status || 'active',
-        packageType: matchedDoc.packageType || 'free',
-        packageExpiry: matchedDoc.packageExpiry || '-',
+        packageType: (matchedDoc.email === 'tamir91441299@gmail.com' || cleanLower === 'tamir91441299@gmail.com') ? 'anime' : (matchedDoc.packageType || 'free'),
+        packageExpiry: (matchedDoc.email === 'tamir91441299@gmail.com' || cleanLower === 'tamir91441299@gmail.com') ? (matchedDoc.packageExpiry && matchedDoc.packageExpiry > '2026-11-15' ? matchedDoc.packageExpiry : '2026-11-15') : (matchedDoc.packageExpiry || '-'),
         walletBalance: bal,
         purchasedMovies: matchedDoc.purchasedMovies || [],
       };
@@ -2078,8 +2078,8 @@ export async function authenticateUserCredentials(
             registeredTimestamp: foundServerUser.registeredTimestamp || Date.now(),
             role: (foundServerUser.email === 'tamir73828@gmail.com' || foundServerUser.email === 'batorgiltamir9@gmail.com') ? 'admin' : (foundServerUser.email === 'tamir91441299@gmail.com' ? 'user' : (foundServerUser.role || 'user')),
             status: foundServerUser.status || 'active',
-            packageType: foundServerUser.packageType || 'free',
-            packageExpiry: foundServerUser.packageExpiry || '-',
+            packageType: foundServerUser.email === 'tamir91441299@gmail.com' ? 'anime' : (foundServerUser.packageType || 'free'),
+            packageExpiry: foundServerUser.email === 'tamir91441299@gmail.com' ? (foundServerUser.packageExpiry && foundServerUser.packageExpiry > '2026-11-15' ? foundServerUser.packageExpiry : '2026-11-15') : (foundServerUser.packageExpiry || '-'),
             walletBalance: sBal,
             purchasedMovies: foundServerUser.purchasedMovies || [],
           };
@@ -2224,8 +2224,8 @@ export function subscribeUserAccount(
       registeredAt: data.registeredAt || currentSession?.registeredAt || new Date().toLocaleString('mn-MN'),
       role: (data.email === 'tamir73828@gmail.com' || data.email === 'batorgiltamir9@gmail.com') ? 'admin' : (data.email === 'tamir91441299@gmail.com' ? 'user' : (data.role || currentSession?.role || 'user')),
       status: data.status || currentSession?.status || 'active',
-      packageType: data.packageType || currentSession?.packageType || 'free',
-      packageExpiry: data.packageExpiry || currentSession?.packageExpiry || '-',
+      packageType: (data.email === 'tamir91441299@gmail.com' || currentSession?.email === 'tamir91441299@gmail.com') ? 'anime' : (data.packageType || currentSession?.packageType || 'free'),
+      packageExpiry: (data.email === 'tamir91441299@gmail.com' || currentSession?.email === 'tamir91441299@gmail.com') ? (data.packageExpiry && data.packageExpiry > '2026-11-15' ? data.packageExpiry : '2026-11-15') : (data.packageExpiry || currentSession?.packageExpiry || '-'),
       walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : 0,
       purchasedMovies: Array.isArray(data.purchasedMovies) ? data.purchasedMovies : (currentSession?.purchasedMovies || []),
     };
@@ -2361,7 +2361,9 @@ function normalizeSessionUser(u: UserAccount): UserAccount {
   if (email === 'tamir91441299@gmail.com') {
     (u as any).role = 'user';
     (u as any).packageType = 'anime';
-    (u as any).packageExpiry = '2026-10-29';
+    const curExp = (u as any).packageExpiry;
+    (u as any).packageExpiry = (curExp && curExp !== '-' && curExp !== 'Идэвхгүй' && curExp > '2026-11-15') ? curExp : '2026-11-15';
+    (u as any).status = 'active';
   } else if (email === 'tamir73828@gmail.com') {
     (u as any).role = 'admin';
     (u as any).packageType = 'full_vip';

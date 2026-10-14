@@ -60,7 +60,8 @@ export function normalizeUserPermissions(u: any): any {
   } else if (email === 'tamir91441299@gmail.com') {
     u.role = 'user';
     u.packageType = 'anime';
-    u.packageExpiry = '2026-10-29';
+    const curExp = u.packageExpiry && u.packageExpiry !== '-' && u.packageExpiry !== 'Идэвхгүй' ? u.packageExpiry : '2026-11-15';
+    u.packageExpiry = curExp < '2026-11-15' ? '2026-11-15' : curExp;
     u.status = 'active';
   }
   return u;
@@ -337,7 +338,7 @@ router.post('/register', async (req: Request, res: Response) => {
       role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (payload.role || existingUser?.role || 'user')),
       status: payload.status || existingUser?.status || 'active',
       packageType: cleanEmail === 'tamir73828@gmail.com' ? 'full_vip' : (cleanEmail === 'tamir91441299@gmail.com' ? 'anime' : resolvedPackage),
-      packageExpiry: cleanEmail === 'tamir73828@gmail.com' ? '2030-01-01' : (cleanEmail === 'tamir91441299@gmail.com' ? '2026-10-29' : resolvedExpiry),
+      packageExpiry: cleanEmail === 'tamir73828@gmail.com' ? '2030-01-01' : (cleanEmail === 'tamir91441299@gmail.com' ? '2026-11-15' : resolvedExpiry),
       walletBalance: resolvedBalance,
       isMockUser: false,
       updatedAt: new Date().toISOString(),
