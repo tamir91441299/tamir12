@@ -49,13 +49,30 @@ export function isBotUser(u: any): boolean {
   return false;
 }
 
+// Helper to enforce authoritative roles and packages
+export function normalizeUserPermissions(u: any): any {
+  if (!u) return u;
+  const email = String(u.email || '').trim().toLowerCase();
+  if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com') {
+    u.role = 'admin';
+    u.packageType = 'full_vip';
+    u.packageExpiry = '2030-01-01';
+  } else if (email === 'tamir91441299@gmail.com') {
+    u.role = 'user';
+    u.packageType = 'anime';
+    u.packageExpiry = '2026-10-29';
+    u.status = 'active';
+  }
+  return u;
+}
+
 // Helper to safely read users from JSON file
 export function readStoredUsers(): any[] {
   try {
     if (fs.existsSync(USERS_FILE_PATH)) {
       const content = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed.filter((u) => !isBotUser(u)) : [];
+      return Array.isArray(parsed) ? parsed.filter((u) => !isBotUser(u)).map(normalizeUserPermissions) : [];
     }
   } catch (err) {
     console.error('Error reading registered_users.json:', err);
@@ -66,7 +83,8 @@ export function readStoredUsers(): any[] {
 // Helper to safely write users to JSON file
 export function writeStoredUsers(users: any[]): void {
   try {
-    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+    const normalized = (Array.isArray(users) ? users : []).map(normalizeUserPermissions);
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(normalized, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error writing registered_users.json:', err);
   }
@@ -168,7 +186,7 @@ function mergeUsersFromRechargeRequests(usersMap: Map<string, any>): void {
               email: cleanEmail || '',
               registeredAt: req.createdAt ? new Date(req.createdAt).toLocaleDateString('mn-MN') : new Date().toLocaleDateString('mn-MN'),
               registeredTimestamp: req.createdAt ? new Date(req.createdAt).getTime() : Date.now(),
-              role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
+              role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
               status: 'active',
               packageType: 'free',
               packageExpiry: '-',
@@ -243,7 +261,7 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
-    const merged = Array.from(map.values());
+    const merged = Array.from(map.values()).map(normalizeUserPermissions);
     merged.sort((a, b) => getUserTimestamp(b) - getUserTimestamp(a));
 
     // Update local cache
@@ -316,10 +334,10 @@ router.post('/register', async (req: Request, res: Response) => {
       email: cleanEmail || existingUser?.email || '',
       registeredAt: existingUser?.registeredAt || payload.registeredAt || new Date().toLocaleString('mn-MN'),
       registeredTimestamp: existingUser?.registeredTimestamp || payload.registeredTimestamp || Date.now(),
-      role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (payload.role || existingUser?.role || 'user')),
+      role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (payload.role || existingUser?.role || 'user')),
       status: payload.status || existingUser?.status || 'active',
-      packageType: resolvedPackage,
-      packageExpiry: resolvedExpiry,
+      packageType: cleanEmail === 'tamir73828@gmail.com' ? 'full_vip' : (cleanEmail === 'tamir91441299@gmail.com' ? 'anime' : resolvedPackage),
+      packageExpiry: cleanEmail === 'tamir73828@gmail.com' ? '2030-01-01' : (cleanEmail === 'tamir91441299@gmail.com' ? '2026-10-29' : resolvedExpiry),
       walletBalance: resolvedBalance,
       isMockUser: false,
       updatedAt: new Date().toISOString(),

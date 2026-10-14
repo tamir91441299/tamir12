@@ -369,6 +369,9 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       resolvedName = baseObj.name;
     }
 
+    const isTamir73828Admin = resolvedEmail === 'tamir73828@gmail.com' || resolvedEmail === 'batorgiltamir9@gmail.com';
+    const isTamir9144User = resolvedEmail === 'tamir91441299@gmail.com';
+
     const merged: UserDetail = {
       ...baseObj,
       ...u,
@@ -377,9 +380,9 @@ export function deduplicateUserList(users: UserDetail[]): UserDetail[] {
       phone: resolvedPhone,
       name: resolvedName,
       walletBalance: resolvedBalance,
-      packageType: resolvedPackage as any,
-      packageExpiry: resolvedExpiry,
-      role: (resolvedEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (resolvedEmail === 'tamir91441299@gmail.com' ? 'user' : (u.role || baseObj?.role || 'user')),
+      packageType: (isTamir73828Admin ? 'full_vip' : (isTamir9144User ? 'anime' : (resolvedPackage as any))),
+      packageExpiry: isTamir73828Admin ? '2030-01-01' : (isTamir9144User ? '2026-10-29' : resolvedExpiry),
+      role: isTamir73828Admin ? 'admin' : (isTamir9144User ? 'user' : (u.role || baseObj?.role || 'user')),
       status: u.status || baseObj?.status || 'active',
       registeredAt: u.registeredAt || baseObj?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       registeredTimestamp: parsedTimestamp,
@@ -816,7 +819,7 @@ export async function approveAndCreditRechargeRequest(
     baseDate.setDate(baseDate.getDate() + durationDays);
     const expiryStr = baseDate.toISOString().split('T')[0];
 
-    const resolvedRole = (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (targetUser?.role || 'user'));
+    const resolvedRole = (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : (targetUser?.role || 'user'));
     const resolvedPackage = targetUser?.packageType === 'full_vip' ? 'full_vip' : 'anime';
     const primaryId = rawUserId || targetUser?.id || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
 
@@ -1405,7 +1408,7 @@ export async function saveUserToFirestore(
       phone: cleanPhone || existingRecord?.phone || '',
       registeredAt: user.registeredAt || existingRecord?.registeredAt || new Date().toLocaleString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       registeredTimestamp: (user as UserDetail).registeredTimestamp || existingRecord?.registeredTimestamp || nowTimestamp,
-      role: (cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : ((user as UserDetail).role || existingRecord?.role || 'user')),
+      role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : (cleanEmail === 'tamir91441299@gmail.com' ? 'user' : ((user as UserDetail).role || existingRecord?.role || 'user')),
       status: (user as UserDetail).status || existingRecord?.status || 'active',
       packageType: resolvedPackage,
       packageExpiry: resolvedExpiry,
@@ -1538,7 +1541,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
             phone: u.phone || '',
             registeredAt: u.registeredAt || new Date().toLocaleString('mn-MN'),
             registeredTimestamp: u.registeredTimestamp || Date.now(),
-            role: (u.email === 'batorgiltamir9@gmail.com') ? 'admin' : (u.email === 'tamir91441299@gmail.com' ? 'user' : (u.role || 'user')),
+            role: (u.email === 'tamir73828@gmail.com' || u.email === 'batorgiltamir9@gmail.com') ? 'admin' : (u.email === 'tamir91441299@gmail.com' ? 'user' : (u.role || 'user')),
             status: u.status || 'active',
             packageType: u.packageType || 'free',
             packageExpiry: u.packageExpiry || 'Идэвхгүй',
@@ -2073,7 +2076,7 @@ export async function authenticateUserCredentials(
             phone: foundServerUser.phone || (isPhone ? cleanPhone : ''),
             registeredAt: foundServerUser.registeredAt || new Date().toLocaleDateString('mn-MN'),
             registeredTimestamp: foundServerUser.registeredTimestamp || Date.now(),
-            role: (foundServerUser.email === 'batorgiltamir9@gmail.com') ? 'admin' : (foundServerUser.email === 'tamir91441299@gmail.com' ? 'user' : (foundServerUser.role || 'user')),
+            role: (foundServerUser.email === 'tamir73828@gmail.com' || foundServerUser.email === 'batorgiltamir9@gmail.com') ? 'admin' : (foundServerUser.email === 'tamir91441299@gmail.com' ? 'user' : (foundServerUser.role || 'user')),
             status: foundServerUser.status || 'active',
             packageType: foundServerUser.packageType || 'free',
             packageExpiry: foundServerUser.packageExpiry || '-',
@@ -2219,7 +2222,7 @@ export function subscribeUserAccount(
       email: data.email || currentSession?.email || (cleanPhone ? `${cleanPhone}@flicknime.mn` : ''),
       phone: data.phone || currentSession?.phone || cleanPhone,
       registeredAt: data.registeredAt || currentSession?.registeredAt || new Date().toLocaleString('mn-MN'),
-      role: (data.email === 'batorgiltamir9@gmail.com') ? 'admin' : (data.email === 'tamir91441299@gmail.com' ? 'user' : (data.role || currentSession?.role || 'user')),
+      role: (data.email === 'tamir73828@gmail.com' || data.email === 'batorgiltamir9@gmail.com') ? 'admin' : (data.email === 'tamir91441299@gmail.com' ? 'user' : (data.role || currentSession?.role || 'user')),
       status: data.status || currentSession?.status || 'active',
       packageType: data.packageType || currentSession?.packageType || 'free',
       packageExpiry: data.packageExpiry || currentSession?.packageExpiry || '-',
@@ -2353,6 +2356,20 @@ export function subscribeUserAccount(
   };
 }
 
+function normalizeSessionUser(u: UserAccount): UserAccount {
+  const email = (u.email || '').trim().toLowerCase();
+  if (email === 'tamir91441299@gmail.com') {
+    (u as any).role = 'user';
+    (u as any).packageType = 'anime';
+    (u as any).packageExpiry = '2026-10-29';
+  } else if (email === 'tamir73828@gmail.com') {
+    (u as any).role = 'admin';
+    (u as any).packageType = 'full_vip';
+    (u as any).packageExpiry = '2030-01-01';
+  }
+  return u;
+}
+
 /**
  * Get active user session with deep fallback for 100% persistent login
  */
@@ -2363,7 +2380,7 @@ export function getPersistedActiveSession(): UserAccount | null {
     if (primary) {
       const parsed = JSON.parse(primary);
       if (parsed && (parsed.email || parsed.phone || parsed.id)) {
-        return parsed;
+        return normalizeSessionUser(parsed);
       }
     }
 
@@ -2372,7 +2389,7 @@ export function getPersistedActiveSession(): UserAccount | null {
     if (backup) {
       const parsed = JSON.parse(backup);
       if (parsed && (parsed.email || parsed.phone || parsed.id)) {
-        return parsed;
+        return normalizeSessionUser(parsed);
       }
     }
 
@@ -2381,7 +2398,7 @@ export function getPersistedActiveSession(): UserAccount | null {
     if (remembered) {
       const parsed = JSON.parse(remembered);
       if (parsed && (parsed.email || parsed.phone || parsed.id)) {
-        return parsed;
+        return normalizeSessionUser(parsed);
       }
     }
   } catch (e) {
@@ -2464,7 +2481,7 @@ export function getUserMemberCode(user: Partial<UserAccount> | null | undefined)
   }
 
   // Admin user
-  if (email === 'batorgiltamir9@gmail.com') {
+  if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com') {
     return '163462';
   }
 

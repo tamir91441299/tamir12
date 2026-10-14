@@ -3,21 +3,20 @@ import { SAMPLE_MOVIES } from '../../src/data/movies.js';
 
 const router = Router();
 
-const ADMIN_EMAIL = 'batorgiltamir9@gmail.com';
+const ADMIN_EMAILS = ['tamir73828@gmail.com', 'batorgiltamir9@gmail.com'];
 
 // Middleware to strictly enforce that only the master admin can add/upload/edit videos
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const adminEmailHeader = req.headers['x-admin-email'];
-  const authHeader = req.headers['authorization'];
+  const adminEmailHeader = String(req.headers['x-admin-email'] || '').trim().toLowerCase();
+  const authHeader = String(req.headers['authorization'] || '').toLowerCase();
 
   const isAuthorized = 
-    adminEmailHeader === ADMIN_EMAIL ||
-    (typeof authHeader === 'string' && authHeader.includes(ADMIN_EMAIL));
+    ADMIN_EMAILS.some((adm) => adminEmailHeader === adm || authHeader.includes(adm));
 
   if (!isAuthorized) {
     return res.status(403).json({
       success: false,
-      error: '⛔ Хандалт хориглогдсон: Энэ сайтын админаас (batorgiltamir9@gmail.com) өөр хүн видео болон кино оруулах эрхгүй!',
+      error: '⛔ Хандалт хориглогдсон: Энэ сайтын админаас өөр хүн видео болон кино оруулах эрхгүй!',
     });
   }
 

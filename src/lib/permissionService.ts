@@ -11,13 +11,13 @@ export function isAdminUser(user: UserAccount | null | undefined): boolean {
   const email = (user.email || '').trim().toLowerCase();
   const role = (user as any).role;
 
-  // Explicitly: tamir91441299@gmail.com is NOT an admin
+  // Explicitly: tamir91441299@gmail.com is NOT an admin (regular user with 15-day anime package)
   if (email === 'tamir91441299@gmail.com') {
     return false;
   }
 
-  // Master admins: batorgiltamir9@gmail.com, admin@ioio.mn
-  if (email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
+  // Master admins: tamir73828@gmail.com, batorgiltamir9@gmail.com, admin@ioio.mn
+  if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
     return true;
   }
 

@@ -71,7 +71,7 @@ export const SecurityShieldModal: React.FC<SecurityShieldModalProps> = ({
           <p className="text-xs sm:text-sm text-zinc-300 font-medium leading-relaxed pt-1">
             Энэхүү платформ дээрх кино, анимэ контент болон дүрслэлийг хамгаалах үүднээс <strong className="text-rose-400">зураг дарах (Screenshot)</strong> болон <strong className="text-rose-400">видео бичлэг хийхийг</strong> бүрэн хориглосон байна.{' '}
             <span className="block mt-1 font-bold text-amber-300">
-              👑 Зөвхөн админ (batorgiltamir9@gmail.com) эдгээрийг хийх эрхтэй.
+              👑 Зөвхөн админ (tamir73828@gmail.com) эдгээрийг хийх эрхтэй.
             </span>
           </p>
         </div>

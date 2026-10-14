@@ -39,7 +39,7 @@
     },
     "Movie": {
       "title": "Movie",
-      "description": "Movie and Anime records. Only admin Tamir (tamir91441299@gmail.com) is permitted to upload, create or modify video content.",
+      "description": "Movie and Anime records. Only admin Tamir (tamir73828@gmail.com) is permitted to upload, create or modify video content.",
       "type": "object",
       "properties": {
         "title": {

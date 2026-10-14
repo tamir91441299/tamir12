@@ -264,7 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         const finalEmail = cleanEmail || `${cleanPhone || cleanCustomId}@flicknime.mn`;
-        const newUserRole = (finalEmail.toLowerCase() === 'batorgiltamir9@gmail.com') ? ('admin' as const) : ('user' as const);
+        const newUserRole = (finalEmail.toLowerCase() === 'tamir73828@gmail.com' || finalEmail.toLowerCase() === 'batorgiltamir9@gmail.com') ? ('admin' as const) : ('user' as const);
         const now = new Date();
         const formattedRegisteredAt = `${now.toLocaleDateString('mn-MN')} ${now.toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' })}`;
         const nowTimestamp = now.getTime();

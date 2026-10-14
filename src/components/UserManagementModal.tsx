@@ -100,7 +100,7 @@ import { isFirestoreQuotaExceeded, FIRESTORE_UPGRADE_URL, resetFirestoreQuotaFla
 const maskPhoneNumber = (phone?: string, email?: string): string => {
   if (!phone) return '';
   const clean = phone.trim().replace(/\s+/g, '');
-  if (clean === '91441299' || email === 'batorgiltamir9@gmail.com' || email === 'tamir91441299@gmail.com') {
+  if (clean === '91441299' || email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com' || email === 'tamir91441299@gmail.com') {
     return '91••••99';
   }
   return phone;
@@ -162,7 +162,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (currentUser && !isBotOrMockUser(currentUser)) {
       rawList.unshift({
         ...currentUser,
-        role: (currentUser.email === 'batorgiltamir9@gmail.com' || (currentUser.role === 'admin' && currentUser.email !== 'tamir91441299@gmail.com')) ? 'admin' : 'user',
+        role: (currentUser.email === 'tamir73828@gmail.com' || currentUser.email === 'batorgiltamir9@gmail.com' || (currentUser.role === 'admin' && currentUser.email !== 'tamir91441299@gmail.com')) ? 'admin' : 'user',
         status: 'active',
         packageType: currentUser.packageType || 'free',
         packageExpiry: currentUser.packageExpiry || '-',
@@ -927,7 +927,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const isUserNew = (u: UserDetail): boolean => {
     if (u.isMockUser) return false;
-    if (u.email === 'batorgiltamir9@gmail.com' || (u.role === 'admin' && u.email !== 'tamir91441299@gmail.com')) return false;
+    if (u.email === 'tamir73828@gmail.com' || u.email === 'batorgiltamir9@gmail.com' || (u.role === 'admin' && u.email !== 'tamir91441299@gmail.com')) return false;
     // Any real registered user is recognized as a new registration
     return !u.isMockUser;
   };
@@ -979,7 +979,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             ...u,
             packageType: 'free' as const,
             packageExpiry: '-',
-            role: (u.email === 'batorgiltamir9@gmail.com' ? ('admin' as const) : ('user' as const)),
+            role: (u.email === 'tamir73828@gmail.com' || u.email === 'batorgiltamir9@gmail.com' ? ('admin' as const) : ('user' as const)),
           }
         : u
     );
@@ -1335,7 +1335,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           ...idSearchResult,
           packageType: 'free',
           packageExpiry: '-',
-          role: idSearchResult.email === 'batorgiltamir9@gmail.com' ? 'admin' : 'user',
+          role: (idSearchResult.email === 'tamir73828@gmail.com' || idSearchResult.email === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
         };
         const updatedList = users.map((u) => (u.id === idSearchResult.id ? updated : u));
         saveUsersState(updatedList);

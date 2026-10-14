@@ -459,7 +459,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     // Check if non-admin tries to post a URL/link or video file in comments
     const containsUrl = /(https?:\/\/|www\.|youtu\.be|youtube\.com|drive\.google\.com|facebook\.com|fb\.watch|vimeo\.com|bilibili|dailymotion|\.mp4|\.m3u8|\.webm|\.avi|\.mov|<iframe|<video)/i.test(newCommentText);
     if (containsUrl && !isAdmin) {
-      alert('⚠️ Хориглогдсон: Энэ сайт дээр админаас (batorgiltamir9@gmail.com) өөр хүн видео болон холбоос оруулах боломжгүй! Видео болон ангийн линк оруулах эрх зөвхөн админд бий.');
+      alert('⚠️ Хориглогдсон: Энэ сайт дээр админаас (tamir73828@gmail.com) өөр хүн видео болон холбоос оруулах боломжгүй! Видео болон ангийн линк оруулах эрх зөвхөн админд бий.');
       return;
     }
 

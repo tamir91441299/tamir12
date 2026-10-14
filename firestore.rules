@@ -3,7 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isMasterAdmin() {
-      return request.auth != null && request.auth.token.email == 'tamir91441299@gmail.com';
+      return request.auth != null && (
+        request.auth.token.email == 'tamir73828@gmail.com' ||
+        request.auth.token.email == 'batorgiltamir9@gmail.com'
+      );
     }
 
     // Users collection

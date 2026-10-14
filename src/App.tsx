@@ -370,7 +370,7 @@ export default function App() {
   }, [currentUser?.id, currentUser?.phone, currentUser?.email]);
 
   const [securityModalReason, setSecurityModalReason] = useState<string>(
-    'Сайт дотор зураг дарах, видео хийх болон эх код харахыг хориглосон байна. Зөвхөн админ (batorgiltamir9@gmail.com) хийх эрхтэй.'
+    'Сайт дотор зураг дарах, видео хийх болон эх код харахыг хориглосон байна. Зөвхөн админ (tamir73828@gmail.com) хийх эрхтэй.'
   );
 
   // Security Guard: Blocks screenshots, screen recording, F12 & devtools for non-admins
