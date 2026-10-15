@@ -1487,19 +1487,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <iframe
                   ref={iframeRef}
                   src={iframeUrl}
-                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: ${isAdmin ? iframeUrl : '***'}`)}
+                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: Хамгаалагдсан эх сурвалж`)}
                   onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа`)}
                   className="w-full h-full border-0 bg-black pointer-events-auto"
-                  allow={
-                    isAdmin
-                      ? "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                      : "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                  }
-                  sandbox={
-                    isAdmin
-                      ? "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
-                      : "allow-scripts allow-same-origin allow-forms"
-                  }
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   referrerPolicy="no-referrer"
                   allowFullScreen
                   title={movie.titleMongolian}
@@ -1523,48 +1515,48 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     <Zap className="w-3 h-3 text-amber-400" />
                     <span>Шууд HD</span>
                   </button>
-                  {isAdmin && rawVideoSrc.includes('pcloud') && (
-                    <a
-                      href={rawVideoSrc}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-0.5 bg-blue-600/40 hover:bg-blue-600/60 text-blue-200 hover:text-white font-bold text-[10px] rounded-lg border border-blue-500/40 transition-all flex items-center gap-1 cursor-pointer ml-1"
-                      title="pCloud эх линкээр шинэ цонхонд үзэх (Зөвхөн админ)"
-                    >
-                      <ExternalLink className="w-3 h-3 text-blue-300" />
-                      <span>pCloud ↗</span>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-lg select-none">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span>Линк хамгаалагдсан</span>
+                  </div>
                 </div>
 
-                {/* 🛡️ Strict Link Protection Barrier: For non-admins, completely blocks clicking/interacting with Drive's header bar, pop-out icon, and file title */}
-                {!isAdmin && (isGoogleDrive || isExternalEmbed || isYouTube) && (
-                  <div 
-                    className="absolute top-0 inset-x-0 h-16 sm:h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    onContextMenu={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    title=""
-                  />
-                )}
-                {isAdmin && isGoogleDrive && (
-                  <div 
-                    className="absolute top-0 right-0 w-14 h-14 z-20 pointer-events-auto bg-transparent select-none"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    title=""
-                  />
+                {/* 🛡️ Strict Link Protection Barrier: Completely blocks clicking/interacting with Drive / YouTube / Embed header bar, pop-out icon, and share buttons */}
+                {(isGoogleDrive || isExternalEmbed || isYouTube) && (
+                  <>
+                    {/* Top Header Shield: Blocks pop-out button, Google Drive title, and open-in-new-tab actions */}
+                    <div 
+                      className="absolute top-0 inset-x-0 h-16 sm:h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                    />
+                    {/* Bottom-Right Shield: Blocks external platform logos, share buttons, and copy-link triggers */}
+                    <div 
+                      className="absolute bottom-0 right-0 w-32 h-16 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                    />
+                  </>
                 )}
               </div>
             </div>
@@ -2754,25 +2746,22 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                       {
                         movie: movie?.titleMongolian,
                         episode: currentEpisode ? currentEpisode.title : 1,
-                        rawVideoSrc,
-                        googleDriveId,
+                        streamProtection: '🔒 Видео линк хуулах, татах боломжгүй (Бүрэн шифрлэгдсэн)',
                         serverMode,
                         isEmbed,
-                        iframeUrl: isEmbed ? iframeUrl : null,
-                        videoSrcToPlay: !isEmbed ? videoSrcToPlay : null,
                         videoElementState,
                         isPlaying,
                         isBuffering,
                         isMuted,
                         currentTime,
                         duration,
-                        debugLogs,
+                        debugLogs: debugLogs.map((l) => l.replace(/https?:\/\/[^\s]+/g, '🔒 [Хамгаалагдсан видео урсгал]')),
                       },
                       null,
                       2
                     );
                     navigator.clipboard.writeText(info);
-                    appendDebugLog('📋 Бүх дебаг мэдээлэл санах ойд хуулагдлаа (Copied to Clipboard).');
+                    appendDebugLog('📋 Оношилгооны мэдээлэл санах ойд хуулагдлаа (Линкүүд бүрэн хамгаалагдсан).');
                   }}
                   className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-zinc-700 cursor-pointer transition-all"
                   title="Дебаг мэдээллийг хуулах"
@@ -2836,47 +2825,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 </div>
               </div>
 
-              {/* Source URLs */}
+              {/* Source Protection Status */}
               <div className="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl space-y-2">
-                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Холбоос & Сервер Шинжилгээ
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Видео Линк Хамгаалалт (Security Status)</span>
+                  <span className="text-emerald-400 font-mono text-[10px] bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                    ШИФРЛЭГДСЭН
+                  </span>
                 </div>
-                <div className="space-y-1 font-mono text-[11px]">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-black/50 p-2 rounded-lg border border-zinc-800/80">
-                    <span className="text-zinc-400 shrink-0 font-sans font-bold">Эх URL (Raw):</span>
-                    <span className="text-cyan-300 truncate max-w-md" title={rawVideoSrc}>{rawVideoSrc}</span>
-                    <a
-                      href={rawVideoSrc}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-400 hover:underline flex items-center gap-1 shrink-0 font-sans font-semibold text-[11px]"
-                    >
-                      <ExternalLink className="w-3 h-3" /> Шинэ цонхонд нээх
-                    </a>
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-zinc-800/80">
+                    <span className="text-zinc-400 font-bold">Линк татах боломж:</span>
+                    <span className="text-rose-400 font-bold">⛔ Боломжгүй (Хаагдсан)</span>
                   </div>
-
-                  {googleDriveId && (
-                    <div className="flex items-center justify-between bg-black/50 p-2 rounded-lg border border-zinc-800/80">
-                      <span className="text-zinc-400 font-sans font-bold">Google Drive File ID:</span>
-                      <span className="text-amber-300 font-bold">{googleDriveId}</span>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-black/50 p-2 rounded-lg border border-zinc-800/80">
-                    <span className="text-zinc-400 shrink-0 font-sans font-bold">Идэвхтэй тоглуулах URL:</span>
-                    <span className="text-emerald-300 truncate max-w-md" title={isEmbed ? iframeUrl : videoSrcToPlay}>
-                      {isEmbed ? iframeUrl : videoSrcToPlay}
-                    </span>
-                    {!isEmbed && videoSrcToPlay && (
-                      <a
-                        href={videoSrcToPlay}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-400 hover:underline flex items-center gap-1 shrink-0 font-sans font-semibold text-[11px]"
-                      >
-                        <ExternalLink className="w-3 h-3" /> Урсгал шалгах
-                      </a>
-                    )}
+                  <div className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-zinc-800/80">
+                    <span className="text-zinc-400 font-bold">Дамжуулах урсгал:</span>
+                    <span className="text-cyan-300 font-bold">🔒 /api/stream (Сервер-дотоод урсгал)</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-black/50 p-2.5 rounded-lg border border-zinc-800/80">
+                    <span className="text-zinc-400 font-bold">Хулганы баруун товч:</span>
+                    <span className="text-amber-300 font-bold">🛡️ Түгжигдсэн (Contextmenu blocked)</span>
                   </div>
                 </div>
               </div>

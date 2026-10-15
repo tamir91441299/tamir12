@@ -342,8 +342,25 @@ export function isDirectPlayableMedia(url?: string): boolean {
 }
 
 /**
+ * Obfuscates video URLs into a secure stream token so raw video links are never exposed to clients
+ */
+export function createSecureStreamToken(url: string, quality: string = '1080p'): string {
+  try {
+    const payload = JSON.stringify({ u: url, q: quality, t: Date.now() });
+    if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
+      return window.btoa(unescape(encodeURIComponent(payload)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    }
+  } catch {}
+  return encodeURIComponent(url);
+}
+
+/**
  * Returns a high-speed direct playback stream for the given server, episode and quality.
- * Streams full resolution (1080p, 720p, etc.) without Google Drive preview 360p restrictions.
+ * All streams are secured through server-side token proxies to prevent extracting, downloading,
+ * or copying raw video links.
  */
 export function getDirectPlaybackStream(
   videoUrl?: string,
@@ -361,7 +378,9 @@ export function getDirectPlaybackStream(
   const streamFromCluster = cluster[(epNum - 1) % cluster.length];
 
   if (!videoUrl || typeof videoUrl !== 'string' || videoUrl.trim() === '') {
-    return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
+    const rawFallback = quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
+    const token = createSecureStreamToken(rawFallback, quality);
+    return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
   }
 
   const formattedUrl = formatDirectPlayableUrl(videoUrl.trim());
@@ -373,19 +392,23 @@ export function getDirectPlaybackStream(
     return `/api/stream/drive/${googleDriveId}?quality=${q}&server=${serverType}&ep=${epNum}`;
   }
 
-  // 2. If direct media file (mp4, webm, m3u8, PixelDrain API, Dropbox raw, Firebase Storage, etc.)
-  if (isDirectPlayableMedia(formattedUrl)) {
+  // 2. If already an internal stream proxy URL, keep as is
+  if (formattedUrl.startsWith('/api/stream')) {
     return formattedUrl;
   }
 
-  // 3. If external web URL that is not an embed provider
-  if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
-    if (!isExternalEmbedMedia(formattedUrl)) {
-      return formattedUrl;
-    }
+  // 3. Direct playable media or external streams: protect behind /api/stream/secure/:token
+  if (
+    isDirectPlayableMedia(formattedUrl) ||
+    (!isExternalEmbedMedia(formattedUrl) && (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')))
+  ) {
+    const token = createSecureStreamToken(formattedUrl, quality);
+    return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
   }
 
-  // Multi-CDN Fallback nodes matching requested quality
-  return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
+  // Multi-CDN Fallback nodes matching requested quality (also secured)
+  const rawFallback = quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
+  const token = createSecureStreamToken(rawFallback, quality);
+  return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
 }
 

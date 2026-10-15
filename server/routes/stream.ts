@@ -53,6 +53,29 @@ interface CachedStream {
 }
 const directUrlCache = new Map<string, CachedStream>();
 
+// Helper to decode secure stream token
+function decodeStreamToken(tokenStr: string): string | null {
+  try {
+    const raw = Buffer.from(tokenStr, "base64").toString("utf-8");
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      return raw;
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.u === "string" && (parsed.u.startsWith("http://") || parsed.u.startsWith("https://"))) {
+      return parsed.u;
+    }
+  } catch {
+    // If not json or base64, check if it's a URL-encoded string
+    try {
+      const decoded = decodeURIComponent(tokenStr);
+      if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
+        return decoded;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 // Middleware for CORS on all stream endpoints
 router.use("/api/stream", (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -193,15 +216,32 @@ router.get("/api/stream/drive/:fileId", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/api/stream/proxy", (req: Request, res: Response) => {
-  const videoUrl = req.query.url as string;
+router.get("/api/stream/secure/:token", (req: Request, res: Response) => {
+  const { token } = req.params;
   const quality = (req.query.quality as string) || "1080p";
-  if (!videoUrl) {
+  const targetUrl = decodeStreamToken(token);
+
+  if (!targetUrl) {
+    console.warn("⚠️ [Secure Stream] Invalid stream token, fallback provided.");
     res.redirect(302, getFallbackForQuality(quality, "default"));
     return;
   }
 
-  pipeStreamWithRange(videoUrl, req, res);
+  pipeStreamWithRange(targetUrl, req, res);
+});
+
+router.get("/api/stream/proxy", (req: Request, res: Response) => {
+  const token = req.query.token as string;
+  const directUrl = req.query.url as string;
+  const quality = (req.query.quality as string) || "1080p";
+
+  const targetUrl = token ? decodeStreamToken(token) : directUrl;
+  if (!targetUrl) {
+    res.redirect(302, getFallbackForQuality(quality, "default"));
+    return;
+  }
+
+  pipeStreamWithRange(targetUrl, req, res);
 });
 
 function pipeStreamWithRange(
@@ -291,11 +331,14 @@ function pipeStreamWithRange(
 
     const responseHeaders: Record<string, string | string[] | undefined> = {
       "Content-Type": contentType.includes("video") ? contentType : "video/mp4",
+      "Content-Disposition": "inline",
+      "X-Content-Type-Options": "nosniff",
+      "X-Download-Options": "noopen",
       "Accept-Ranges": "bytes",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Range, Origin, Content-Type, Accept",
       "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
-      "Cache-Control": "public, max-age=7200",
+      "Cache-Control": "private, no-cache, no-store, must-revalidate",
     };
 
     if (proxyRes.headers["content-length"]) {

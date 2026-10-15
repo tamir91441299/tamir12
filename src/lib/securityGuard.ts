@@ -196,6 +196,17 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
       }
     }
 
+    // Ctrl + J (Downloads)
+    if (isCtrlOrCmd && (e.key === 'j' || e.key === 'J' || e.keyCode === 74)) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (onViolation) {
+        onViolation('shortcut', 'Видео болон файлыг шууд татахыг хориглосон байна. Видео линк хамгаалагдсан.');
+      }
+      return false;
+    }
+
     // Ctrl + U / Cmd + U (View Page Source)
     if (isCtrlOrCmd && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
       e.preventDefault();
@@ -207,13 +218,13 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
       return false;
     }
 
-    // Ctrl + S / Cmd + S (Save Webpage)
+    // Ctrl + S / Cmd + S (Save Webpage or Media)
     if (isCtrlOrCmd && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
       if (onViolation) {
-        onViolation('shortcut', 'Хуудсыг санах ойд татаж хадгалахыг хориглосон байна.');
+        onViolation('shortcut', 'Видео болон хуудсыг татаж хадгалах боломжгүй болгосон байна.');
       }
       return false;
     }
@@ -249,7 +260,7 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
     e.preventDefault();
     e.stopPropagation();
     if (onViolation) {
-      onViolation('contextmenu', 'Зураг, видео болон контентыг хулганы баруун товчоор татахыг хориглосон байна.');
+      onViolation('contextmenu', 'Видеоны линк авах, татах болон хулганы баруун товч дарах боломжгүй болгосон байна.');
     }
     return false;
   };
@@ -259,6 +270,34 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'IMG' || target.tagName === 'VIDEO' || target.closest('img') || target.closest('video'))) {
       e.preventDefault();
+      return false;
+    }
+  };
+
+  // 3b. Intercept clipboard copy to prevent extracting video or stream URLs
+  const handleCopy = (e: ClipboardEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return;
+    }
+    const selection = window.getSelection()?.toString() || '';
+    if (
+      selection.includes('http') ||
+      selection.includes('stream') ||
+      selection.includes('drive.google') ||
+      selection.includes('.mp4') ||
+      selection.includes('.m3u8') ||
+      target?.closest('video') ||
+      target?.closest('#cinema-player-root') ||
+      target?.closest('#video-player-container')
+    ) {
+      e.preventDefault();
+      try {
+        e.clipboardData?.setData('text/plain', '🔒 Видео линк хуулах боломжгүй хамгаалагдсан.');
+      } catch {}
+      if (onViolation) {
+        onViolation('shortcut', 'Видео линк болон хамгаалагдсан файлыг хуулж авахыг хориглосон байна.');
+      }
       return false;
     }
   };
@@ -317,12 +356,14 @@ export function initSecurityGuard(options: SecurityGuardOptions): () => void {
   window.addEventListener('keydown', handleKeyDown, { capture: true });
   window.addEventListener('contextmenu', handleContextMenu, { capture: true });
   window.addEventListener('dragstart', handleDragStart, { capture: true });
+  window.addEventListener('copy', handleCopy, { capture: true });
 
   // Return teardown function
   return () => {
     window.removeEventListener('keydown', handleKeyDown, { capture: true });
     window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
     window.removeEventListener('dragstart', handleDragStart, { capture: true });
+    window.removeEventListener('copy', handleCopy, { capture: true });
 
     // Restore getDisplayMedia if modified
     try {
