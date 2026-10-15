@@ -39,7 +39,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  SkipBack
+  SkipBack,
+  MoreVertical,
+  ShieldAlert,
+  AlertTriangle
 } from 'lucide-react';
 import { Movie, Episode } from '../types';
 import { UserAccount } from './AuthModal';
@@ -189,6 +192,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [videoFitMode, setVideoFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [showDriveGuide, setShowDriveGuide] = useState<boolean>(false);
   const [drawerSearch, setDrawerSearch] = useState<string>('');
+  const [showProtectionNotice, setShowProtectionNotice] = useState<boolean>(false);
 
   const [showDebugPanel, setShowDebugPanel] = useState<boolean>(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -227,7 +231,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     appendDebugLog(`Google Drive ID: ${googleDriveId || 'Байхгүй'}`);
     appendDebugLog(`YouTube ID: ${extractYouTubeId(rawVideoSrc) || 'Байхгүй'}`);
     const currentProvider = isPCloud
-      ? 'pCloud Full HD (Линк хамгаалагдсан шууд тоглуулагч)'
+      ? 'pCloud (Линк хамгаалагдсан тоглуулагч)'
       : isGoogleDrive
       ? 'Google Drive'
       : isYouTube
@@ -236,7 +240,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       ? 'Filemoon'
       : serverMode === 'embed'
       ? 'Embed тоглуулагч'
-      : 'Шууд HD дамжуулалт (HTML5)';
+      : 'Үндсэн дамжуулалт (HTML5)';
     appendDebugLog(`Тоглуулах горим (Mode): ${currentProvider}`);
     appendDebugLog(`Сонгосон чанар (Quality): ${activeQualityOption.label} (${activeQualityOption.resolution})`);
     if (serverMode === 'embed') {
@@ -455,7 +459,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       setServerMode('direct');
     }
 
-    setQualityNotice(`✨ ${opt.label} (${opt.resolution}) Full HD шууд горимд шилжлээ`);
+    setQualityNotice(`✨ ${opt.label} (${opt.resolution}) горимд шилжлээ`);
     setTimeout(() => {
       setQualityNotice(null);
     }, 2400);
@@ -1042,7 +1046,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   FlickNime
                 </span>
                 <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase">
-                  HD Cinema
+                  Cinema
                 </span>
               </div>
             </div>
@@ -1059,12 +1063,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 {currentEpisode ? (
                   <p className="text-[11px] sm:text-xs text-cyan-400 font-bold truncate flex items-center gap-1">
                     <Tv className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{currentEpisode.title} • 1080p Full HD</span>
+                    <span className="truncate">{currentEpisode.title}</span>
                   </p>
                 ) : (
                   <p className="text-[11px] sm:text-xs text-emerald-400 font-bold flex items-center gap-1 truncate">
                     <Sparkles className="w-3 h-3 shrink-0" />
-                    <span>Шууд тоглуулагч • 1080p Full HD</span>
+                    <span>Үндсэн тоглуулагч</span>
                   </p>
                 )}
               </div>
@@ -1229,10 +1233,10 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Шууд тоглуулагч: HTML5 тоглуулагч"
+                title="HTML5 тоглуулагч"
               >
                 <Zap className="w-3 h-3" />
-                <span>Шууд HD</span>
+                <span>HTML5</span>
               </button>
             </div>
 
@@ -1330,6 +1334,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 <span className="hidden sm:inline">Дебаг</span>
               </button>
             )}
+
+            {/* 3-Dots Notice / Warning Button */}
+            <button
+              type="button"
+              id="top-more-options-btn"
+              onClick={() => setShowProtectionNotice(true)}
+              className="flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-amber-400 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-amber-500/30 active:scale-95 shadow-md shadow-amber-500/10"
+              title="3 цэг: Системийн анхааруулга & Хамгаалалт"
+            >
+              <MoreVertical className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline text-zinc-300">Анхааруулга</span>
+            </button>
 
             {/* Fullscreen Quick Button */}
             <button
@@ -1503,36 +1519,31 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   title={movie.titleMongolian}
                 />
 
-                {/* ✨ Authentic High-Definition Master Quality Status Badge */}
-                <div className="absolute top-3 left-3 sm:left-4 z-40 flex items-center gap-2 bg-black/85 backdrop-blur-md border border-cyan-500/40 rounded-xl px-3 py-1.5 shadow-2xl animate-in fade-in duration-300">
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                  </span>
-                  <span className="text-[11px] font-bold text-cyan-300">
-                    ✨ Анхны эх чанар • Full HD (1080p/720p)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleServerChange('direct')}
-                    className="px-2.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold text-[10px] rounded-lg border border-zinc-600 transition-all flex items-center gap-1 active:scale-95 cursor-pointer ml-1"
-                    title="Шууд HTML5 тоглуулагч руу шилжих"
-                  >
-                    <Zap className="w-3 h-3 text-amber-400" />
-                    <span>Шууд HD</span>
-                  </button>
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-lg select-none">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                    <span>Линк хамгаалагдсан</span>
-                  </div>
-                </div>
-
                 {/* 🛡️ Strict Link Protection Barrier: Completely blocks clicking/interacting with Drive / YouTube / Embed header bar, pop-out icon, and share buttons */}
                 {(isGoogleDrive || isExternalEmbed || isYouTube) && (
                   <>
-                    {/* Top Header Shield: Blocks pop-out button, player headers, and open-in-new-tab/copy-link actions */}
+                    {/* Top-Right 3-Dots & Pop-out Zone Shield: Clicking here triggers the Warning notice! */}
                     <div 
-                      className="absolute top-0 inset-x-0 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      className="absolute top-0 right-0 w-48 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-pointer"
+                      title="3 цэг / Анхааруулга"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setShowProtectionNotice(true);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setShowProtectionNotice(true);
+                      }}
+                    />
+                    {/* Rest of Top Header Shield: Blocks pop-out button, player headers, and title actions */}
+                    <div 
+                      className="absolute top-0 left-0 right-48 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-default"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -2109,11 +2120,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
                 {/* Right Controls */}
                 <div className="flex items-center gap-1 sm:gap-2 justify-end shrink-0">
-                  {/* HD Badge Indicator */}
-                  <div className="flex items-center gap-1 bg-zinc-900/90 border border-cyan-500/40 text-cyan-300 px-2 sm:px-2.5 py-1 rounded-xl shadow-lg backdrop-blur-sm text-[10px] sm:text-xs font-black">
-                    <span>⚡</span>
-                    <span>HD 1080P</span>
-                  </div>
+                  {/* 3-Dots Warning & Security Notice Button */}
+                  <button
+                    type="button"
+                    id="player-more-dots-btn"
+                    onClick={() => {
+                      setShowProtectionNotice(true);
+                      resetControlsTimer();
+                    }}
+                    className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 text-amber-400 border border-amber-500/40 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-md shadow-amber-500/10"
+                    title="3 цэг: Анхааруулга & Хамгаалалтын санамж"
+                  >
+                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                  </button>
 
                   {/* Quick Brightness Booster cycle */}
                   <button
@@ -2501,7 +2520,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                               }`}
                             >
                               <Zap className="w-3.5 h-3.5" />
-                              <span>Шууд 1080p HD</span>
+                              <span>HTML5 тоглуулагч</span>
                             </button>
                             <button
                               type="button"
@@ -2940,6 +2959,73 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 Хаах
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚠️ Хамгаалалт ба 3 цэгийн анхааруулга модал (Security & Copyright Notice Modal) */}
+      {showProtectionNotice && (
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 select-none"
+          onClick={() => setShowProtectionNotice(false)}
+        >
+          <div 
+            className="relative w-full max-w-md bg-gradient-to-b from-[#181a24] to-[#0c0d12] border border-amber-500/40 rounded-3xl p-6 shadow-2xl text-white text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Close Icon */}
+            <button
+              type="button"
+              onClick={() => setShowProtectionNotice(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              title="Хаах"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Glowing Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
+              <ShieldAlert className="w-8 h-8 text-amber-400" />
+            </div>
+
+            {/* Pill Tag */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-black tracking-wider uppercase mb-3">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <span>СИСТЕМИЙН АНХААРУУЛГА</span>
+            </div>
+
+            <h3 className="text-lg font-black text-white mb-2">
+              Контентын хамгаалалт ба Зохиогчийн эрх
+            </h3>
+
+            <div className="text-xs text-zinc-300 space-y-2.5 text-left bg-black/50 p-4 rounded-2xl border border-white/10 mb-5 leading-relaxed">
+              <div className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                <p>
+                  <strong className="text-amber-300">Видео татах хориотой:</strong> Энэхүү видео нь FlickNime-ийн шифрлэгдсэн системээр хамгаалагдсан тул файлыг гадагш татах, эх линкийг хуулбарлах боломжгүй.
+                </p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                <p>
+                  <strong className="text-amber-300">3 цэгийн цэс түгжигдсэн:</strong> Хууль бусаар бичлэг хуулах, татахаас сэргийлж 3 цэгэн цэс болон нэмэлт сонголтууд хамгаалалтын дагуу хязгаарлагдсан байна.
+                </p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                <p>
+                  <strong className="text-cyan-300">Шууд үзэх:</strong> Та систем дотроос бүх ангийг тасалдалгүй, найдвартай үзэх боломжтой.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowProtectionNotice(false)}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-sm shadow-lg shadow-amber-500/25 transition-all cursor-pointer active:scale-95"
+            >
+              Ойлголоо, үзэхээ үргэлжлүүлэх
+            </button>
           </div>
         </div>
       )}
