@@ -18,11 +18,11 @@ export function formatHaikyuS2DriveLink(driveIdOrUrl: string): string {
  * 🏐 ХАЙКЬЮ!! 2-Р БҮЛЭГ (HAIKYU!! SEASON 2) - 1-ЭЭС 25 ХҮРТЭЛХ АНГИУД
  */
 export const HAIKYU_S2_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1haikyu_s2_ep1/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1haikyu_s2_ep2/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1haikyu_s2_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1haikyu_s2_ep4/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1haikyu_s2_ep5/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZLbEmJZ4q6XqtFwOcpnWQzV14lpXX0QumHV',
+  2: 'https://u.pcloud.link/publink/show?code=XZ4bEmJZFNHLvS0JRLJyYS4wEYXaqhTYtu7V',
+  3: 'https://u.pcloud.link/publink/show?code=XZYbEmJZLnXXt3gKaMzVbEUPIWMUrL5cvASy',
+  4: 'https://u.pcloud.link/publink/show?code=XZmbEmJZe4toNl8zCWS7OMziq6LAJu3V0Jik',
+  5: 'https://u.pcloud.link/publink/show?code=XZTbEmJZ4UMpjCkFtxS8mSAkrxwjNpOzdWGy',
   6: 'https://drive.google.com/file/d/1haikyu_s2_ep6/view?usp=drivesdk',
   7: 'https://drive.google.com/file/d/1haikyu_s2_ep7/view?usp=drivesdk',
   8: 'https://drive.google.com/file/d/1haikyu_s2_ep8/view?usp=drivesdk',

@@ -489,6 +489,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Server switch handler
   const handleServerChange = (mode: ServerMode) => {
+    if (isPCloud && mode === 'embed') {
+      setQualityNotice('🛡️ pCloud эх сурвалж шифрлэгдсэн тоглуулагчаар түгжигдсэн');
+      setTimeout(() => setQualityNotice(null), 2500);
+      return;
+    }
     serverModeRef.current = mode;
     setServerMode(mode);
     setIsPlaying(true);
@@ -1211,34 +1216,44 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             })()}
 
             {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
-            <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
-              <button
-                type="button"
-                onClick={() => handleServerChange('embed')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                  serverMode === 'embed'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
+            {isPCloud ? (
+              <div 
+                className="flex items-center gap-1.5 bg-zinc-900/90 px-2.5 py-1 rounded-xl border border-emerald-500/40 text-[11px] font-black text-emerald-300 shadow-sm select-none"
+                title="pCloud эх сурвалж: Бүх линк болон 3 цэг бүрэн шифрлэгдэж хаагдсан"
               >
-                <HardDrive className="w-3 h-3" />
-                <span className="hidden sm:inline">Drive</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleServerChange('direct')}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                  serverMode === 'direct'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="HTML5 тоглуулагч"
-              >
-                <Zap className="w-3 h-3" />
-                <span>HTML5</span>
-              </button>
-            </div>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>FlickNime HD</span>
+              </div>
+            ) : (
+              <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => handleServerChange('embed')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    serverMode === 'embed'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                  title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
+                >
+                  <HardDrive className="w-3 h-3" />
+                  <span className="hidden sm:inline">Drive</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleServerChange('direct')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    serverMode === 'direct'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                  title="HTML5 тоглуулагч"
+                >
+                  <Zap className="w-3 h-3" />
+                  <span>HTML5</span>
+                </button>
+              </div>
+            )}
 
             {/* Interactive Quality Selector Dropdown */}
             <div className="relative">
@@ -1335,17 +1350,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               </button>
             )}
 
-            {/* 3-Dots Notice / Warning Button */}
-            <button
-              type="button"
+            {/* 3-Dots Warning & Link Protection Badge - UNCLICKABLE / LOCKED */}
+            <div
               id="top-more-options-btn"
-              onClick={() => setShowProtectionNotice(true)}
-              className="flex items-center gap-1 bg-zinc-800/90 hover:bg-zinc-700 text-amber-400 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl cursor-pointer transition-all border border-amber-500/30 active:scale-95 shadow-md shadow-amber-500/10"
-              title="3 цэг: Системийн анхааруулга & Хамгаалалт"
+              className="flex items-center gap-1.5 bg-zinc-900/60 text-zinc-500 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-zinc-800/80 cursor-not-allowed select-none pointer-events-none opacity-60"
+              title="🔒 3 цэг хаагдсан (Эх линк болон татах тохиргоо бүрэн түгжигдсэн)"
             >
-              <MoreVertical className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline text-zinc-300">Анхааруулга</span>
-            </button>
+              <Lock className="w-3 h-3 text-zinc-500" />
+              <MoreVertical className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="hidden sm:inline text-zinc-500 text-[11px]">3 цэг хаагдсан</span>
+            </div>
 
             {/* Fullscreen Quick Button */}
             <button
@@ -1520,35 +1534,57 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 />
 
                 {/* 🛡️ Strict Link Protection Barrier: Completely blocks clicking/interacting with Drive / YouTube / Embed header bar, pop-out icon, and share buttons */}
-                {(isGoogleDrive || isExternalEmbed || isYouTube) && (
+                {(isGoogleDrive || isExternalEmbed || isYouTube || isPCloud) && (
                   <>
-                    {/* Top-Right 3-Dots & Pop-out Zone Shield: Clicking here triggers the Warning notice! */}
+                    {/* Top-Right 3-Dots & Pop-out Zone Shield: COMPLETELY UNCLICKABLE */}
                     <div 
-                      className="absolute top-0 right-0 w-48 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-pointer"
-                      title="3 цэг / Анхааруулга"
+                      className="absolute top-0 right-0 w-72 h-24 sm:h-28 z-40 pointer-events-auto bg-transparent select-none cursor-not-allowed"
+                      title="🔒 3 цэг түгжигдсэн - Линк татах боломжгүй"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        setShowProtectionNotice(true);
                       }}
                       onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchEnd={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                       }}
                       onContextMenu={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        setShowProtectionNotice(true);
                       }}
                     />
                     {/* Rest of Top Header Shield: Blocks pop-out button, player headers, and title actions */}
                     <div 
-                      className="absolute top-0 left-0 right-48 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      className="absolute top-0 left-0 right-72 h-24 sm:h-28 z-30 pointer-events-auto bg-transparent select-none cursor-not-allowed"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                       }}
                       onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchEnd={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                       }}
@@ -1559,12 +1595,24 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     />
                     {/* Bottom-Right Shield: Blocks external platform logos, share buttons, and copy-link triggers */}
                     <div 
-                      className="absolute bottom-0 right-0 w-36 h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      className="absolute bottom-0 right-0 w-56 h-24 z-30 pointer-events-auto bg-transparent select-none cursor-not-allowed"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                       }}
                       onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      onTouchEnd={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                       }}
@@ -2120,19 +2168,14 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
                 {/* Right Controls */}
                 <div className="flex items-center gap-1 sm:gap-2 justify-end shrink-0">
-                  {/* 3-Dots Warning & Security Notice Button */}
-                  <button
-                    type="button"
+                  {/* 3-Dots Warning Button - UNCLICKABLE / LOCKED */}
+                  <div
                     id="player-more-dots-btn"
-                    onClick={() => {
-                      setShowProtectionNotice(true);
-                      resetControlsTimer();
-                    }}
-                    className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 text-amber-400 border border-amber-500/40 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-md shadow-amber-500/10"
-                    title="3 цэг: Анхааруулга & Хамгаалалтын санамж"
+                    className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/50 text-zinc-600 border border-zinc-800/80 flex items-center justify-center cursor-not-allowed select-none pointer-events-none opacity-50"
+                    title="🔒 3 цэг түгжигдсэн - Линк татах боломжгүй"
                   >
-                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
-                  </button>
+                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600" />
+                  </div>
 
                   {/* Quick Brightness Booster cycle */}
                   <button
