@@ -50,6 +50,7 @@ import { checkUserContentAccess, getAnimeExpiryDetails, isAdminUser } from '../l
 import {
   getEmbedUrl,
   extractGoogleDriveId,
+  extractPCloudCode,
   getDirectPlaybackStream,
   isDirectPlayableMedia,
   extractYouTubeId,
@@ -147,33 +148,38 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const isYouTube = !!extractYouTubeId(rawVideoSrc);
   const googleDriveId = extractGoogleDriveId(rawVideoSrc);
   const isGoogleDrive = !!googleDriveId;
+  const pcloudCode = extractPCloudCode(rawVideoSrc);
+  const isPCloud = !!pcloudCode;
   const isDirectMedia = isDirectPlayableMedia(rawVideoSrc);
   const isExternalEmbed = isExternalEmbedMedia(rawVideoSrc);
-  const isStrictEmbedOnly = isYouTube || isExternalEmbed || isGoogleDrive;
+  const isStrictEmbedOnly = isYouTube || isExternalEmbed;
 
   // High-Quality Default:
-  // Direct playable media (.mp4, .webm, .m3u8) plays in direct HTML5 player.
-  // Google Drive, Filemoon, YouTube and external embeds play in high-definition embed player for authentic original master quality without proxy degradation.
+  // pCloud and direct playable media (.mp4, .webm, .m3u8) play directly in native HTML5 player with full custom controls and zero link leak.
+  // External embeds (YouTube, etc.) play in protected embed mode with click shielding.
   const [serverMode, setServerMode] = useState<ServerMode>(() => {
-    if (isDirectMedia) {
+    if (isPCloud || isDirectMedia) {
       return 'direct';
     }
-    return 'embed';
+    if (isStrictEmbedOnly) {
+      return 'embed';
+    }
+    return 'direct';
   });
   const [selectedQualityKey, setSelectedQualityKey] = useState<VideoQualityKey>('1080p');
   const [showQualityQuickMenu, setShowQualityQuickMenu] = useState<boolean>(false);
   const [colorProfile, setColorProfile] = useState<'vibrant_hdr' | 'sharp_cinema' | 'standard'>('standard');
 
-  // Adapt server mode when source changes: ensure embeds play directly in authentic HD embed mode
+  // Adapt server mode when source changes: ensure pCloud & direct media play in protected direct HTML5 mode
   useEffect(() => {
-    if (isStrictEmbedOnly) {
-      setServerMode('embed');
-      serverModeRef.current = 'embed';
-    } else if (isDirectMedia) {
+    if (isPCloud || isDirectMedia) {
       setServerMode('direct');
       serverModeRef.current = 'direct';
+    } else if (isStrictEmbedOnly) {
+      setServerMode('embed');
+      serverModeRef.current = 'embed';
     }
-  }, [rawVideoSrc, isStrictEmbedOnly, isDirectMedia]);
+  }, [rawVideoSrc, isStrictEmbedOnly, isDirectMedia, isPCloud]);
 
   // Next Episode prompt dialog state when episode finishes
   const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState<boolean>(false);
@@ -220,12 +226,12 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     appendDebugLog(`Эх холбоос (Raw URL): ${rawVideoSrc}`);
     appendDebugLog(`Google Drive ID: ${googleDriveId || 'Байхгүй'}`);
     appendDebugLog(`YouTube ID: ${extractYouTubeId(rawVideoSrc) || 'Байхгүй'}`);
-    const currentProvider = isGoogleDrive
+    const currentProvider = isPCloud
+      ? 'pCloud Full HD (Линк хамгаалагдсан шууд тоглуулагч)'
+      : isGoogleDrive
       ? 'Google Drive'
       : isYouTube
       ? 'YouTube'
-      : rawVideoSrc.includes('pcloud')
-      ? 'pCloud'
       : rawVideoSrc.includes('filemoon')
       ? 'Filemoon'
       : serverMode === 'embed'
@@ -1524,9 +1530,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 {/* 🛡️ Strict Link Protection Barrier: Completely blocks clicking/interacting with Drive / YouTube / Embed header bar, pop-out icon, and share buttons */}
                 {(isGoogleDrive || isExternalEmbed || isYouTube) && (
                   <>
-                    {/* Top Header Shield: Blocks pop-out button, Google Drive title, and open-in-new-tab actions */}
+                    {/* Top Header Shield: Blocks pop-out button, player headers, and open-in-new-tab/copy-link actions */}
                     <div 
-                      className="absolute top-0 inset-x-0 h-16 sm:h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      className="absolute top-0 inset-x-0 h-20 sm:h-24 z-30 pointer-events-auto bg-transparent select-none cursor-default"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -1542,7 +1548,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                     />
                     {/* Bottom-Right Shield: Blocks external platform logos, share buttons, and copy-link triggers */}
                     <div 
-                      className="absolute bottom-0 right-0 w-32 h-16 z-30 pointer-events-auto bg-transparent select-none cursor-default"
+                      className="absolute bottom-0 right-0 w-36 h-20 z-30 pointer-events-auto bg-transparent select-none cursor-default"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -1620,9 +1626,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   }));
                   setIsBuffering(false);
 
-                  // If source is Google Drive or External embed, automatically switch to reliable Embed mode
-                  if (isGoogleDrive || isYouTube || isExternalEmbed) {
-                    const fallbackProvider = isGoogleDrive ? 'Google Drive' : rawVideoSrc.includes('pcloud') ? 'pCloud' : isYouTube ? 'YouTube' : rawVideoSrc.includes('filemoon') ? 'Filemoon' : 'HD Embed';
+                  // If source is Google Drive or External embed (excluding pCloud), automatically switch to reliable Embed mode
+                  if (!isPCloud && (isGoogleDrive || isYouTube || isExternalEmbed)) {
+                    const fallbackProvider = isGoogleDrive ? 'Google Drive' : isYouTube ? 'YouTube' : rawVideoSrc.includes('filemoon') ? 'Filemoon' : 'HD Embed';
                     appendDebugLog(`🔄 ${fallbackProvider} тоглуулагч руу автоматаар шилжиж байна...`);
                     setQualityNotice(`💡 ${fallbackProvider} тоглуулагч руу автоматаар шилжлээ`);
                     setServerMode('embed');

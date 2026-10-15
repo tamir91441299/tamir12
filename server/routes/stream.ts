@@ -191,6 +191,106 @@ async function resolveGoogleDriveStreamUrl(fileId: string): Promise<{ url: strin
   return { url: fallbackDirect };
 }
 
+// Cache of pCloud direct streaming URLs
+const pcloudUrlCache = new Map<string, CachedStream>();
+
+export function extractPCloudCodeFromUrl(url: string): string | null {
+  if (!url) return null;
+  const clean = url.trim();
+  const matchCode = clean.match(/[?&]code=([a-zA-Z0-9_-]+)/);
+  if (matchCode && matchCode[1]) return matchCode[1];
+  const matchPath = clean.match(/(?:pcloud\.link|pcloud\.com)\/(?:publink\/show\/|publink\/show\?code=|u\/)?([a-zA-Z0-9_-]{20,})/i);
+  if (matchPath && matchPath[1]) return matchPath[1];
+  if (/^XZ[a-zA-Z0-9_-]{25,50}$/.test(clean)) return clean;
+  return null;
+}
+
+/**
+ * Resolves pCloud public code to direct high-speed video stream URL
+ */
+async function resolvePCloudStreamUrl(code: string): Promise<string | null> {
+  const cached = pcloudUrlCache.get(code);
+  if (cached && cached.expires > Date.now()) {
+    return cached.url;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4500);
+    const res = await fetch(`https://u.pcloud.link/publink/show?code=${encodeURIComponent(code)}`, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      console.warn(`[pCloud Resolver] HTTP error ${res.status} for code "${code}"`);
+      return null;
+    }
+
+    const html = await res.text();
+    const match = html.match(/var\s+publinkData\s*=\s*(\{[\s\S]*?\});\s*(?:if|var|\n)/);
+    if (!match) {
+      console.warn(`[pCloud Resolver] No publinkData found for code "${code}"`);
+      return null;
+    }
+
+    const data = JSON.parse(match[1]);
+    const orig = data.variants?.find((v: any) => v.transcodetype === "original" || v.isoriginal);
+    if (orig && orig.hosts && orig.hosts.length > 0 && orig.path) {
+      const directUrl = `https://${orig.hosts[0]}${orig.path}`;
+      pcloudUrlCache.set(code, { url: directUrl, expires: Date.now() + 1000 * 60 * 60 * 4 });
+      return directUrl;
+    }
+
+    if (data.variants && data.variants.length > 0) {
+      const v = data.variants[0];
+      if (v.hosts && v.hosts.length > 0 && v.path) {
+        const directUrl = `https://${v.hosts[0]}${v.path}`;
+        pcloudUrlCache.set(code, { url: directUrl, expires: Date.now() + 1000 * 60 * 60 * 4 });
+        return directUrl;
+      }
+    }
+  } catch (err) {
+    console.error(`[pCloud Resolver] Error resolving pCloud stream for code "${code}":`, err);
+  }
+
+  return null;
+}
+
+/**
+ * Proxy stream endpoint for pCloud video links (plays directly in native player, completely hiding pCloud UI)
+ */
+router.get("/api/stream/pcloud/:code", async (req: Request, res: Response) => {
+  const { code } = req.params;
+  const quality = (req.query.quality as string) || "1080p";
+  console.log(`📡 [Stream Proxy] Request for pCloud code: "${code}" (${quality})`);
+
+  if (!code || typeof code !== "string" || code.length < 5) {
+    console.warn(`⚠️ [Stream Proxy] Invalid pCloud code "${code}", falling back.`);
+    res.redirect(302, getFallbackForQuality(quality, code || "default"));
+    return;
+  }
+
+  try {
+    const directUrl = await resolvePCloudStreamUrl(code);
+    if (directUrl) {
+      console.log(`✅ [Stream Proxy] Resolved pCloud stream URL for "${code}"`);
+      pipeStreamWithRange(directUrl, req, res, code, 0);
+      return;
+    }
+  } catch (err) {
+    console.error("❌ [Stream Proxy] Error resolving pCloud stream:", err);
+  }
+
+  if (!res.headersSent) {
+    res.redirect(302, getFallbackForQuality(quality, code));
+  }
+});
+
 /**
  * Proxy stream endpoint for Google Drive and external videos (Server 1).
  */
@@ -216,10 +316,10 @@ router.get("/api/stream/drive/:fileId", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/api/stream/secure/:token", (req: Request, res: Response) => {
+router.get("/api/stream/secure/:token", async (req: Request, res: Response) => {
   const { token } = req.params;
   const quality = (req.query.quality as string) || "1080p";
-  const targetUrl = decodeStreamToken(token);
+  let targetUrl = decodeStreamToken(token);
 
   if (!targetUrl) {
     console.warn("⚠️ [Secure Stream] Invalid stream token, fallback provided.");
@@ -227,18 +327,34 @@ router.get("/api/stream/secure/:token", (req: Request, res: Response) => {
     return;
   }
 
+  const pcloudCode = extractPCloudCodeFromUrl(targetUrl);
+  if (pcloudCode && !targetUrl.includes(".pcloud.com/c")) {
+    const directPcloud = await resolvePCloudStreamUrl(pcloudCode);
+    if (directPcloud) {
+      targetUrl = directPcloud;
+    }
+  }
+
   pipeStreamWithRange(targetUrl, req, res);
 });
 
-router.get("/api/stream/proxy", (req: Request, res: Response) => {
+router.get("/api/stream/proxy", async (req: Request, res: Response) => {
   const token = req.query.token as string;
   const directUrl = req.query.url as string;
   const quality = (req.query.quality as string) || "1080p";
 
-  const targetUrl = token ? decodeStreamToken(token) : directUrl;
+  let targetUrl = token ? decodeStreamToken(token) : directUrl;
   if (!targetUrl) {
     res.redirect(302, getFallbackForQuality(quality, "default"));
     return;
+  }
+
+  const pcloudCode = extractPCloudCodeFromUrl(targetUrl);
+  if (pcloudCode && !targetUrl.includes(".pcloud.com/c")) {
+    const directPcloud = await resolvePCloudStreamUrl(pcloudCode);
+    if (directPcloud) {
+      targetUrl = directPcloud;
+    }
   }
 
   pipeStreamWithRange(targetUrl, req, res);
@@ -270,11 +386,12 @@ function pipeStreamWithRange(
   }
 
   const clientRange = clientReq.headers.range;
+  const isPCloudHost = parsedUrl.hostname.includes("pcloud.com") || parsedUrl.hostname.includes("pcloud.link");
   const headers: Record<string, string> = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Accept": "*/*",
     "Accept-Encoding": "identity",
-    "Referer": "https://drive.google.com/",
+    "Referer": isPCloudHost ? "https://u.pcloud.link/" : "https://drive.google.com/",
   };
 
   if (initialCookies && initialCookies.length > 0) {

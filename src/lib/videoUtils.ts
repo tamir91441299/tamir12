@@ -70,6 +70,30 @@ export function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+export function extractPCloudCode(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const clean = url.trim();
+
+  // Match ?code=CODE or &code=CODE
+  const matchCode = clean.match(/[?&]code=([a-zA-Z0-9_-]+)/);
+  if (matchCode && matchCode[1]) {
+    return matchCode[1];
+  }
+
+  // Match /publink/show?code=CODE or /publink/show/CODE or /u/CODE
+  const matchPath = clean.match(/(?:pcloud\.link|pcloud\.com)\/(?:publink\/show\/|publink\/show\?code=|u\/)?([a-zA-Z0-9_-]{20,})/i);
+  if (matchPath && matchPath[1]) {
+    return matchPath[1];
+  }
+
+  // Raw pCloud code
+  if (/^XZ[a-zA-Z0-9_-]{25,50}$/.test(clean)) {
+    return clean;
+  }
+
+  return null;
+}
+
 export function extractGoogleDriveId(url: string): string | null {
   if (!url) return null;
   const clean = url.trim();
@@ -229,7 +253,6 @@ export function isExternalEmbedMedia(url?: string): boolean {
     clean.includes('docs.google.com') ||
     clean.includes('youtube.com') ||
     clean.includes('youtu.be') ||
-    clean.includes('pcloud.link') ||
     clean.includes('streamtape.') ||
     clean.includes('dood.') ||
     clean.includes('doodstream.') ||
@@ -327,6 +350,9 @@ export function isDirectPlayableMedia(url?: string): boolean {
     clean.startsWith('data:video') ||
     clean.startsWith('blob:') ||
     clean.startsWith('/api/stream') ||
+    clean.includes('pcloud.link') ||
+    clean.includes('pcloud.com') ||
+    !!extractPCloudCode(clean) ||
     clean.includes('commondatastorage.googleapis.com') ||
     clean.includes('firebasestorage.googleapis.com') ||
     clean.includes('pixeldrain.com') ||
@@ -385,19 +411,26 @@ export function getDirectPlaybackStream(
 
   const formattedUrl = formatDirectPlayableUrl(videoUrl.trim());
 
-  // 1. If Google Drive URL, use our direct streaming proxy with quality resolution
+  // 1. If pCloud URL or code, use our direct streaming proxy with high-speed range requests (completely hides pCloud UI and copy link button)
+  const pcloudCode = extractPCloudCode(formattedUrl);
+  if (pcloudCode) {
+    const q = quality || '1080p';
+    return `/api/stream/pcloud/${pcloudCode}?quality=${q}&server=${serverType}&ep=${epNum}`;
+  }
+
+  // 2. If Google Drive URL, use our direct streaming proxy with quality resolution
   const googleDriveId = extractGoogleDriveId(formattedUrl);
   if (googleDriveId) {
     const q = quality || '1080p';
     return `/api/stream/drive/${googleDriveId}?quality=${q}&server=${serverType}&ep=${epNum}`;
   }
 
-  // 2. If already an internal stream proxy URL, keep as is
+  // 3. If already an internal stream proxy URL, keep as is
   if (formattedUrl.startsWith('/api/stream')) {
     return formattedUrl;
   }
 
-  // 3. Direct playable media or external streams: protect behind /api/stream/secure/:token
+  // 4. Direct playable media or external streams: protect behind /api/stream/secure/:token
   if (
     isDirectPlayableMedia(formattedUrl) ||
     (!isExternalEmbedMedia(formattedUrl) && (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')))
