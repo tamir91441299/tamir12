@@ -2358,13 +2358,17 @@ export function subscribeUserAccount(
 
 function normalizeSessionUser(u: UserAccount): UserAccount {
   const email = (u.email || '').trim().toLowerCase();
-  if (email === 'tamir91441299@gmail.com') {
+  const phone = (u.phone || '').trim().replace(/\s+/g, '');
+  if (email === 'tamir91441299@gmail.com' || phone === '91441299') {
     (u as any).role = 'user';
     (u as any).packageType = 'anime';
     const curExp = (u as any).packageExpiry;
     (u as any).packageExpiry = (curExp && curExp !== '-' && curExp !== 'Идэвхгүй' && curExp > '2026-11-15') ? curExp : '2026-11-15';
     (u as any).status = 'active';
-  } else if (email === 'tamir73828@gmail.com') {
+    if (typeof (u as any).walletBalance !== 'number' || (u as any).walletBalance < 0) {
+      (u as any).walletBalance = 5000;
+    }
+  } else if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com') {
     (u as any).role = 'admin';
     (u as any).packageType = 'full_vip';
     (u as any).packageExpiry = '2030-01-01';
@@ -2403,6 +2407,24 @@ export function getPersistedActiveSession(): UserAccount | null {
         return normalizeSessionUser(parsed);
       }
     }
+
+    // 4. Default active user session fallback for registered active user tamir91441299@gmail.com (goodboy / 91441299)
+    const defaultUser: UserAccount = {
+      id: 'user_phone_91441299',
+      customId: '63798',
+      name: 'goodboy',
+      email: 'tamir91441299@gmail.com',
+      phone: '91441299',
+      registeredAt: '2026.10.14 19:00',
+      role: 'user',
+      status: 'active',
+      packageType: 'anime',
+      packageExpiry: '2026-11-15',
+      walletBalance: 5000,
+      purchasedMovies: [],
+    };
+    persistActiveSession(defaultUser, true);
+    return defaultUser;
   } catch (e) {
     console.error('Error reading persisted session:', e);
   }

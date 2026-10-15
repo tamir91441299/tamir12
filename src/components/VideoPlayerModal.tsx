@@ -1771,7 +1771,26 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   lastTapTimeRef.current = now;
                   lastTapPositionRef.current = { x: e.clientX, y: e.clientY };
 
-                  // Single click/tap: Toggle controls visibility smoothly without stopping or pausing the video
+                  // If video is paused, tap/click anywhere on screen to immediately start playback!
+                  if (!isPlaying || (videoRef.current && videoRef.current.paused)) {
+                    if (videoRef.current) {
+                      videoRef.current.muted = false;
+                      setIsMuted(false);
+                      setShowUnmuteBanner(false);
+                      videoRef.current.play().then(() => {
+                        setIsPlaying(true);
+                        setIsBuffering(false);
+                      }).catch(() => {
+                        togglePlay();
+                      });
+                    } else {
+                      togglePlay();
+                    }
+                    resetControlsTimer();
+                    return;
+                  }
+
+                  // Single click/tap while playing: Toggle controls visibility smoothly without stopping or pausing the video
                   setControlsVisible((prev) => {
                     const next = !prev;
                     if (next) {
@@ -1828,8 +1847,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                 </div>
               )}
 
-              {/* Non-intrusive Minimalist Play Button (No dimming screen) */}
-              {!isPlaying && controlsVisible && (
+              {/* Non-intrusive Minimalist Play Button (Always visible whenever paused) */}
+              {!isPlaying && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none"
                 >

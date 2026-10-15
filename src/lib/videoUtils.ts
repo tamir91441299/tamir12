@@ -169,9 +169,9 @@ export function getEmbedUrl(url: string, playerMode: 'standard' | 'nocookie' = '
   if (!url) return '';
   const cleanUrl = url.trim();
 
-  // pCloud should NEVER be embedded in an iframe as pCloud's web page exposes download, copy link, and 3-dots menu
-  if (extractPCloudCode(cleanUrl)) {
-    return '';
+  const pcloudCode = extractPCloudCode(cleanUrl);
+  if (pcloudCode) {
+    return `https://u.pcloud.link/publink/show?code=${pcloudCode}`;
   }
 
   const driveId = extractGoogleDriveId(cleanUrl);

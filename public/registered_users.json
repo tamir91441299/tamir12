@@ -6,7 +6,7 @@
     "lastTopUpAt": "2026-10-03T04:10:32.368Z",
     "favoriteCount": 0,
     "packageExpiry": "2026-11-15",
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "registeredAt": "2026.10.14 19:02",
     "email": "tamir91441299@gmail.com",
     "role": "user",
@@ -31,7 +31,7 @@
     "email": "tamir91441299@gmail.com",
     "role": "user",
     "watchedCount": 0,
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "purchasedMovies": [],
     "registeredAt": "2026.10.14 19:02",
     "isMockUser": false,
@@ -50,7 +50,7 @@
     "favoriteCount": 0,
     "registeredAt": "2026.10.14 19:00",
     "updatedAt": "2026-10-06T13:27:22.882Z",
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "isMockUser": false,
     "name": "goodboy",
     "status": "active",
@@ -74,7 +74,7 @@
     "lastLogin": "2026.10.14 19:00:44",
     "role": "user",
     "watchedCount": 0,
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "purchasedMovies": [],
     "registeredAt": "2026.10.14 19:00",
     "isMockUser": false,
@@ -103,6 +103,22 @@
     "packageType": "full_vip",
     "favoriteCount": 0,
     "status": "active"
+  },
+  {
+    "id": "user_phone_94393289",
+    "customId": "",
+    "name": "Хэрэглэгч (94393289)",
+    "phone": "94393289",
+    "email": "94393289@flicknime.mn",
+    "registeredAt": "2026.10.14",
+    "registeredTimestamp": 1791962936875,
+    "role": "user",
+    "status": "active",
+    "packageType": "free",
+    "packageExpiry": "-",
+    "walletBalance": 0,
+    "isMockUser": false,
+    "updatedAt": "2026-10-15T10:14:25.819Z"
   },
   {
     "password": "12345678Aa",
@@ -192,7 +208,7 @@
     "email": "tamir73828@gmail.com",
     "role": "admin",
     "watchedCount": 0,
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "purchasedMovies": [],
     "registeredAt": "2026.10.13 19:05",
     "isMockUser": false,
@@ -212,7 +228,7 @@
     "lastLogin": "2026.10.13 18:54:37",
     "role": "user",
     "watchedCount": 0,
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "purchasedMovies": [],
     "registeredAt": "2026.10.13 18:54",
     "isMockUser": false,
@@ -533,7 +549,7 @@
     "phone": "91441299",
     "watchedCount": 0,
     "email": "tamir73828@gmail.com",
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "registeredAt": "2026.10.08 10:42",
     "purchasedMovies": [],
     "status": "active",
@@ -615,7 +631,7 @@
     "name": "Tek",
     "lastLogin": "2026.10.06 21:42:18",
     "watchedCount": 0,
-    "walletBalance": 2500,
+    "walletBalance": 5000,
     "packageExpiry": "2026-11-15",
     "email": "tamir91441299@gmail.com",
     "updatedAt": "2026-10-14T11:07:24.149Z",
@@ -639,7 +655,7 @@
     "lastTopUpAmount": -2500,
     "email": "tamir91441299@gmail.com",
     "packageType": "anime",
-    "walletBalance": 2500,
+    "walletBalance": 5000,
     "lastLogin": "2026.10.06 21:42:18",
     "registeredAt": "2026.10.06 21:41",
     "password": "Tergel0429",
@@ -659,7 +675,7 @@
     "role": "admin",
     "registeredTimestamp": 1791294072260,
     "customId": "12345",
-    "walletBalance": 0,
+    "walletBalance": 5000,
     "password": "tamir73828",
     "registeredAt": "2026.10.06 21:41",
     "updatedAt": "2026-10-06T13:29:41.492Z",
@@ -729,7 +745,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-14T11:10:55.177Z"
+    "updatedAt": "2026-10-15T10:14:25.820Z"
   },
   {
     "id": "user_phone_99159996",
@@ -772,22 +788,6 @@
     "watchedCount": 0,
     "lastLogin": "2026.09.27 23:55:22",
     "customId": ""
-  },
-  {
-    "id": "user_phone_94393289",
-    "customId": "",
-    "name": "Хэрэглэгч (94393289)",
-    "phone": "94393289",
-    "email": "94393289@flicknime.mn",
-    "registeredAt": "2026.09.25",
-    "registeredTimestamp": 1790322505045,
-    "role": "user",
-    "status": "active",
-    "packageType": "free",
-    "packageExpiry": "-",
-    "walletBalance": 0,
-    "isMockUser": false,
-    "updatedAt": "2026-10-14T11:10:55.178Z"
   },
   {
     "id": "user_phone_85199193",
@@ -845,7 +845,7 @@
     "packageExpiry": "-",
     "walletBalance": 0,
     "isMockUser": false,
-    "updatedAt": "2026-10-14T11:10:55.178Z"
+    "updatedAt": "2026-10-15T10:14:25.820Z"
   },
   {
     "id": "user_phone_94362457",
@@ -1028,7 +1028,7 @@
   {
     "id": "user_phone_91097071",
     "updatedAt": "2026-10-14T11:07:24.404Z",
-    "walletBalance": 7500,
+    "walletBalance": 5000,
     "phone": "91097071",
     "isMockUser": false,
     "lastTopUpAt": "2026-09-30T05:29:32.356Z",
@@ -1055,7 +1055,7 @@
     "status": "active",
     "role": "user",
     "id": "user_1790410888332",
-    "walletBalance": 7500,
+    "walletBalance": 5000,
     "registeredAt": "8/14/2026",
     "email": "tamir91441299@gmail.com",
     "registeredTimestamp": 1768003200000,
@@ -1073,6 +1073,7 @@
     "status": "active",
     "updatedAt": "2026-10-14T11:07:25.281Z",
     "id": "tamir91441299_gmail_com",
-    "isMockUser": false
+    "isMockUser": false,
+    "walletBalance": 5000
   }
 ]

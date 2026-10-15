@@ -870,14 +870,22 @@ export default function App() {
   );
 
   const handlePlayMovie = (movie: Movie, episodeNumber: number = 1) => {
+    let activeUser = currentUser;
+    if (!activeUser) {
+      activeUser = getPersistedActiveSession();
+      if (activeUser) {
+        setCurrentUser(activeUser);
+      }
+    }
+
     // Бүртгэлгүй хүмүүс анимэ болон контент үзэх боломжгүй (Нэвтрэх шаардлагатай)
-    if (!currentUser) {
+    if (!activeUser) {
       handleOpenAuthModal('phone');
       return;
     }
 
     // Эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
-    const access = checkUserContentAccess(currentUser, movie, purchasedMovies.includes(movie.id));
+    const access = checkUserContentAccess(activeUser, movie, purchasedMovies.includes(movie.id));
 
     if (!access.hasAccess) {
       setPaymentMovie(movie);
