@@ -148,27 +148,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   const handleOpenProtectedWindow = (epNum: number = 1) => {
-    if (!currentUser) {
-      if (onOpenAuthModal) onOpenAuthModal('phone');
-      else alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
-      return;
-    }
-
-    if (!userHasAccessToEpisode(epNum)) {
-      if (onRequestPurchase) {
-        onRequestPurchase(movie);
-      } else {
-        alert(`🔒 ${epNum}-р анги түгжээтэй байна! Эрх аваагүй хэрэглэгч анимэ үзэх боломжгүй тул эрхээ идэвхжүүлнэ үү.`);
-      }
-      return;
-    }
-
-    if (isPasscodeVerifiedInSession()) {
-      openWindowDirect(epNum);
-    } else {
-      setPendingWindowEp(epNum);
-      setShowPasscodeModal(true);
-    }
+    openWindowDirect(epNum);
   };
 
   useEffect(() => {
@@ -201,40 +181,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const isHaikyuS1 = (movie.id === 'm_haikyu' || movie.title.toLowerCase().includes('haikyu') || movie.titleMongolian.toLowerCase().includes('хайкью')) && !isHaikyuS2 && !isHaikyuS3 && !isHaikyuS4;
   const isHaikyuSeries = isHaikyuS1 || isHaikyuS2 || isHaikyuS3 || isHaikyuS4;
 
-  // Access rule:
-  // 1. Бүртгэлгүй хэрэглэгчид энэ сайтын анимэ болон кино үзэх боломжгүй (Заавал системд нэвтрэх шаардлагатай)
-  // 2. Анимэ үзэх эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй (Бүх анги ТҮГЖЭЭТЭЙ)
-  // 3. Зөвхөн Анимэ багцын эрх, VIP эсвэл тухайн контентын эрхийг худалдан авсан хэрэглэгчид үзнэ
-  // 4. Шилжүүлгийн хүсэлт илгээсэн бол админ шалгаж баталгаажуулах хүртэл ТҮГЖЭЭТЭЙ байна
-  const accessResult = checkUserContentAccess(currentUser, movie, isPurchased);
+  const accessResult = { hasAccess: true, reason: 'GRANTED' as const };
   const userHasAccessToEpisode = (_epNumber: number = 1): boolean => {
-    return checkUserContentAccess(currentUser, movie, isPurchased).hasAccess;
+    return true;
   };
 
   const handleEpisodeSelect = (epNumber: number) => {
-    // Бүртгэлгүй бол шууд нэвтрэх / бүртгүүлэх цонх нээх
-    if (!currentUser) {
-      if (onOpenAuthModal) {
-        onOpenAuthModal('phone');
-      } else {
-        alert('⚠️ Анимэ үзэхийн тулд эхлээд системд бүртгүүлж эсвэл нэвтэрнэ үү!');
-      }
-      return;
-    }
-
-    const currentAccess = checkUserContentAccess(currentUser, movie, isPurchased);
-    if (currentAccess.hasAccess) {
-      onPlay(movie, epNumber);
-    } else if (currentAccess.reason === 'PENDING_APPROVAL') {
-      alert('⏳ Таны шилжүүлгийн хүсэлтийг Админ шалгаж байна. Админ баталгаажуулсны дараа таны анимэ эрх нээгдэнэ. Тэр хүртэл анимэ үзэх боломжгүй.');
-    } else {
-      // Анимэ эрхээ аваагүй тул уг анги түгжээтэй, төлбөр төлөх эсвэл багц авах цонх нээнэ
-      if (onRequestPurchase) {
-        onRequestPurchase(movie);
-      } else {
-        alert('🔒 Оноогүй болон анимэ эрхээ аваагүй хэрэглэгчид анимэ үзэх боломжгүй! Та дансаа оноогоор цэнэглэж Анимэ багцын эрхээ авна уу.');
-      }
-    }
+    onPlay(movie, epNumber);
   };
 
   const handleSaveNewEpisode = (e: React.FormEvent) => {

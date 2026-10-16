@@ -161,10 +161,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   // pCloud and direct playable media (.mp4, .webm, .m3u8) play directly in native HTML5 player with full custom controls and zero link leak.
   // External embeds (YouTube, etc.) play in protected embed mode with click shielding.
   const [serverMode, setServerMode] = useState<ServerMode>(() => {
-    if (isPCloud || isDirectMedia) {
-      return 'direct';
-    }
-    if (isStrictEmbedOnly) {
+    if (isGoogleDrive || isYouTube || isExternalEmbed || isPCloud) {
       return 'embed';
     }
     return 'direct';
@@ -173,16 +170,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [showQualityQuickMenu, setShowQualityQuickMenu] = useState<boolean>(false);
   const [colorProfile, setColorProfile] = useState<'vibrant_hdr' | 'sharp_cinema' | 'standard'>('standard');
 
-  // Adapt server mode when source changes: ensure pCloud & direct media play in protected direct HTML5 mode
   useEffect(() => {
-    if (isPCloud || isDirectMedia) {
-      setServerMode('direct');
-      serverModeRef.current = 'direct';
-    } else if (isStrictEmbedOnly) {
+    if (isGoogleDrive || isYouTube || isExternalEmbed || isPCloud) {
       setServerMode('embed');
       serverModeRef.current = 'embed';
+    } else if (isDirectMedia) {
+      setServerMode('direct');
+      serverModeRef.current = 'direct';
     }
-  }, [rawVideoSrc, isStrictEmbedOnly, isDirectMedia, isPCloud]);
+  }, [rawVideoSrc, isStrictEmbedOnly, isDirectMedia, isPCloud, isGoogleDrive, isYouTube, isExternalEmbed]);
 
   // Next Episode prompt dialog state when episode finishes
   const [showNextEpisodePrompt, setShowNextEpisodePrompt] = useState<boolean>(false);
@@ -489,11 +485,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
   // Server switch handler
   const handleServerChange = (mode: ServerMode) => {
-    if (isPCloud && mode === 'embed') {
-      setQualityNotice('🛡️ pCloud эх сурвалж шифрлэгдсэн тоглуулагчаар түгжигдсэн');
-      setTimeout(() => setQualityNotice(null), 2500);
-      return;
-    }
     serverModeRef.current = mode;
     setServerMode(mode);
     setIsPlaying(true);
@@ -1215,45 +1206,35 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
               );
             })()}
 
-            {/* Server Mode Toggle: Google Drive / Embed vs Direct HTML5 */}
-            {isPCloud ? (
-              <div 
-                className="flex items-center gap-1.5 bg-zinc-900/90 px-2.5 py-1 rounded-xl border border-emerald-500/40 text-[11px] font-black text-emerald-300 shadow-sm select-none"
-                title="pCloud эх сурвалж: Бүх линк болон 3 цэг бүрэн шифрлэгдэж хаагдсан"
+            {/* Server Mode Toggle: Embed vs HTML5 Direct */}
+            <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
+              <button
+                type="button"
+                onClick={() => handleServerChange('embed')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  serverMode === 'embed'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Үндсэн Embed тоглуулагч (Drive / pCloud / YouTube)"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>FlickNime HD</span>
-              </div>
-            ) : (
-              <div className="flex items-center bg-zinc-900/90 p-0.5 rounded-xl border border-zinc-700/80 text-[11px] font-bold shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => handleServerChange('embed')}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    serverMode === 'embed'
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                  title="Үндсэн тоглуулагч: Анхны эх чанар, 1080p Full HD"
-                >
-                  <HardDrive className="w-3 h-3" />
-                  <span className="hidden sm:inline">Drive</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleServerChange('direct')}
-                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    serverMode === 'direct'
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                  title="HTML5 тоглуулагч"
-                >
-                  <Zap className="w-3 h-3" />
-                  <span>HTML5</span>
-                </button>
-              </div>
-            )}
+                <HardDrive className="w-3 h-3" />
+                <span>Embed</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleServerChange('direct')}
+                className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  serverMode === 'direct'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black shadow-md shadow-cyan-500/20'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="HTML5 шууд тоглуулагч"
+              >
+                <Zap className="w-3 h-3" />
+                <span>HTML5</span>
+              </button>
+            </div>
 
             {/* Interactive Quality Selector Dropdown */}
             <div className="relative">
@@ -1351,15 +1332,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             )}
 
             {/* 3-Dots Warning & Link Protection Badge - UNCLICKABLE / LOCKED */}
-            <div
-              id="top-more-options-btn"
-              className="flex items-center gap-1.5 bg-zinc-900/60 text-zinc-500 font-bold text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-zinc-800/80 cursor-not-allowed select-none pointer-events-none opacity-60"
-              title="🔒 3 цэг хаагдсан (Эх линк болон татах тохиргоо бүрэн түгжигдсэн)"
-            >
-              <Lock className="w-3 h-3 text-zinc-500" />
-              <MoreVertical className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="hidden sm:inline text-zinc-500 text-[11px]">3 цэг хаагдсан</span>
-            </div>
 
             {/* Fullscreen Quick Button */}
             <button
@@ -1397,232 +1369,19 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
           onContextMenu={(e) => e.preventDefault()}
           className="relative w-full h-full flex items-center justify-center group select-none bg-black"
         >
-          {/* Episode Access Restricted Overlay */}
-          {!hasAccessToCurrentEpisode ? (
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white z-30 space-y-5 animate-in fade-in duration-200 text-center select-none relative">
-              <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border-2 border-rose-500/40 flex items-center justify-center text-rose-400 shadow-2xl shadow-rose-500/20">
-                <Lock className="w-10 h-10 animate-pulse" />
-              </div>
-
-              {!currentUser ? (
-                /* Unregistered User Lock State */
-                <>
-                  <div className="space-y-2 max-w-md">
-                    <span className="text-xs font-black uppercase tracking-widest text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/30 inline-block">
-                      Бүртгэл шаардлагатай
-                    </span>
-                    <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                      Бүртгэлгүй хэрэглэгч анимэ үзэх боломжгүй
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      Энэхүү сайтын анимэг үзэхийн тулд заавал системд бүртгүүлж, Анимэ эрхээ идэвхжүүлэх шаардлагатай.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onOpenAuthModal) onOpenAuthModal('phone');
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-cyan-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Утсаар нэвтрэх</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onOpenAuthModal) onOpenAuthModal('pc');
-                      }}
-                      className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow border border-indigo-500/50 hover:scale-105"
-                    >
-                      <span>PC-ээр нэвтрэх</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onOpenAuthModal) onOpenAuthModal('register');
-                      }}
-                      className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer border border-zinc-700"
-                    >
-                      <span>Шинээр бүртгүүлэх</span>
-                    </button>
-                  </div>
-                </>
-              ) : (
-                /* Registered but No Anime Package */
-                <>
-                  <div className="space-y-2.5 max-w-md">
-                    <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 inline-flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-amber-400" />
-                      {currentEpisodeIndex + 1}-р анги түгжээтэй байна
-                    </span>
-                    <h3 className="text-lg sm:text-2xl font-black text-white leading-tight">
-                      Эрх аваагүй хэрэглэгч анимэ үзэх боломжгүй
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                      Эрх аваагүй хүмүүс энэхүү анимэг үзэх боломжгүй тул та Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) эсвэл VIP эрхээ авч үзнэ үү.
-                    </p>
-
-                    {/* Expiry and Points status box */}
-                    {(() => {
-                      const animeExpiry = getAnimeExpiryDetails(currentUser);
-                      const userPoints = typeof currentUser?.walletBalance === 'number'
-                        ? currentUser.walletBalance
-                        : (currentUser as any)?.balance ?? 0;
-                      return (
-                        <div className="p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl space-y-2 text-xs text-left">
-                          <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5">
-                            <span className="text-zinc-400">📅 Анимэ эрх дуусах хугацаа:</span>
-                            <span className="font-mono font-bold text-amber-300">
-                              {animeExpiry.hasAccess
-                                ? `${animeExpiry.expiryDateStr} (${animeExpiry.countdownText})`
-                                : animeExpiry.isExpired && animeExpiry.expiryDateStr !== '-'
-                                  ? `Дууссан (${animeExpiry.expiryDateStr})`
-                                  : 'Эрх аваагүй'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-zinc-400">💰 Таны үлдэгдэл оноо:</span>
-                            <span className="font-mono font-black text-emerald-400">
-                              {userPoints.toLocaleString()} ₮ оноо
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                    {onRequestPurchase && (
-                      <button
-                        type="button"
-                        onClick={() => onRequestPurchase(movie)}
-                        className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm rounded-xl flex items-center gap-2 shadow-xl shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
-                      >
-                        <Zap className="w-4 h-4 fill-black" />
-                        <span>Анимэ багцын эрх авах / Төлбөр төлөх</span>
-                      </button>
-                    )}
-                    <a
-                      href="https://www.facebook.com/share/1LdgHqWqvz/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-3 bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-                      title="Асуух юм байвал энэ page-ээс мэдээлэл авах"
-                    >
-                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">f</span>
-                      <span>Асуух зүйл (Facebook Page) ↗</span>
-                    </a>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : isEmbed ? (
+          {isEmbed ? (
             <div className="w-full h-full flex items-center justify-center relative bg-black overflow-hidden">
               <div className="relative w-full h-full bg-black flex items-center justify-center">
                 <iframe
                   ref={iframeRef}
                   src={iframeUrl}
-                  onLoad={() => appendDebugLog(`✅ Iframe ачааллаа: Хамгаалагдсан эх сурвалж`)}
-                  onError={() => appendDebugLog(`❌ Iframe ачаалахад алдаа гарлаа`)}
+                  onLoad={() => appendDebugLog('✅ Iframe амжилттай ачааллаа')}
+                  onError={() => appendDebugLog('❌ Iframe ачаалахад алдаа гарлаа')}
                   className="w-full h-full border-0 bg-black pointer-events-auto"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
-                  referrerPolicy="no-referrer"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   allowFullScreen
                   title={movie.titleMongolian}
                 />
-
-                {/* 🛡️ Strict Link Protection Barrier: Completely blocks clicking/interacting with Drive / YouTube / Embed header bar, pop-out icon, and share buttons */}
-                {(isGoogleDrive || isExternalEmbed || isYouTube || isPCloud) && (
-                  <>
-                    {/* Top-Right 3-Dots & Pop-out Zone Shield: COMPLETELY UNCLICKABLE */}
-                    <div 
-                      className="absolute top-0 right-0 w-72 h-24 sm:h-28 z-40 pointer-events-auto bg-transparent select-none cursor-not-allowed"
-                      title="🔒 3 цэг түгжигдсэн - Линк татах боломжгүй"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onContextMenu={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                    />
-                    {/* Rest of Top Header Shield: Blocks pop-out button, player headers, and title actions */}
-                    <div 
-                      className="absolute top-0 left-0 right-72 h-24 sm:h-28 z-30 pointer-events-auto bg-transparent select-none cursor-not-allowed"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onContextMenu={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                    />
-                    {/* Bottom-Right Shield: Blocks external platform logos, share buttons, and copy-link triggers */}
-                    <div 
-                      className="absolute bottom-0 right-0 w-56 h-24 z-30 pointer-events-auto bg-transparent select-none cursor-not-allowed"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      onContextMenu={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                    />
-                  </>
-                )}
               </div>
             </div>
           ) : (
@@ -1685,11 +1444,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   }));
                   setIsBuffering(false);
 
-                  // If source is Google Drive or External embed (excluding pCloud), automatically switch to reliable Embed mode
-                  if (!isPCloud && (isGoogleDrive || isYouTube || isExternalEmbed)) {
-                    const fallbackProvider = isGoogleDrive ? 'Google Drive' : isYouTube ? 'YouTube' : rawVideoSrc.includes('filemoon') ? 'Filemoon' : 'HD Embed';
+                  // If direct playback has an error, seamlessly switch to embed mode
+                  if (isPCloud || isGoogleDrive || isYouTube || isExternalEmbed) {
+                    const fallbackProvider = isPCloud ? 'pCloud' : isGoogleDrive ? 'Google Drive' : isYouTube ? 'YouTube' : 'HD Embed';
                     appendDebugLog(`🔄 ${fallbackProvider} тоглуулагч руу автоматаар шилжиж байна...`);
-                    setQualityNotice(`💡 ${fallbackProvider} тоглуулагч руу автоматаар шилжлээ`);
+                    setQualityNotice(`💡 ${fallbackProvider} тоглуулагч руу шилжлээ`);
                     setServerMode('embed');
                     serverModeRef.current = 'embed';
                   } else if (videoRef.current && videoRef.current.src && !videoRef.current.src.includes('commondatastorage')) {

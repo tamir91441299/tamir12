@@ -32,18 +32,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   }, [movie.poster, movie.backdrop]);
 
   const handleCardClick = () => {
-    if (!hasAccess) {
-      onPlay(movie);
-    } else {
-      onOpenDetails(movie);
-    }
+    onOpenDetails(movie);
   };
 
   return (
     <div 
-      className={`group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer transition-all duration-300 ${
-        !hasAccess ? 'border-rose-500/20 hover:border-rose-500/50' : 'hover:border-amber-400/30'
-      }`}
+      className="group relative cinema-glass-card rounded-2xl overflow-hidden flex flex-col h-full select-none cursor-pointer transition-all duration-300 hover:border-amber-400/30"
     >
       {/* Poster Image Container */}
       <div

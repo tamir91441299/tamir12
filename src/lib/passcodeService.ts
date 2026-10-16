@@ -25,11 +25,7 @@ export function getProtectedWindowPasscode(): string {
  * Check if the user has already verified the passcode in this browser session
  */
 export function isPasscodeVerifiedInSession(): boolean {
-  try {
-    return sessionStorage.getItem(SESSION_VERIFIED_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return true;
 }
 
 /**

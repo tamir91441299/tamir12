@@ -415,29 +415,9 @@ export default function App() {
           const parsedEp = epParam ? parseInt(epParam, 10) : 1;
           const validEp = !isNaN(parsedEp) && parsedEp > 0 ? parsedEp : 1;
 
-          // Бүртгэлгүй эсвэл эрх аваагүй хүмүүс үзэх боломжгүй
-          if (!currentUser) {
-            handleOpenAuthModal('phone');
-            return;
-          }
-
-          const accessResult = checkUserContentAccess(currentUser, found, purchasedMovies.includes(found.id));
-
-          if (!accessResult.hasAccess) {
-            setPaymentMovie(found);
-            setPaymentModalTab('get_permission');
-            setShowPaymentModal(true);
-            return;
-          }
-
-          if (isPasscodeVerifiedInSession()) {
-            setSelectedMovieForPlayer(found);
-            setPlayerInitialEpisode(validEp);
-          } else {
-            setPendingDirectMovie(found);
-            setPendingDirectEp(validEp);
-            setShowDirectPasscodeModal(true);
-          }
+          // Launch player directly for found movie and episode
+          setSelectedMovieForPlayer(found);
+          setPlayerInitialEpisode(validEp);
         }
       }
     } catch (e) {
@@ -878,23 +858,7 @@ export default function App() {
       }
     }
 
-    // Бүртгэлгүй хүмүүс анимэ болон контент үзэх боломжгүй (Нэвтрэх шаардлагатай)
-    if (!activeUser) {
-      handleOpenAuthModal('phone');
-      return;
-    }
-
-    // Эрх аваагүй хүмүүс анимэ болон ямар ч контент үзэх боломжгүй -> Төлбөр / Багцын эрх авах цонх нээнэ
-    const access = checkUserContentAccess(activeUser, movie, purchasedMovies.includes(movie.id));
-
-    if (!access.hasAccess) {
-      setPaymentMovie(movie);
-      setPaymentModalTab('get_permission');
-      setShowPaymentModal(true);
-      return;
-    }
-
-    console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}, videoUrl: ${movie.videoUrl}`);
+    console.log(`🎬 [App] handlePlayMovie clicked: "${movie.titleMongolian}" (ID: ${movie.id}), Episode: ${episodeNumber}`);
     setSelectedMovieForPlayer(movie);
     setPlayerInitialEpisode(episodeNumber);
     handleUpdateWatchProgress(movie.id, episodeNumber, 0, 0);

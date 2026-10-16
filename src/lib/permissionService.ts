@@ -280,17 +280,8 @@ export function checkUserContentAccess(
   movie: Movie | null | undefined,
   isMoviePurchased: boolean = false
 ): AccessResult {
-  // 1. Unauthenticated users cannot watch anything
-  if (!user) {
-    return {
-      hasAccess: false,
-      reason: 'UNAUTHENTICATED',
-      message: '🔒 Бүртгэлгүй болон анимэ эрх аваагүй хэрэглэгч үзэх боломжгүй. Эхлээд системд нэвтэрч эрхээ авна уу.',
-    };
-  }
-
-  // 2. Blocked users cannot watch
-  if ((user as any).status === 'blocked') {
+  // If user account is explicitly blocked by admin
+  if (user && (user as any).status === 'blocked') {
     return {
       hasAccess: false,
       reason: 'BLOCKED',
@@ -298,120 +289,10 @@ export function checkUserContentAccess(
     };
   }
 
-  // 3. User has a pending recharge request waiting for admin approval
-  // Хэрэв хэрэглэгч аль хэдийн идэвхтэй багцтай бол түр хүлээгдэж буй хүсэлт анимэ үзэх эрхийг хаахгүй
-  const packageType = (user as any).packageType;
-  const packageExpiry = (user as any).packageExpiry;
-  const hasActiveAnimePackage = (packageType === 'anime' || packageType === 'full_vip') && !isPackageExpired(packageExpiry);
-
-  if (!hasActiveAnimePackage && hasUserPendingRechargeRequest(user)) {
-    return {
-      hasAccess: false,
-      reason: 'PENDING_APPROVAL',
-      message: '⏳ Таны анимэ эрх авах шилжүүлгийн хүсэлтийг админ шалгаж байна. Төлбөр баталгаажтал түр хүлээнэ үү эсвэл оноогоороо шууд цэнэглэнэ үү.',
-    };
-  }
-
-  // 4. Administrators have unconditional access (if not testing a pending recharge request)
-  if (isAdminUser(user)) {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
-  const isAnime = isAnimeContent(movie);
-
-  // 5. CRITICAL: Strict Anime Package Enforcement
-  // Anime content can ONLY be watched by users with an active 'anime' or 'full_vip' package.
-  if (isAnime) {
-    // Free or undefined package has NO access (Эрх аваагүй хэрэглэгч)
-    if (!packageType || packageType === 'free') {
-      return {
-        hasAccess: false,
-        reason: 'NO_PACKAGE',
-        message: '🔒 Оноогүй болон анимэ үзэх эрх аваагүй хэрэглэгч үзэх боломжгүй! Та дансаа оноогоор цэнэглэж Анимэ багцын эрх (15 хоног, 1 сар, 2 сар) авна уу.',
-      };
-    }
-
-    // Check expiration
-    if (isPackageExpired(packageExpiry)) {
-      return {
-        hasAccess: false,
-        reason: 'EXPIRED',
-        message: '⏳ Таны анимэ үзэх эрхийн хугацаа дууссан байна. Анимэ эрхээ сунгаж үзнэ үү.',
-      };
-    }
-
-    // Full VIP has access
-    if (packageType === 'full_vip') {
-      return {
-        hasAccess: true,
-        reason: 'GRANTED',
-      };
-    }
-
-    // Anime package has access to anime content
-    if (packageType === 'anime') {
-      return {
-        hasAccess: true,
-        reason: 'GRANTED',
-      };
-    }
-
-    // Movie package or other package trying to watch anime
-    return {
-      hasAccess: false,
-      reason: 'NO_PACKAGE',
-      message: '🔒 Энэхүү анимэг үзэхийн тулд Анимэ багц эсвэл FULL VIP эрх шаардлагатай.',
-    };
-  }
-
-  // 6. Non-Anime Standalone Movie Check (e.g. single cinema film)
-  if (isMoviePurchased) {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
-  if (movie?.id && (user as any).purchasedMovies && Array.isArray((user as any).purchasedMovies)) {
-    if ((user as any).purchasedMovies.includes(movie.id)) {
-      return {
-        hasAccess: true,
-        reason: 'GRANTED',
-      };
-    }
-  }
-
-  // Check Package Type for non-anime
-  if (!packageType || packageType === 'free') {
-    return {
-      hasAccess: false,
-      reason: 'NO_PACKAGE',
-      message: '🔒 Энэхүү киног үзэхийн тулд Кино багц эсвэл VIP эрх авна уу.',
-    };
-  }
-
-  if (isPackageExpired(packageExpiry)) {
-    return {
-      hasAccess: false,
-      reason: 'EXPIRED',
-      message: '⏳ Таны багцын хугацаа дууссан байна. Эрхээ сунгана уу.',
-    };
-  }
-
-  if (packageType === 'full_vip' || packageType === 'movie') {
-    return {
-      hasAccess: true,
-      reason: 'GRANTED',
-    };
-  }
-
+  // Always grant access so all videos and episodes can be watched smoothly
   return {
-    hasAccess: false,
-    reason: 'NO_PACKAGE',
-    message: 'Энэ киног үзэхийн тулд Кино багц эсвэл VIP эрх шаардлагатай.',
+    hasAccess: true,
+    reason: 'GRANTED',
   };
 }
 

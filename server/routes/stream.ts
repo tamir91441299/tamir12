@@ -287,7 +287,7 @@ router.get("/api/stream/pcloud/:code", async (req: Request, res: Response) => {
   }
 
   if (!res.headersSent) {
-    res.redirect(302, getFallbackForQuality(quality, code));
+    res.redirect(302, `https://u.pcloud.link/publink/show?code=${encodeURIComponent(code)}`);
   }
 });
 

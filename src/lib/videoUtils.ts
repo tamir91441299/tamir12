@@ -401,7 +401,6 @@ export function getDirectPlaybackStream(
 ): string {
   const epNum = episodeNumber > 0 ? episodeNumber : 1;
 
-  // If specific quality is selected and not auto, check quality cluster for fallback
   const qualityCluster = QUALITY_CDN_MAP[quality] || QUALITY_CDN_MAP['1080p'];
   const streamFromQualityCluster = qualityCluster[(epNum - 1) % qualityCluster.length];
 
@@ -409,44 +408,33 @@ export function getDirectPlaybackStream(
   const streamFromCluster = cluster[(epNum - 1) % cluster.length];
 
   if (!videoUrl || typeof videoUrl !== 'string' || videoUrl.trim() === '') {
-    const rawFallback = quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
-    const token = createSecureStreamToken(rawFallback, quality);
-    return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
+    return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
   }
 
   const formattedUrl = formatDirectPlayableUrl(videoUrl.trim());
 
-  // 1. If pCloud URL or code, use our direct streaming proxy with high-speed range requests (completely hides pCloud UI and copy link button)
+  // 1. If pCloud URL or code, use our direct streaming proxy or return formatted
   const pcloudCode = extractPCloudCode(formattedUrl);
   if (pcloudCode) {
     const q = quality || '1080p';
     return `/api/stream/pcloud/${pcloudCode}?quality=${q}&server=${serverType}&ep=${epNum}`;
   }
 
-  // 2. If Google Drive URL, use our direct streaming proxy with quality resolution
+  // 2. If Google Drive URL, use our direct streaming proxy
   const googleDriveId = extractGoogleDriveId(formattedUrl);
   if (googleDriveId) {
     const q = quality || '1080p';
     return `/api/stream/drive/${googleDriveId}?quality=${q}&server=${serverType}&ep=${epNum}`;
   }
 
-  // 3. If already an internal stream proxy URL, keep as is
-  if (formattedUrl.startsWith('/api/stream')) {
-    return formattedUrl;
-  }
-
-  // 4. Direct playable media or external streams: protect behind /api/stream/secure/:token
+  // 3. Direct playable media (.mp4, .webm, external direct URLs): play directly
   if (
     isDirectPlayableMedia(formattedUrl) ||
     (!isExternalEmbedMedia(formattedUrl) && (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')))
   ) {
-    const token = createSecureStreamToken(formattedUrl, quality);
-    return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
+    return formattedUrl;
   }
 
-  // Multi-CDN Fallback nodes matching requested quality (also secured)
-  const rawFallback = quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
-  const token = createSecureStreamToken(rawFallback, quality);
-  return `/api/stream/secure/${token}?quality=${quality}&ep=${epNum}`;
+  return quality !== 'auto' ? streamFromQualityCluster : streamFromCluster;
 }
 
