@@ -452,5 +452,183 @@ router.post('/reject', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/recharges/give-points - Admin directly credits points to user from recharge request
+router.post('/give-points', async (req: Request, res: Response) => {
+  try {
+    const { requestId, userId, userPhone, userEmail, userName, amount, processedBy, note, grantAnimeDays } = req.body;
+    const cleanAmount = Math.max(0, Number(amount) || 0);
+
+    if (cleanAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Олгох онооны дүн 0-ээс их байх ёстой.' });
+    }
+
+    const adminName = processedBy || 'Админ';
+    const cleanPhone = (userPhone || '').trim().replace(/\s+/g, '');
+    const cleanEmail = (userEmail || '').trim().toLowerCase();
+    const cleanUserId = (userId || '').trim();
+
+    // 1. Locate and update user in registered_users.json
+    let users = readStoredUsers();
+    let userIndex = users.findIndex((u) => {
+      const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uId = String(u.id || '').trim();
+      const uCustomId = String(u.customId || '').trim();
+      return (
+        (cleanUserId && (uId === cleanUserId || uCustomId === cleanUserId)) ||
+        (cleanPhone && cleanPhone.length >= 8 && cleanPhone !== '99110000' && uPhone === cleanPhone) ||
+        (cleanEmail && cleanEmail.includes('@') && uEmail === cleanEmail)
+      );
+    });
+
+    let targetUser: any = null;
+    const daysToGrant = typeof grantAnimeDays === 'number' ? grantAnimeDays : 30;
+
+    let baseDate = new Date();
+    if (userIndex >= 0) {
+      targetUser = users[userIndex];
+      if (
+        (targetUser.packageType === 'anime' || targetUser.packageType === 'full_vip') &&
+        targetUser.packageExpiry &&
+        targetUser.packageExpiry !== '-' &&
+        targetUser.packageExpiry !== 'Идэвхгүй'
+      ) {
+        const exp = new Date(targetUser.packageExpiry.replace(/\./g, '-').replace(/\//g, '-'));
+        if (!isNaN(exp.getTime()) && exp.getTime() > Date.now()) {
+          baseDate = exp;
+        }
+      }
+    }
+
+    baseDate.setDate(baseDate.getDate() + daysToGrant);
+    const newExpiryStr = baseDate.toISOString().split('T')[0];
+
+    const currentBal = typeof targetUser?.walletBalance === 'number' ? targetUser.walletBalance : 0;
+    const newBalance = currentBal + cleanAmount;
+
+    if (userIndex >= 0) {
+      users[userIndex] = {
+        ...targetUser,
+        walletBalance: newBalance,
+        packageType: targetUser.packageType === 'full_vip' ? 'full_vip' : 'anime',
+        packageExpiry: newExpiryStr,
+        status: 'active',
+        lastTopUpAmount: cleanAmount,
+        lastTopUpAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      targetUser = users[userIndex];
+    } else {
+      const primaryId = cleanUserId || (cleanPhone ? `user_phone_${cleanPhone}` : `user_${Date.now()}`);
+      targetUser = {
+        id: primaryId,
+        customId: primaryId.length === 5 ? primaryId : '',
+        name: userName || 'Хэрэглэгч',
+        phone: cleanPhone,
+        email: cleanEmail,
+        role: (cleanEmail === 'tamir73828@gmail.com' || cleanEmail === 'batorgiltamir9@gmail.com') ? 'admin' : 'user',
+        status: 'active',
+        packageType: 'anime',
+        packageExpiry: newExpiryStr,
+        walletBalance: newBalance,
+        registeredAt: new Date().toLocaleDateString('mn-MN'),
+        registeredTimestamp: Date.now(),
+        lastTopUpAmount: cleanAmount,
+        lastTopUpAt: new Date().toISOString(),
+        isMockUser: false,
+        updatedAt: new Date().toISOString(),
+      };
+      users.unshift(targetUser);
+    }
+    writeStoredUsers(users);
+
+    // 2. Locate and update recharge request
+    const rechargesList = readStoredRecharges();
+    let updatedReq: any = null;
+
+    if (requestId) {
+      const rIdx = rechargesList.findIndex((r) => r.id === requestId);
+      if (rIdx >= 0) {
+        rechargesList[rIdx] = {
+          ...rechargesList[rIdx],
+          status: 'approved',
+          amount: cleanAmount,
+          processedAt: new Date().toISOString(),
+          processedBy: adminName,
+          note: note || rechargesList[rIdx].note || 'Админ шууд оноо олгосон',
+          updatedAt: new Date().toISOString(),
+        };
+        updatedReq = rechargesList[rIdx];
+      }
+    }
+
+    if (!updatedReq && cleanPhone) {
+      const rIdx = rechargesList.findIndex(
+        (r) => (r.userPhone || '').trim().replace(/\s+/g, '') === cleanPhone && r.status === 'pending'
+      );
+      if (rIdx >= 0) {
+        rechargesList[rIdx] = {
+          ...rechargesList[rIdx],
+          status: 'approved',
+          amount: cleanAmount,
+          processedAt: new Date().toISOString(),
+          processedBy: adminName,
+          note: note || rechargesList[rIdx].note,
+          updatedAt: new Date().toISOString(),
+        };
+        updatedReq = rechargesList[rIdx];
+      }
+    }
+
+    writeStoredRecharges(rechargesList);
+
+    // 3. Persist to Firestore asynchronously
+    const db = getServerDb();
+    if (db && Date.now() > firestoreQuotaBlockedUntil) {
+      if (targetUser && targetUser.id) {
+        setDoc(
+          doc(db, 'users', targetUser.id),
+          {
+            walletBalance: newBalance,
+            packageType: targetUser.packageType,
+            packageExpiry: newExpiryStr,
+            status: 'active',
+            lastTopUpAmount: cleanAmount,
+            lastTopUpAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ).catch(() => {});
+      }
+
+      if (updatedReq && updatedReq.id) {
+        setDoc(
+          doc(db, 'recharge_requests', updatedReq.id),
+          {
+            status: 'approved',
+            amount: cleanAmount,
+            processedAt: updatedReq.processedAt,
+            processedBy: adminName,
+            note: updatedReq.note,
+          },
+          { merge: true }
+        ).catch(() => {});
+      }
+    }
+
+    return res.json({
+      success: true,
+      newBalance,
+      user: targetUser,
+      request: updatedReq,
+      expiryDate: newExpiryStr,
+      message: `✓ ${targetUser.name} хэрэглэгчид +${cleanAmount.toLocaleString()}₮ оноо шууд олгогдлоо! (Нийт оноо: ${newBalance.toLocaleString()}₮, Анимэ эрх: ${newExpiryStr} хүртэл)`,
+    });
+  } catch (err: any) {
+    console.error('Give points error:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Server error giving points' });
+  }
+});
+
 export default router;
 

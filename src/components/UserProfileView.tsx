@@ -20,6 +20,8 @@ import {
   AlertCircle,
   Film,
   Zap,
+  Ticket,
+  Gift,
 } from 'lucide-react';
 import { UserAccount } from './AuthModal';
 import { TabType } from '../types';
@@ -28,8 +30,10 @@ import {
   getUserDisplayName,
   changeUserPassword,
   updateUserProfile,
+  topUpUserBalanceInFirestore,
 } from '../lib/userService';
 import { getAnimeExpiryDetails, isAdminUser } from '../lib/permissionService';
+import { redeemCode } from '../lib/codeService';
 import { GitHubConnectModal } from './GitHubConnectModal';
 
 // Crisp illustrated Anime Character avatar matching the screenshot
@@ -125,6 +129,7 @@ interface UserProfileViewProps {
   onOpenUserManagement?: () => void;
   onNavigateToTab?: (tab: TabType) => void;
   onUpdateCurrentUser?: (user: UserAccount) => void;
+  onTopUpBalance?: (amount: number) => void;
 }
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
@@ -136,6 +141,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onOpenUserManagement,
   onNavigateToTab,
   onUpdateCurrentUser,
+  onTopUpBalance,
 }) => {
   // Biometric toggle state
   const [biometricsEnabled, setBiometricsEnabled] = useState<boolean>(() => {
@@ -152,6 +158,13 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+
+  // Redeem Code state
+  const [showRedeemCodeModal, setShowRedeemCodeModal] = useState(false);
+  const [inputRedeemCode, setInputRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
 
   // Edit name state inside profile modal
   const [isEditingName, setIsEditingName] = useState(false);
@@ -172,6 +185,45 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleRedeemCodeSubmit = async (codeToUse?: string) => {
+    const cleanCode = (codeToUse || inputRedeemCode).trim();
+    if (!cleanCode) {
+      setRedeemError('Эрхийн кодоо оруулна уу.');
+      return;
+    }
+
+    setRedeemLoading(true);
+    setRedeemError(null);
+    setRedeemSuccess(null);
+
+    try {
+      const res = redeemCode(cleanCode, currentUser);
+      if (res.success) {
+        if (res.type === 'points' && res.pointsAdded) {
+          if (onTopUpBalance) {
+            onTopUpBalance(res.pointsAdded);
+          }
+          if (currentUser) {
+            const nextBal = (currentUser.walletBalance || 0) + res.pointsAdded;
+            if (onUpdateCurrentUser) {
+              onUpdateCurrentUser({ ...currentUser, walletBalance: nextBal });
+            }
+            topUpUserBalanceInFirestore(currentUser, res.pointsAdded, `Кодоор авсан оноо (${cleanCode})`, nextBal);
+          }
+        }
+        setRedeemSuccess(res.message);
+        showToast(res.message);
+        setInputRedeemCode('');
+      } else {
+        setRedeemError(res.message);
+      }
+    } catch (e: any) {
+      setRedeemError(e?.message || 'Код шалгахад алдаа гарлаа.');
+    } finally {
+      setRedeemLoading(false);
+    }
   };
 
   const animeExpiry = getAnimeExpiryDetails(currentUser);
@@ -455,6 +507,33 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-amber-400 font-bold">
               {userBalance.toLocaleString()}₮
+            </span>
+            <ChevronRight className="w-5 h-5 text-zinc-500 shrink-0" />
+          </div>
+        </button>
+
+        {/* 3.5. 🎟️ Кодоор оноо авах */}
+        <button
+          id="profile-menu-item-redeem-code"
+          onClick={() => {
+            setRedeemError(null);
+            setRedeemSuccess(null);
+            setInputRedeemCode('');
+            setShowRedeemCodeModal(true);
+          }}
+          className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] active:bg-white/[0.06] transition-colors cursor-pointer text-left bg-gradient-to-r from-amber-500/[0.04] to-transparent"
+        >
+          <div className="flex items-center gap-3">
+            <Ticket className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="text-sm font-medium text-zinc-100 block">🎟️ Кодоор оноо авах</span>
+              <span className="text-[10px] text-zinc-400">Бэлгийн & урамшууллын кодоор оноо авах</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black flex items-center gap-1">
+              <Gift className="w-3 h-3 text-amber-400" />
+              <span>+Оноо авах</span>
             </span>
             <ChevronRight className="w-5 h-5 text-zinc-500 shrink-0" />
           </div>
@@ -756,6 +835,134 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   className="px-4 py-2.5 bg-zinc-800 text-zinc-300 font-bold rounded-xl text-xs hover:bg-zinc-700 cursor-pointer"
                 >
                   Болих
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REDEEM PROMO CODE FOR POINTS MODAL */}
+      {showRedeemCodeModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#18181c] border-2 border-amber-500/50 rounded-3xl w-full max-w-sm p-5 sm:p-6 space-y-4 shadow-2xl relative text-zinc-100">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2 font-black text-white text-base">
+                <Ticket className="w-5 h-5 text-amber-400" />
+                <span>Кодоор Оноо Авах</span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRedeemCodeModal(false);
+                  setRedeemError(null);
+                  setRedeemSuccess(null);
+                }}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg bg-white/[0.04] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Админаас өгсөн бэлгийн код, урамшууллын кодоо оруулж хэтэвчиндээ оноо шууд аваарай.
+            </p>
+
+            {/* Quick Test / Promo Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                Бэлэн урамшууллын кодууд:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { code: 'BONUS2500', label: '🎁 BONUS2500 (+2.5k₮)' },
+                  { code: 'FREE5000', label: '🎉 FREE5000 (+5k₮)' },
+                  { code: 'NOVA2025', label: '🌟 NOVA2025 (+5k₮)' },
+                ].map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => {
+                      setInputRedeemCode(item.code);
+                      setRedeemError(null);
+                    }}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                      inputRedeemCode === item.code
+                        ? 'bg-amber-500 text-black border-amber-400 shadow'
+                        : 'bg-zinc-900 text-amber-300 border-amber-500/30 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Code Input Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleRedeemCodeSubmit();
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                  Эрхийн код:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Кодоо энд оруулна уу..."
+                  value={inputRedeemCode}
+                  onChange={(e) => {
+                    setInputRedeemCode(e.target.value.toUpperCase());
+                    setRedeemError(null);
+                  }}
+                  className="w-full bg-black/60 border border-zinc-700 focus:border-amber-400 text-white font-mono text-sm font-black px-3.5 py-3 rounded-xl focus:outline-none uppercase tracking-wider placeholder-zinc-600"
+                />
+              </div>
+
+              {redeemError && (
+                <div className="p-2.5 rounded-xl bg-rose-950/70 border border-rose-800 text-rose-300 text-xs font-semibold">
+                  {redeemError}
+                </div>
+              )}
+
+              {redeemSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-950/70 border border-emerald-500/50 text-emerald-300 text-xs font-black space-y-1 text-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" />
+                  <p>{redeemSuccess}</p>
+                  <p className="text-[11px] text-zinc-300 font-normal">
+                    Шинэ үлдэгдэл: <strong className="text-amber-400 font-mono font-bold">{userBalance.toLocaleString()} ₮</strong>
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRedeemCodeModal(false);
+                    setRedeemError(null);
+                    setRedeemSuccess(null);
+                  }}
+                  className="w-1/3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs py-3 rounded-xl transition-all cursor-pointer"
+                >
+                  Хаах
+                </button>
+                <button
+                  type="submit"
+                  disabled={redeemLoading || !inputRedeemCode.trim()}
+                  className="w-2/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 text-black font-black text-xs py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5"
+                >
+                  {redeemLoading ? (
+                    <span>Шалгаж байна...</span>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-black fill-current" />
+                      <span>⚡ Оноогоо авах</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

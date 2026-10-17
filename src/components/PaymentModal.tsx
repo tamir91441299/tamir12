@@ -552,7 +552,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <span className="truncate">2. Эрх Авах (Оноогоор)</span>
           </button>
 
-          {/* ХЭСЭГ 3: Эрхийн код */}
+          {/* ХЭСЭГ 3: Эрхийн код / Кодоор оноо авах */}
           <button
             type="button"
             id="tab-mode-code"
@@ -568,7 +568,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             }`}
           >
             <Ticket className="w-3.5 h-3.5" />
-            <span>3. Эрхийн Код</span>
+            <span>3. Кодоор Оноо Авах</span>
           </button>
         </div>
 
@@ -853,6 +853,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 >
                   <span>Оноо хангалттай юу? 2-р Хэсэг: "Эрх Авах" руу шилжих</span>
                   <ArrowRight className="w-3.5 h-3.5 text-rose-400" />
+                </button>
+
+                {/* Direct switch to Section 3: Кодоор оноо авах */}
+                <button
+                  type="button"
+                  onClick={() => setMainTab('code')}
+                  className="w-full bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-300 hover:text-white border border-cyan-500/30 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Ticket className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>🎟️ Танд эрхийн эсвэл бэлгийн код байгаа бол? "Кодоор оноо авах" ➔</span>
                 </button>
               </div>
 
@@ -1149,7 +1159,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           )}
 
           {/* ================================================================ */}
-          {/* ХЭСЭГ 3: ЭРХИЙН КОД / ВАУЧЕР */}
+          {/* ХЭСЭГ 3: ЭРХИЙН КОД / КОДООР ОНОО АВАХ */}
           {/* ================================================================ */}
           {mainTab === 'code' && (
             <div className="space-y-4 bg-gradient-to-b from-cyan-950/30 via-zinc-900 to-zinc-900 p-4 rounded-xl border border-cyan-500/40 animate-in fade-in duration-200">
@@ -1159,23 +1169,58 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     🎟️
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-xs text-white">ХЭСЭГ 3: ИДЭВХЖҮҮЛЭХ КОД / ВАУЧЕР</h4>
-                    <p className="text-[10px] text-zinc-400">Админаас өгсөн эрхийн кодыг шууд идэвхжүүлэх</p>
+                    <h4 className="font-extrabold text-xs text-white">ХЭСЭГ 3: КОДООР ОНОО АВАХ / ВАУЧЕР</h4>
+                    <p className="text-[10px] text-zinc-400">Админаас өгсөн код эсвэл бэлгийн кодоор шууд оноо авах</p>
                   </div>
                 </div>
                 <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-[11px] font-black px-2 py-0.5 rounded-lg">
-                  Шууд Идэвхжинэ
+                  Шууд Олгогдоно
                 </span>
+              </div>
+
+              {/* Informational callout */}
+              <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-3 rounded-xl border border-white/5">
+                Танд Админаас өгсөн тусгай код эсвэл бэлгийн код байгаа бол доор оруулан дансандаа оноогоо нэмж аваарай. Кодоор авсан оноогоороо анимэ эрхээ шууд нээх боломжтой.
+              </p>
+
+              {/* Quick Promo Chips */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                  Бэлэн урамшууллын кодууд:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: 'BONUS2500', label: '🎁 BONUS2500 (+2,500₮ оноо)' },
+                    { code: 'FREE5000', label: '🎉 FREE5000 (+5,000₮ оноо)' },
+                    { code: 'NOVA2025', label: '🌟 NOVA2025 (+5,000₮ оноо)' },
+                  ].map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => {
+                        setInputActivationCode(item.code);
+                        setCodeError(null);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+                        inputActivationCode === item.code
+                          ? 'bg-cyan-400 text-black border-cyan-300 shadow font-black ring-1 ring-cyan-300'
+                          : 'bg-zinc-950 text-cyan-300 border-cyan-500/30 hover:bg-zinc-800'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-zinc-300 block">
-                  Админаас авсан кодоо оруулна уу:
+                  Кодоо оруулна уу:
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Эрхийн кодоо энд оруулна уу..."
+                    placeholder="Жишээ: BONUS2500, ONOO-..."
                     value={inputActivationCode}
                     onChange={(e) => {
                       setInputActivationCode(e.target.value.toUpperCase());
@@ -1195,8 +1240,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     disabled={isVerifying || !inputActivationCode.trim()}
                     className="bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 disabled:opacity-50 text-black font-black text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
                   >
-                    {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                    <span>Идэвхжүүлэх</span>
+                    {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    <span>⚡ Оноо авах</span>
                   </button>
                 </div>
 

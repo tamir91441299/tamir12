@@ -268,6 +268,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [copiedQuickCode, setCopiedQuickCode] = useState<boolean>(false);
   const [copiedQuickShare, setCopiedQuickShare] = useState<boolean>(false);
 
+  // Direct Points Modal / Quick Action on Recharge Request
+  const [directPointsRechargeReq, setDirectPointsRechargeReq] = useState<RechargeRequest | null>(null);
+  const [directPointsAmount, setDirectPointsAmount] = useState<number>(5000);
+  const [directPointsGrantAnime, setDirectPointsGrantAnime] = useState<boolean>(true);
+  const [directPointsLoading, setDirectPointsLoading] = useState<boolean>(false);
+
   // New Window Security Passcode state
   const [currentPasscode, setCurrentPasscode] = useState<string>(() => getProtectedWindowPasscode());
   const [newPasscodeInput, setNewPasscodeInput] = useState<string>('');
@@ -909,6 +915,128 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
     await updateRechargeRequestStatus(req.id, 'rejected', reason);
     alert(`❌ ${req.userName} хэрэглэгчийн хүсэлтийг цуцаллаа.`);
+  };
+
+  const handleOpenDirectPointsModal = (req: RechargeRequest) => {
+    setDirectPointsRechargeReq(req);
+    setDirectPointsAmount(req.amount > 0 ? req.amount : 5000);
+    setDirectPointsGrantAnime(true);
+  };
+
+  const handleExecuteDirectPointsToRecharge = async (customAmount?: number) => {
+    if (!directPointsRechargeReq) return;
+    const req = directPointsRechargeReq;
+    const amountToCredit = Math.max(0, customAmount !== undefined ? customAmount : directPointsAmount);
+    if (amountToCredit <= 0) {
+      alert('Олгох онооны дүнгээ оруулна уу.');
+      return;
+    }
+
+    setDirectPointsLoading(true);
+    try {
+      // 1. Call Server REST API endpoint /api/recharges/give-points
+      let resData: any = null;
+      try {
+        const res = await fetch('/api/recharges/give-points', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestId: req.id,
+            userId: req.userId,
+            userPhone: req.userPhone,
+            userEmail: req.userEmail,
+            userName: req.userName,
+            amount: amountToCredit,
+            grantAnimeDays: directPointsGrantAnime ? 30 : 0,
+            processedBy: 'Админ (Шууд оноо олгосон)',
+            note: `Админ шууд +${amountToCredit.toLocaleString()}₮ оноо олгов`,
+          }),
+        });
+        if (res.ok) {
+          resData = await res.json();
+        }
+      } catch (e) {
+        console.warn('Server give-points call fallback:', e);
+      }
+
+      // 2. Also execute client-side Firestore top up & update
+      const targetUser = users.find((u) => {
+        const uPhone = (u.phone || '').trim().replace(/\s+/g, '');
+        const uEmail = (u.email || '').trim().toLowerCase();
+        const uId = String(u.id || '').trim();
+        const reqPhone = (req.userPhone || '').trim().replace(/\s+/g, '');
+        const reqEmail = (req.userEmail || '').trim().toLowerCase();
+        const reqId = String(req.userId || '').trim();
+        return (
+          (reqId && uId === reqId) ||
+          (reqPhone && reqPhone.length >= 8 && uPhone === reqPhone) ||
+          (reqEmail && uEmail === reqEmail)
+        );
+      }) || {
+        id: req.userId || `user_${Date.now()}`,
+        name: req.userName || 'Хэрэглэгч',
+        phone: req.userPhone || '',
+        email: req.userEmail || '',
+        role: 'user' as const,
+        status: 'active' as const,
+        packageType: 'anime' as const,
+        packageExpiry: '2026-12-31',
+        walletBalance: 0,
+        lastLogin: 'Шууд оноо авсан',
+        watchedCount: 0,
+        favoriteCount: 0,
+      };
+
+      const newBal = (targetUser.walletBalance || 0) + amountToCredit;
+      const updatedUser: UserDetail = {
+        ...targetUser,
+        walletBalance: newBal,
+        packageType: directPointsGrantAnime ? 'anime' : targetUser.packageType,
+        status: 'active',
+        isMockUser: false,
+      };
+
+      const updatedUsersList = users.map((u) => (u.id === targetUser.id ? updatedUser : u));
+      saveUsersState(updatedUsersList);
+
+      // 3. Mark recharge request as approved with updated amount
+      const updatedReqs = rechargeRequests.map((r) =>
+        r.id === req.id
+          ? {
+              ...r,
+              status: 'approved' as const,
+              amount: amountToCredit,
+              processedAt: new Date().toISOString(),
+              processedBy: 'Админ (Шууд оноо)',
+            }
+          : r
+      );
+      setRechargeRequests(updatedReqs);
+      localStorage.setItem('ioio_recharge_requests', JSON.stringify(updatedReqs));
+
+      // 4. Update current logged-in balance if matches
+      if (
+        currentUser &&
+        (currentUser.id === req.userId ||
+          (currentUser.phone && currentUser.phone === req.userPhone) ||
+          (currentUser.email && currentUser.email === req.userEmail))
+      ) {
+        onUpdateBalance(newBal);
+        try {
+          localStorage.setItem('ioio_balance', String(newBal));
+        } catch {}
+      }
+
+      setDirectPointsRechargeReq(null);
+      alert(
+        resData?.message ||
+          `🎉 АМЖИЛТТАЙ!\n\n${req.userName} (${req.userPhone}) хэрэглэгчийн дансанд +${amountToCredit.toLocaleString()} ₮ ОНОО ШУУД ОРЛОО!\nШинэ үлдэгдэл: ${newBal.toLocaleString()} ₮.`
+      );
+    } catch (err: any) {
+      alert('Алдаа гарлаа: ' + (err?.message || 'Дахин оролдоно уу'));
+    } finally {
+      setDirectPointsLoading(false);
+    }
   };
 
   const saveUsersState = (updatedUsers: UserDetail[]) => {
@@ -4566,7 +4694,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           <span>👤 Шууд бүртгэл рүү орох</span>
                         </button>
 
-                        {/* 2. 1 хүнд зориулсан онооны код хийх товч */}
+                        {/* 2. Шууд Оноо Өгөх товч */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDirectPointsModal(req)}
+                          className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
+                          title="Энэ хэрэглэгчид шууд хүссэн дүнгээр оноо олгох"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-black fill-current" />
+                          <span>⚡ Шууд оноо өгөх</span>
+                        </button>
+
+                        {/* 3. 1 хүнд зориулсан онооны код хийх товч */}
                         <button
                           type="button"
                           onClick={() => handleOpenQuickTargetCodeForRecharge(req)}
@@ -5786,6 +5925,193 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* DIRECT POINTS TO RECHARGE REQUEST MODAL */}
+      {directPointsRechargeReq && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-[#17181c] border-2 border-emerald-500/60 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl relative text-zinc-100">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  <Zap className="w-5 h-5 text-emerald-400 fill-current animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>ХЭРЭГЛЭГЧИД ШУУД ОНОО ОЛГОХ</span>
+                    <span className="bg-emerald-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                      ШУУРХАЙ
+                    </span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Цэнэглэлтийн хүсэлтийн дагуу хэрэглэгчийн дансанд оноог шууд шилжүүлэх
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDirectPointsRechargeReq(null)}
+                className="p-1.5 text-zinc-400 hover:text-white rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target User Info Card */}
+            <div className="bg-black/60 border border-emerald-500/30 rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 text-black font-black text-lg flex items-center justify-center shrink-0 uppercase shadow">
+                    {directPointsRechargeReq.userName.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-white">
+                      {directPointsRechargeReq.userName}
+                    </h4>
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
+                      {directPointsRechargeReq.userPhone && (
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-emerald-400" />
+                          <span>{maskPhoneNumber(directPointsRechargeReq.userPhone, directPointsRechargeReq.userEmail)}</span>
+                        </span>
+                      )}
+                      {directPointsRechargeReq.userEmail && (
+                        <span className="text-zinc-500 truncate max-w-[150px]">{directPointsRechargeReq.userEmail}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">Хүссэн дүн:</span>
+                  <span className="text-base font-mono font-black text-rose-400">
+                    {directPointsRechargeReq.amount.toLocaleString()} ₮
+                  </span>
+                </div>
+              </div>
+
+              {directPointsRechargeReq.note && (
+                <div className="p-2 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
+                  <span className="text-zinc-500 font-bold">Шилжүүлгийн утга: </span>
+                  <span className="font-mono text-amber-300">{directPointsRechargeReq.note}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Point Presets */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-300 block flex items-center justify-between">
+                <span>Олгох онооны дүн сонгох:</span>
+                <span className="text-emerald-400 font-mono font-bold text-sm">
+                  +{directPointsAmount.toLocaleString()} ₮
+                </span>
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {directPointsRechargeReq.amount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDirectPointsAmount(directPointsRechargeReq.amount)}
+                    className={`p-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer text-center ${
+                      directPointsAmount === directPointsRechargeReq.amount
+                        ? 'bg-rose-500 text-black border-rose-400 shadow-md ring-2 ring-rose-400/40'
+                        : 'bg-zinc-900 hover:bg-zinc-850 text-rose-300 border-rose-500/40'
+                    }`}
+                  >
+                    📩 +{directPointsRechargeReq.amount.toLocaleString()} ₮ (Хүссэн)
+                  </button>
+                )}
+                {[
+                  { amt: 2500, label: '+2,500 ₮ (15 хоног)' },
+                  { amt: 5000, label: '+5,000 ₮ (1 сар)' },
+                  { amt: 8500, label: '+8,500 ₮ (2 сар)' },
+                  { amt: 10000, label: '+10,000 ₮' },
+                  { amt: 20000, label: '+20,000 ₮' },
+                ].map((item) => (
+                  <button
+                    key={item.amt}
+                    type="button"
+                    onClick={() => setDirectPointsAmount(item.amt)}
+                    className={`p-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer text-center ${
+                      directPointsAmount === item.amt
+                        ? 'bg-emerald-500 text-black border-emerald-400 shadow-md ring-2 ring-emerald-400/40'
+                        : 'bg-zinc-900 hover:bg-zinc-850 text-emerald-300 border-zinc-800'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input */}
+              <div className="relative pt-1">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                  Гараар оруулах дүн:
+                </span>
+                <input
+                  type="number"
+                  min="100"
+                  step="500"
+                  value={directPointsAmount}
+                  onChange={(e) => setDirectPointsAmount(Math.max(0, Number(e.target.value)))}
+                  className="w-full bg-zinc-950 border border-zinc-700 focus:border-emerald-400 rounded-xl py-2.5 pl-36 pr-10 font-mono text-base font-black text-amber-300 text-right focus:outline-none"
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                  ₮
+                </span>
+              </div>
+            </div>
+
+            {/* Grant Anime Option */}
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={directPointsGrantAnime}
+                onChange={(e) => setDirectPointsGrantAnime(e.target.checked)}
+                className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">
+                  🎌 Зэрэгцүүлээд 30 хоног Анимэ эрх нээх / сунгах
+                </span>
+                <span className="text-[11px] text-zinc-400">
+                  Оноо олгохтой зэрэгцэн анимэ үзэх эрхийг нь нээнэ
+                </span>
+              </div>
+            </label>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setDirectPointsRechargeReq(null)}
+                className="w-1/3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Болих
+              </button>
+
+              <button
+                type="button"
+                disabled={directPointsLoading || directPointsAmount <= 0}
+                onClick={() => handleExecuteDirectPointsToRecharge()}
+                className="w-2/3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs sm:text-sm py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {directPointsLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Оноо оруулж байна...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>+{directPointsAmount.toLocaleString()}₮ Дансанд шууд оруулах</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

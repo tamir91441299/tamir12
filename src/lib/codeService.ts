@@ -41,7 +41,71 @@ export interface RedeemResult {
   matchedCode?: PromoCode;
 }
 
-export const INITIAL_PRESET_CODES: PromoCode[] = [];
+export const INITIAL_PRESET_CODES: PromoCode[] = [
+  {
+    id: 'preset_bonus2500',
+    code: 'BONUS2500',
+    type: 'points',
+    value: 2500,
+    durationDays: 15,
+    description: '🎁 +2,500 ₮ Бэлгийн оноо (15 хоногийн эрх)',
+    maxUses: 9999,
+    usedCount: 0,
+    createdAt: '2026-10-16',
+    createdBy: 'Админ',
+    isActive: true,
+  },
+  {
+    id: 'preset_free5000',
+    code: 'FREE5000',
+    type: 'points',
+    value: 5000,
+    durationDays: 30,
+    description: '🎉 +5,000 ₮ Урамшууллын оноо (1 сарын эрх)',
+    maxUses: 9999,
+    usedCount: 0,
+    createdAt: '2026-10-16',
+    createdBy: 'Админ',
+    isActive: true,
+  },
+  {
+    id: 'preset_nova2025',
+    code: 'NOVA2025',
+    type: 'points',
+    value: 5000,
+    durationDays: 30,
+    description: '🌟 +5,000 ₮ Шинэ гишүүний бэлгийн оноо',
+    maxUses: 9999,
+    usedCount: 0,
+    createdAt: '2026-10-16',
+    createdBy: 'Админ',
+    isActive: true,
+  },
+  {
+    id: 'preset_vip2025',
+    code: 'VIP2025',
+    type: 'full_vip',
+    durationDays: 365,
+    description: '👑 1 Жилийн Бүтэн VIP Эрх (Бүх кино+анимэ)',
+    maxUses: 500,
+    usedCount: 0,
+    createdAt: '2026-10-16',
+    createdBy: 'Админ',
+    isActive: true,
+  },
+  {
+    id: 'preset_korra',
+    code: 'KORRA',
+    type: 'anime',
+    durationDays: 30,
+    description: '🌊 Коррагийн Домог анимэ 30 хоногийн эрх',
+    maxUses: 1000,
+    usedCount: 0,
+    createdAt: '2026-10-16',
+    createdBy: 'Админ',
+    isActive: true,
+  },
+];
 
 const LOCAL_STORAGE_CODES_KEY = 'ioio_promo_codes_list';
 
@@ -308,6 +372,24 @@ export function redeemCode(
       };
     } else if (matched.type === 'points') {
       const pts = matched.value || 5000;
+      if (currentUser && (currentUser.id || currentUser.phone || currentUser.email)) {
+        try {
+          const targetId = currentUser.id || currentUser.phone || currentUser.email;
+          const currentBal = typeof (currentUser as any).walletBalance === 'number' ? (currentUser as any).walletBalance : 0;
+          fetch('/api/users/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: targetId,
+              updates: {
+                walletBalance: currentBal + pts,
+                lastTopUpAmount: pts,
+                lastTopUpAt: new Date().toISOString(),
+              },
+            }),
+          }).catch(() => {});
+        } catch {}
+      }
       return {
         success: true,
         type: 'points',
