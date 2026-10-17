@@ -18,16 +18,16 @@ export function formatHaikyuS3DriveLink(driveIdOrUrl: string): string {
  * 🏐 ХАЙКЬЮ!! 3-Р БҮЛЭГ: КАРАСУНО VS ШИРАТОРИЗАВА (HAIKYU!! SEASON 3) - 1-ЭЭС 10 ХҮРТЭЛХ АНГИУД
  */
 export const HAIKYU_S3_EPISODE_LINKS: Record<number, string> = {
-  1: 'https://drive.google.com/file/d/1haikyu_s3_ep1/view?usp=drivesdk',
-  2: 'https://drive.google.com/file/d/1haikyu_s3_ep2/view?usp=drivesdk',
-  3: 'https://drive.google.com/file/d/1haikyu_s3_ep3/view?usp=drivesdk',
-  4: 'https://drive.google.com/file/d/1haikyu_s3_ep4/view?usp=drivesdk',
-  5: 'https://drive.google.com/file/d/1haikyu_s3_ep5/view?usp=drivesdk',
-  6: 'https://drive.google.com/file/d/1haikyu_s3_ep6/view?usp=drivesdk',
-  7: 'https://drive.google.com/file/d/1haikyu_s3_ep7/view?usp=drivesdk',
-  8: 'https://drive.google.com/file/d/1haikyu_s3_ep8/view?usp=drivesdk',
-  9: 'https://drive.google.com/file/d/1haikyu_s3_ep9/view?usp=drivesdk',
-  10: 'https://drive.google.com/file/d/1haikyu_s3_ep10/view?usp=drivesdk',
+  1: 'https://u.pcloud.link/publink/show?code=XZx4RbJZlVm61aTn55FqP4v2rQGeH4w1ziSk',
+  2: 'https://u.pcloud.link/publink/show?code=XZA4RbJZjFlNHKSlAwRhQODhWj0o3myrOJgk',
+  3:'https://u.pcloud.link/publink/show?code=XZa4RbJZMg8WVoGGfbfyaC9nP6vtxypXi79V',
+  4: 'https://u.pcloud.link/publink/show?code=XZ78RbJZU4H8wDcxLTVn6oHGsjrQjX7bWbn7',
+  5: 'https://u.pcloud.link/publink/show?code=XZX8RbJZHFkTELBhmeF0QQkFpkEk6mVTtpJk',
+  6: 'https://u.pcloud.link/publink/show?code=XZQ8RbJZw4yV6LWVbwVLx6njg2ERwQ7dkaTk',
+  7: 'https://u.pcloud.link/publink/show?code=XZY8RbJZEP8pg6LA0QmNt60rviCsJyid6Qry',
+  8: 'https://u.pcloud.link/publink/show?code=XZm8RbJZ0xmK65X4uMBHWgVBsfkPE47NmudV',
+  9: 'https://u.pcloud.link/publink/show?code=XZW8RbJZ4WA5eFlEa7jH5x6YI15y0HLowu9X',
+  10: 'https://u.pcloud.link/publink/show?code=XZM8RbJZri3sljJb0AFYgrnac1NAGXp2iLj7',
 };
 
 export const HAIKYU_S3_EPISODES: Episode[] = [
