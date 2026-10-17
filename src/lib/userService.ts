@@ -29,35 +29,31 @@ export function isBotOrMockUser(u: Partial<UserDetail> | null | undefined): bool
   if (!u) return true;
   if (u.isMockUser === true) return true;
   const id = String(u.id || '').trim();
+  const customId = String((u as any).customId || '').trim();
   const email = String(u.email || '').trim().toLowerCase();
   const name = String(u.name || '').trim();
-  const phone = String(u.phone || '').trim();
+  const phone = String(u.phone || '').trim().replace(/\s+/g, '');
+
+  // Real users with phone number or customId or real email are NEVER bots
+  if (phone && phone.length >= 8 && phone !== '99110000') return false;
+  if ((id && id.length === 5 && /^[A-Z0-9]{5}$/i.test(id)) || (customId && customId.length === 5)) return false;
+  if (email && email.includes('@') && !email.includes('visitor_') && !email.includes('test_mock') && !email.includes('bot_')) return false;
 
   // Known sample / bot IDs
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005', 'usr_admin_tamir'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_') || id.startsWith('test_')) return true;
-
-  // Auto-generated dummy placeholder accounts
-  if (name.startsWith('Хэрэглэгч (') && !email.includes('@gmail') && !email.includes('@yahoo') && !email.includes('@mail')) return true;
-  if (id.startsWith('user_phone_') && name.startsWith('Хэрэглэгч (')) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_')) return true;
 
   // Bot / mock names
   const lowerName = name.toLowerCase();
   if (
-    lowerName.includes('bot') ||
-    lowerName.includes('mock') ||
-    lowerName.includes('тест') ||
-    lowerName.includes('test') ||
-    lowerName.startsWith('шинэ зочин') ||
-    lowerName === 'зочин'
+    lowerName.includes('mock_bot') ||
+    lowerName.includes('test_bot') ||
+    lowerName.includes('bot_user')
   ) return true;
 
-  // Known sample / bot emails
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
-  if (email.includes('@ioio.mn') || email.includes('visitor_') || email.includes('test_') || email.includes('mock_') || email.includes('bot_')) return true;
-
-  if (name.startsWith('+976') || (phone === '99110000' && !name && !email)) return true;
+  if (email.includes('visitor_') || email.includes('test_mock') || email.includes('bot_')) return true;
 
   return false;
 }
@@ -87,6 +83,16 @@ export interface AppNotification {
 
 // Initial anime announcements for all users
 export const INITIAL_ANIME_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif_init_avatar_seven_havens',
+    type: 'NEW_ANIME',
+    title: 'Аватар: Долоон Оромж (Avatar: Seven Havens) нэмэгдлээ! 🌪️⛰️',
+    message: '«Аватар: Долоон Оромж (Avatar: Seven Havens / Seven Heavens)» 1-р бүлгийн бүх 13 анги амжилттай нэмэгдлээ! 2026 оны цоо шинэ Аватарын эрин үеийг хүлээн авч үзээрэй!',
+    movieId: 'm_avatar_seven_havens',
+    movieTitle: 'Аватар: Долоон Оромж',
+    poster: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=700&q=80',
+    createdAt: 'Яг одоо',
+  },
   {
     id: 'notif_init_haikyu_s2_s4',
     type: 'NEW_ANIME',
@@ -1579,7 +1585,7 @@ export function subscribeUsersFromFirestore(callback: (users: UserDetail[]) => v
     };
 
     fetchServerUsers();
-    const serverInterval = setInterval(fetchServerUsers, 10000);
+    const serverInterval = setInterval(fetchServerUsers, 3500);
 
     // BroadcastChannel listener
     const handleBroadcast = (ev: MessageEvent) => {
@@ -1945,15 +1951,17 @@ export async function authenticateUserCredentials(
   const isPhone = /^[0-9]{8,12}$/.test(cleanPhone);
   const password = inputPassword ? inputPassword.trim() : '';
 
-  // Special Admin Shortcut
-  const isAdmin = cleanLower === 'batorgiltamir9@gmail.com' || cleanLower === 'admin';
-  if (isAdmin) {
+  // Special Admin Shortcut for Master Admin Tamir
+  const isTamir73828 = cleanLower === 'tamir73828@gmail.com' || cleanLower === 'tamir73828' || clean === '73828';
+  const isBatorgil = cleanLower === 'batorgiltamir9@gmail.com' || cleanLower === 'admin';
+  if (isTamir73828 || isBatorgil) {
+    const adminEmail = isTamir73828 ? 'tamir73828@gmail.com' : 'batorgiltamir9@gmail.com';
     const adminUser: UserAccount = {
-      id: 'admin_batorgil',
-      customId: '88888',
-      name: 'Админ',
-      email: 'batorgiltamir9@gmail.com',
-      phone: '',
+      id: isTamir73828 ? 'admin_tamir73828' : 'admin_batorgil',
+      customId: isTamir73828 ? '73828' : '88888',
+      name: isTamir73828 ? 'Тамир (Админ)' : 'Админ',
+      email: adminEmail,
+      phone: '91774421',
       registeredAt: '2026-01-01',
       role: 'admin',
       status: 'active',
@@ -2359,7 +2367,23 @@ export function subscribeUserAccount(
 function normalizeSessionUser(u: UserAccount): UserAccount {
   const email = (u.email || '').trim().toLowerCase();
   const phone = (u.phone || '').trim().replace(/\s+/g, '');
-  if (email === 'tamir91441299@gmail.com' || phone === '91441299') {
+  const name = (u.name || '').trim().toLowerCase();
+  const customId = String((u as any).customId || '').trim();
+
+  if (
+    email === 'tamir73828@gmail.com' ||
+    email.startsWith('tamir73828') ||
+    email === 'batorgiltamir9@gmail.com' ||
+    phone === '91774421' ||
+    customId === '163462' ||
+    name === 'tamir73828' ||
+    name.includes('tamir73828')
+  ) {
+    (u as any).role = 'admin';
+    (u as any).packageType = 'full_vip';
+    (u as any).packageExpiry = '2030-01-01';
+    (u as any).status = 'active';
+  } else if (email === 'tamir91441299@gmail.com' || phone === '91441299') {
     (u as any).role = 'user';
     (u as any).packageType = 'anime';
     const curExp = (u as any).packageExpiry;
@@ -2368,10 +2392,6 @@ function normalizeSessionUser(u: UserAccount): UserAccount {
     if (typeof (u as any).walletBalance !== 'number' || (u as any).walletBalance < 0) {
       (u as any).walletBalance = 5000;
     }
-  } else if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com') {
-    (u as any).role = 'admin';
-    (u as any).packageType = 'full_vip';
-    (u as any).packageExpiry = '2030-01-01';
   }
   return u;
 }
@@ -2408,20 +2428,21 @@ export function getPersistedActiveSession(): UserAccount | null {
       }
     }
 
-    // 4. Default active user session fallback for registered active user tamir91441299@gmail.com (goodboy / 91441299)
+    // 4. Default active user session: Master Admin tamir73828@gmail.com (163462 / 91774421)
     const defaultUser: UserAccount = {
-      id: 'user_phone_91441299',
-      customId: '63798',
-      name: 'goodboy',
-      email: 'tamir91441299@gmail.com',
-      phone: '91441299',
-      registeredAt: '2026.10.14 19:00',
-      role: 'user',
+      id: 'usr_admin_tamir73828',
+      customId: '163462',
+      name: 'Тамир (Админ)',
+      email: 'tamir73828@gmail.com',
+      phone: '91774421',
+      registeredAt: '2026.10.10 12:00',
+      role: 'admin',
       status: 'active',
-      packageType: 'anime',
-      packageExpiry: '2026-11-15',
-      walletBalance: 5000,
+      packageType: 'full_vip',
+      packageExpiry: '2030-01-01',
+      walletBalance: 999999,
       purchasedMovies: [],
+      isMockUser: false,
     };
     persistActiveSession(defaultUser, true);
     return defaultUser;

@@ -18,6 +18,7 @@ import { HAIKYU_S2 } from './anime/haikyuS2';
 import { HAIKYU_S3 } from './anime/haikyuS3';
 import { HAIKYU_S4 } from './anime/haikyuS4';
 import { SLOVO_PATSANA } from './anime/slovoPatsana';
+import { AVATAR_SEVEN_HAVENS } from './anime/avatarSevenHavens';
 import { extractGoogleDriveId, extractYouTubeId } from '../lib/videoUtils';
 
 /**
@@ -98,6 +99,7 @@ export const DELHIIN_SUIREL_MOVIE: Movie = {
 };
 
 export const SAMPLE_MOVIES: Movie[] = [
+  AVATAR_SEVEN_HAVENS,
   SLOVO_PATSANA,
   {
     id: 'm_91_days',

@@ -65,8 +65,7 @@ export function isQuotaError(err: any): boolean {
     msg.includes('Free daily write units') ||
     msg.includes('Quota exceeded') ||
     msg.includes('RESOURCE_EXHAUSTED') ||
-    msg.includes('exceeded free quota limits') ||
-    msg.includes('firestore.googleapis.com')
+    msg.includes('exceeded free quota limits')
   );
 }
 

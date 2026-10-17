@@ -9,20 +9,33 @@ export function isAdminUser(user: UserAccount | null | undefined): boolean {
   if (!user) return false;
 
   const email = (user.email || '').trim().toLowerCase();
+  const name = (user.name || '').trim().toLowerCase();
+  const phone = (user.phone || '').trim().replace(/\s+/g, '');
+  const id = String(user.id || '').trim();
+  const customId = String((user as any).customId || '').trim();
   const role = (user as any).role;
 
-  // Explicitly: tamir91441299@gmail.com is NOT an admin (regular user with 15-day anime package)
+  // Master admins: tamir73828@gmail.com, 91774421, 163462, batorgiltamir9@gmail.com, admin@ioio.mn
+  if (
+    email === 'tamir73828@gmail.com' ||
+    email.startsWith('tamir73828') ||
+    email === 'batorgiltamir9@gmail.com' ||
+    email === 'admin@ioio.mn' ||
+    name === 'tamir73828' ||
+    name === 'tamir admin' ||
+    name.includes('tamir73828') ||
+    phone === '91774421' ||
+    customId === '163462' ||
+    id === '163462' ||
+    id === 'usr_admin_tamir73828' ||
+    role === 'admin'
+  ) {
+    return true;
+  }
+
+  // Explicit regular user check (only if not admin credentials above)
   if (email === 'tamir91441299@gmail.com') {
     return false;
-  }
-
-  // Master admins: tamir73828@gmail.com, batorgiltamir9@gmail.com, admin@ioio.mn
-  if (email === 'tamir73828@gmail.com' || email === 'batorgiltamir9@gmail.com' || email === 'admin@ioio.mn') {
-    return true;
-  }
-
-  if (role === 'admin') {
-    return true;
   }
 
   return false;

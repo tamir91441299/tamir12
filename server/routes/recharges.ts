@@ -60,8 +60,9 @@ router.get('/', async (req: Request, res: Response) => {
     const now = Date.now();
     const db = getServerDb();
 
-    // Only query Firestore if NOT blocked by quota and at least 60s has passed
-    if (db && now > firestoreQuotaBlockedUntil && now - lastFirestoreFetchTime > 60000) {
+    const isForce = req.query.force === '1' || req.query.force === 'true';
+    // Query Firestore if forced or at least 5s has passed
+    if (db && now > firestoreQuotaBlockedUntil && (isForce || now - lastFirestoreFetchTime > 5000)) {
       try {
         lastFirestoreFetchTime = now;
         const snap = await getDocs(collection(db, 'recharge_requests'));
@@ -81,7 +82,7 @@ router.get('/', async (req: Request, res: Response) => {
       } catch (err: any) {
         const msg = String(err?.message || err);
         if (msg.includes('Quota exceeded') || msg.includes('quota') || msg.includes('resource-exhausted')) {
-          firestoreQuotaBlockedUntil = now + 300000; // 5 min backoff
+          firestoreQuotaBlockedUntil = now + 120000; // 2 min backoff
           console.warn('Firestore daily read quota limit reached on /api/recharges. Using local file cache.');
         } else {
           console.warn('Firestore fetch warning on /api/recharges:', err?.message || err);
@@ -151,6 +152,7 @@ router.post('/submit', async (req: Request, res: Response) => {
       list.unshift(newReq);
     }
     writeStoredRecharges(list);
+    lastFirestoreFetchTime = 0;
 
     // 2. Ensure user is in registered_users.json immediately so Admin sees them in user list
     try {

@@ -18,33 +18,31 @@ export function isBotUser(u: any): boolean {
   if (!u) return true;
   if (u.isMockUser === true) return true;
   const id = String(u.id || '').trim();
+  const customId = String(u.customId || '').trim();
   const email = String(u.email || '').trim().toLowerCase();
   const name = String(u.name || '').trim();
-  const phone = String(u.phone || '').trim();
+  const phone = String(u.phone || '').trim().replace(/\s+/g, '');
 
+  // Real users with valid phone or customId or real email are NEVER bots
+  if (phone && phone.length >= 8 && phone !== '99110000') return false;
+  if ((id && id.length === 5 && /^[A-Z0-9]{5}$/i.test(id)) || (customId && customId.length === 5)) return false;
+  if (email && email.includes('@') && !email.includes('visitor_') && !email.includes('test_mock') && !email.includes('bot_')) return false;
+
+  // Explicit mock/sample bot IDs
   if (['usr_001', 'usr_002', 'usr_003', 'usr_004', 'usr_005', 'usr_admin_tamir'].includes(id)) return true;
-  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_') || id.startsWith('test_')) return true;
-
-  // Auto-generated dummy placeholder accounts
-  if (name.startsWith('Хэрэглэгч (') && !email.includes('@gmail') && !email.includes('@yahoo') && !email.includes('@mail')) return true;
-  if (id.startsWith('user_phone_') && name.startsWith('Хэрэглэгч (')) return true;
+  if (id.startsWith('visitor_') || id.startsWith('test_mock_') || id.startsWith('bot_') || id.startsWith('mock_')) return true;
 
   // Bot / mock names
   const lowerName = name.toLowerCase();
   if (
-    lowerName.includes('bot') ||
-    lowerName.includes('mock') ||
-    lowerName.includes('тест') ||
-    lowerName.includes('test') ||
-    lowerName.startsWith('шинэ зочин') ||
-    lowerName === 'зочин'
+    lowerName.includes('mock_bot') ||
+    lowerName.includes('test_bot') ||
+    lowerName.includes('bot_user')
   ) return true;
 
   const botEmails = ['admin@ioio.mn'];
   if (botEmails.includes(email)) return true;
-  if (email.includes('@ioio.mn') || email.includes('visitor_') || email.includes('test_') || email.includes('mock_') || email.includes('bot_')) return true;
-
-  if (name.startsWith('+976') || (phone === '99110000' && !name && !email)) return true;
+  if (email.includes('visitor_') || email.includes('test_mock') || email.includes('bot_')) return true;
 
   return false;
 }
@@ -224,28 +222,25 @@ router.get('/', async (req: Request, res: Response) => {
     const now = Date.now();
     const db = getServerDb();
 
-    // Only query Firestore if NOT blocked by quota and at least 60s has passed since last fetch
-    if (db && now > firestoreQuotaBlockedUntil && now - lastFirestoreFetchTime > 60000) {
+    const isForce = req.query.force === '1' || req.query.force === 'true';
+    // Query Firestore if forced or at least 5s has passed since last fetch
+    if (db && now > firestoreQuotaBlockedUntil && (isForce || now - lastFirestoreFetchTime > 5000)) {
       try {
         lastFirestoreFetchTime = now;
         const snap = await getDocs(collection(db, 'users'));
         const firestoreList: any[] = [];
         snap.forEach((docSnap) => {
           const d = docSnap.data();
-          if (d && !isBotUser(d) && !isBotUser({ id: docSnap.id })) {
-            const userObj: any = {
-              ...d,
-              id: docSnap.id,
-              isMockUser: false,
-            };
-            firestoreList.push(userObj);
+          const combinedUser = { ...d, id: docSnap.id, isMockUser: false };
+          if (d && !isBotUser(combinedUser)) {
+            firestoreList.push(combinedUser);
           }
         });
         cachedFirestoreUsers = firestoreList;
       } catch (err: any) {
         const msg = String(err?.message || err);
         if (msg.includes('Quota exceeded') || msg.includes('quota') || msg.includes('resource-exhausted')) {
-          firestoreQuotaBlockedUntil = now + 300000; // Block Firestore queries for 5 minutes
+          firestoreQuotaBlockedUntil = now + 120000; // Block Firestore queries for 2 minutes
           console.warn('Firestore daily read quota limit reached. Using resilient local cache.');
         } else {
           console.warn('Firestore fetch warning on /api/users:', err?.message || err);
@@ -351,6 +346,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     writeStoredUsers(users);
+    lastFirestoreFetchTime = 0;
 
     const isNew = existingIndex < 0;
 

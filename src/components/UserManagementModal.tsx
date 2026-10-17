@@ -753,42 +753,75 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
-  const handleManualSyncUsers = async () => {
+  const handleManualSyncUsers = async (force: boolean = false) => {
     setIsSyncing(true);
     try {
-      // 1. Fetch Users from Server REST API
+      // 1. Fetch Users from Server REST API (cache-busting query to guarantee fresh cross-device data)
       let serverUsers: UserDetail[] = [];
       try {
-        const res = await fetch('/api/users');
+        const res = await fetch(`/api/users?force=${force ? '1' : '0'}&t=${Date.now()}`);
         if (res.ok) {
           const d = await res.json();
           if (d.success && Array.isArray(d.users)) {
             serverUsers = d.users.filter((u: any) => !isBotOrMockUser(u));
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn('Server users fetch notice:', err);
+      }
 
       // 2. Fetch Users from Firestore (skip if quota exceeded)
       const firestoreUsers = isFirestoreQuotaExceeded() ? [] : await fetchUsersFromFirestore();
-      const combinedUsers = sortUsersByNewest(deduplicateUserList([...firestoreUsers, ...serverUsers]));
-      setUsers(combinedUsers);
-      localStorage.setItem('ioio_registered_users_list', JSON.stringify(combinedUsers));
+
+      // Read local users
+      let localUsers: UserDetail[] = [];
+      try {
+        const saved = localStorage.getItem('ioio_registered_users_list');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            localUsers = parsed.filter((u) => !isBotOrMockUser(u));
+          }
+        }
+      } catch {}
+
+      const allUsersCandidate = [...firestoreUsers, ...serverUsers, ...localUsers, ...users];
+      const combinedUsers = sortUsersByNewest(deduplicateUserList(allUsersCandidate));
+      if (combinedUsers.length > 0) {
+        setUsers(combinedUsers);
+        localStorage.setItem('ioio_registered_users_list', JSON.stringify(combinedUsers));
+      }
 
       // 3. Fetch Recharges from Server REST API
       let serverRecharges: RechargeRequest[] = [];
       try {
-        const recRes = await fetch('/api/recharges');
+        const recRes = await fetch(`/api/recharges?force=${force ? '1' : '0'}&t=${Date.now()}`);
         if (recRes.ok) {
           const recData = await recRes.json();
           if (recData.success && Array.isArray(recData.requests)) {
             serverRecharges = recData.requests;
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn('Server recharges fetch notice:', err);
+      }
 
       // 4. Fetch Recharges from Firestore (skip if quota exceeded)
       const firestoreRecharges = isFirestoreQuotaExceeded() ? [] : await fetchRechargesFromFirestore();
+
+      // Local storage recharges
+      let localRecharges: RechargeRequest[] = [];
+      try {
+        const localSaved = localStorage.getItem('ioio_recharge_requests');
+        if (localSaved) {
+          const parsed = JSON.parse(localSaved);
+          if (Array.isArray(parsed)) localRecharges = parsed;
+        }
+      } catch {}
+
       const recMap = new Map<string, RechargeRequest>();
+      localRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
+      rechargeRequests.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
       serverRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
       firestoreRecharges.forEach((r) => { if (r?.id) recMap.set(r.id, r); });
       const combinedRecharges = Array.from(recMap.values());
@@ -805,11 +838,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   useEffect(() => {
-    // Automatically purge all bot accounts only if quota is healthy
-    if (!isFirestoreQuotaExceeded()) {
-      cleanupAllBotUsers().catch(() => {});
-    }
+    // Initial fetch of users and recharges
     handleManualSyncUsers();
+
+    // Poll every 3.5 seconds to guarantee instant reception of new users and recharge requests across all devices
+    const syncInterval = setInterval(() => {
+      handleManualSyncUsers();
+    }, 3500);
 
     const unsubscribeUsers = subscribeUsersFromFirestore((list) => {
       setUsers(sortUsersByNewest(deduplicateUserList(list.filter((u) => !isBotOrMockUser(u)))));
@@ -853,6 +888,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setRechargeRequests(reqs);
     });
     return () => {
+      clearInterval(syncInterval);
       unsubscribeUsers();
       window.removeEventListener('ioio_users_updated', handleLocalUsersUpdated);
       window.removeEventListener('ioio_new_user_registered', handleNewUserEvent);
@@ -2429,6 +2465,103 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* 🚨 ШИНЭ ЦЭНЭГЛЭЛТИЙН ХҮСЭЛТҮҮД (PENDING RECHARGES ALERT) */}
+              {rechargeRequests.filter((r) => r.status === 'pending').length > 0 && (
+                <div className="bg-gradient-to-r from-rose-950/90 via-red-950/80 to-zinc-900 border-2 border-rose-500 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-3 border-b border-rose-500/30 mb-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-inner">
+                        <CreditCard className="w-5 h-5 text-rose-400 animate-pulse" />
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-black text-white flex items-center gap-2">
+                          <span>ЦЭНЭГЛЭЛТИЙН ХҮСЭЛТҮҮД ({rechargeRequests.filter((r) => r.status === 'pending').length})</span>
+                          <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow">
+                            ШИНЭ ИРСЭН ХҮСЭЛТ
+                          </span>
+                        </h3>
+                        <p className="text-[11px] text-rose-200/90">
+                          Хэрэглэгчид данс цэнэглэх, оноо авах хүсэлт илгээсэн байна. Та доороос шалгаад шууд баталгаажуулж Анимэ эрх + оноог нь олгоорой.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveAdminTab('recharges')}
+                      className="px-3.5 py-1.5 bg-rose-500 hover:bg-rose-400 text-black font-black text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5 shrink-0 self-end sm:self-auto"
+                    >
+                      <span>📩 Бүх хүсэлт рүү шилжих</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {rechargeRequests
+                      .filter((r) => r.status === 'pending')
+                      .slice(0, 6)
+                      .map((req) => (
+                        <div
+                          key={`pending_alert_${req.id}`}
+                          className="bg-black/70 border border-rose-500/50 rounded-xl p-3.5 flex flex-col justify-between gap-3 shadow-lg"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-sm text-white truncate">{req.userName}</span>
+                                <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.2 rounded">
+                                  #{req.userId}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-cyan-300 font-mono font-bold mt-0.5">
+                                <Phone className="w-3 h-3 shrink-0 text-cyan-400" />
+                                <span>{req.userPhone || '-'}</span>
+                              </div>
+                              {req.note && (
+                                <p className="text-[10px] text-zinc-400 line-clamp-1 mt-1 bg-zinc-900/60 px-2 py-0.5 rounded border border-zinc-800">
+                                  {req.note}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="text-base font-black text-emerald-400 font-mono block">
+                                +{req.amount.toLocaleString()} ₮
+                              </span>
+                              <span className="text-[10px] text-rose-300 font-bold block">
+                                {req.planLabel || `${req.durationDays || 15} хоног`}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/80">
+                            <button
+                              type="button"
+                              onClick={() => handleApproveRecharge(req)}
+                              className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs transition-all cursor-pointer shadow flex items-center justify-center gap-1 active:scale-95"
+                              title="Дансанд оноо оруулж анимэ эрх олгох"
+                            >
+                              <Check className="w-3.5 h-3.5 text-black" />
+                              <span>Зөвшөөрөх</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetUser = findUserByRechargeRequest(req);
+                                handleOpenDirectPointsModal(targetUser, req, req.amount);
+                              }}
+                              className="py-1.5 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-bold text-xs transition-all cursor-pointer border border-amber-500/30"
+                              title="Дүн өөрчилж оноо олгох"
+                            >
+                              Дүн засах
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {/* 🌟 ШИНЭЭР БҮРТГҮҮЛСЭН ХЭРЭГЛЭГЧДИЙН ШУУД УДИРДАХ САМБАР */}
               {newUsersCount > 0 && (
